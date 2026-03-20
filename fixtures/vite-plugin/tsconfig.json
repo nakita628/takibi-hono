@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src", "vite.config.ts", "takibi-hono.config.ts"]
+}
