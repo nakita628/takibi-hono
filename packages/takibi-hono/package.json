@@ -1,0 +1,42 @@
+{
+  "name": "takibi-hono",
+  "version": "0.0.1",
+  "bin": {
+    "takibi-hono": "dist/index.js"
+  },
+  "type": "module",
+  "exports": {
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./vite-plugin": {
+      "types": "./dist/vite-plugin/index.d.ts",
+      "import": "./dist/vite-plugin/index.js"
+    }
+  },
+  "scripts": {
+    "deps": "rm -rf node_modules && pnpm install",
+    "build": "tsdown",
+    "release": "pnpm build && pnpm publish"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
+    "@typespec/compiler": "^1.10.0",
+    "@typespec/openapi3": "^1.10.0",
+    "oxfmt": "^0.40.0",
+    "schema-to-library": "0.0.8",
+    "ts-morph": "^27.0.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "valibot": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@typespec/http": "^1.10.0",
+    "@typespec/rest": "^0.80.0",
+    "@typespec/versioning": "^0.80.0",
+    "tsdown": "^0.21.2",
+    "vite": "^8.0.0"
+  }
+}
