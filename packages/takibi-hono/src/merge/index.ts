@@ -4,15 +4,22 @@ function createProject() {
   return new Project({ useInMemoryFileSystem: true })
 }
 
-type RouteInfo = {
-  readonly body: string
-  readonly comment: string | undefined
-}
-
-function extractRouteInfo(code: string): ReadonlyMap<string, RouteInfo> {
+function extractRouteInfo(code: string): ReadonlyMap<
+  string,
+  {
+    readonly body: string
+    readonly comment: string | undefined
+  }
+> {
   const project = createProject()
   const file = project.createSourceFile('temp.ts', code)
-  const result = new Map<string, RouteInfo>()
+  const result = new Map<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >()
 
   file.forEachDescendant((node) => {
     if (!node.isKind(SyntaxKind.CallExpression)) return
@@ -54,7 +61,13 @@ function extractRouteInfo(code: string): ReadonlyMap<string, RouteInfo> {
 
 function replaceRouteParts(
   generatedCode: string,
-  existingRoutes: ReadonlyMap<string, RouteInfo>,
+  existingRoutes: ReadonlyMap<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >,
 ): string {
   const project = createProject()
   const file = project.createSourceFile('gen.ts', generatedCode)
@@ -223,7 +236,13 @@ export function mergeBarrelFile(_existingCode: string, generatedCode: string): s
 
 function restoreRouteComments(
   code: string,
-  existingRoutes: ReadonlyMap<string, RouteInfo>,
+  existingRoutes: ReadonlyMap<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >,
 ): string {
   return [...existingRoutes.entries()]
     .filter(([, info]) => info.comment !== undefined)
