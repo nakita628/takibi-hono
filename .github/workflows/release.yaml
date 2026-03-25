@@ -21,7 +21,7 @@ jobs:
       - name: Check version change
         id: ver
         run: |
-          FILE=packages/hono-takibi/package.json
+          FILE=packages/takibi-hono/package.json
           git diff --name-only HEAD~1 | grep -q "$FILE" || { echo "skip=true" >> $GITHUB_OUTPUT; exit 0; }
           CUR=$(jq -r .version "$FILE")
           PRE=$(git show HEAD~1:"$FILE" 2>/dev/null | jq -r .version || echo "")
