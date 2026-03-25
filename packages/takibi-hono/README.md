@@ -22,6 +22,20 @@ npm install -D takibi-hono
 
 Create `takibi-hono.config.ts`:
 
+### Minimal Config
+
+```ts
+// takibi-hono.config.ts
+import { defineConfig } from 'takibi-hono/config'
+
+export default defineConfig({
+  input: 'main.tsp',
+  schema: 'zod',
+})
+```
+
+### Full Config
+
 ```ts
 // takibi-hono.config.ts
 import { defineConfig } from 'takibi-hono/config'
