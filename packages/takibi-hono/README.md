@@ -1,5 +1,7 @@
 # Takibi Hono
 
+![](https://github.com/nakita628/takibi-hono/blob/main/assets/takibi-hono.gif)
+
 OpenAPI / TypeSpec to [Hono](https://hono.dev/) application code generator.
 
 Supports schema libraries: `zod` | `valibot` | `typebox` | `arktype` | `effect`
