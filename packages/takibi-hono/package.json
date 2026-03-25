@@ -1,6 +1,11 @@
 {
   "name": "takibi-hono",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "Takibi Hono is a code generator from OpenAPI to hono",
+  "keywords": [
+    "hono",
+    "openapi"
+  ],
   "bin": {
     "takibi-hono": "dist/index.js"
   },
