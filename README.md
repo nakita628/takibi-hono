@@ -229,7 +229,7 @@ export default app
 You write your logic in the handler body. On the next regeneration, your code is preserved:
 
 ```ts
-  (c) => c.json({ message: 'Takibi Hono🔥' }),
+  (c) => return c.json({ message: 'Takibi Hono🔥' }),
 ```
 
 ## License
