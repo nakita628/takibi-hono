@@ -2,14 +2,20 @@
 
 ![](https://github.com/nakita628/takibi-hono/blob/main/assets/takibi-hono.gif)
 
-OpenAPI / TypeSpec to [Hono](https://hono.dev/) application code generator.
+## OpenAPI to Hono Code Generator
 
-Supports schema libraries: `zod` | `valibot` | `typebox` | `arktype` | `effect`
+**[Takibi Hono](https://www.npmjs.com/package/takibi-hono)** generates type-safe [Hono](https://hono.dev/) code from [OpenAPI](https://www.openapis.org/) / [TypeSpec](https://typespec.io/) specifications.
+
+- OpenAPI schemas to validation schemas (`zod` | `valibot` | `typebox` | `arktype` | `effect`)
+- [hono-openapi](https://hono.dev/examples/hono-openapi) route definitions with `describeRoute`
+- App entry point + handler stubs with [handler merge](#handler-merge)
+- Component splitting into separate files (schemas, parameters, headers, etc.)
+- Vite plugin for automatic regeneration on spec changes
 
 ## Install
 
 ```bash
-pnpm add -D takibi-hono
+npm install -D takibi-hono
 ```
 
 ## Setup
@@ -229,7 +235,7 @@ export default app
 You write your logic in the handler body. On the next regeneration, your code is preserved:
 
 ```ts
-  (c) => return c.json({ message: 'Takibi Hono🔥' }),
+(c) => return c.json({ message: 'Takibi Hono🔥' }),
 ```
 
 ## License
