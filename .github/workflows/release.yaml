@@ -1,0 +1,36 @@
+name: release
+
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version change
+        id: ver
+        run: |
+          FILE=packages/hono-takibi/package.json
+          git diff --name-only HEAD~1 | grep -q "$FILE" || { echo "skip=true" >> $GITHUB_OUTPUT; exit 0; }
+          CUR=$(jq -r .version "$FILE")
+          PRE=$(git show HEAD~1:"$FILE" 2>/dev/null | jq -r .version || echo "")
+          [[ "$CUR" != "$PRE" ]] && echo "version=$CUR" >> $GITHUB_OUTPUT || echo "skip=true" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        if: steps.ver.outputs.version
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
+          generateReleaseNotes: true
