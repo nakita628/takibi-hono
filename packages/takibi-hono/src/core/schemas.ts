@@ -9,9 +9,6 @@ import { zodType } from '../helper/type.js'
 import type { Schema } from '../openapi/index.js'
 import { toPascalCase } from '../utils/index.js'
 
-/**
- * Generates schemas as a single file.
- */
 export async function makeSchemasCode(
   schemas: { readonly [k: string]: Schema },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -19,16 +16,14 @@ export async function makeSchemasCode(
     readonly exportTypes?: boolean | undefined
     readonly readonly?: boolean | undefined
   },
-): Promise<string> {
+) {
   const config = getLibraryConfig(schemaLib)
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const declarations: string[] = []
-
   const circularNames = detectCircularRefs(schemas)
   const schemaNames = Object.keys(schemas)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-
   for (const [name, schema] of Object.entries(schemas)) {
     const rawDecl = await extractSchemaExports(name, schema, schemaLib, exportTypes, readonly)
     declarations.push(
@@ -40,36 +35,27 @@ export async function makeSchemasCode(
       }),
     )
   }
-
   const declarationsCode = declarations.join('\n')
   const sortedDeclarations = ast(declarationsCode)
-
   const imports = [config.schemaImport]
   if (schemaLib === 'typebox' && exportTypes) {
     imports.push("import type{Static}from'typebox'")
   }
-
   return [...imports, '', sortedDeclarations].join('\n')
 }
 
-/**
- * Generates split schema files: one file per schema + barrel index.
- */
 export async function makeSplitSchemas(
   schemas: { readonly [k: string]: Schema },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   outputDir: string,
   options?: { readonly exportTypes?: boolean | undefined; readonly readonly?: boolean | undefined },
-): Promise<
-  { readonly ok: true; readonly value: undefined } | { readonly ok: false; readonly error: string }
-> {
+) {
   const config = getLibraryConfig(schemaLib)
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const schemaNames = Object.keys(schemas)
   const circularNames = detectCircularRefs(schemas)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-
   for (const name of schemaNames) {
     const rawDecl = await extractSchemaExports(
       name,
@@ -84,17 +70,12 @@ export async function makeSplitSchemas(
       cyclicGroupPascal,
       readonly,
     })
-
-    // Find schema references in the generated code (exclude self)
     const deps = findSchemaRefs(decl, name).filter((d) => d in schemas)
-
-    // Build file content
     const lines: string[] = []
     lines.push(config.schemaImport)
     if (schemaLib === 'typebox' && exportTypes) {
       lines.push("import type{Static}from'typebox'")
     }
-
     if (deps.length > 0) {
       const sortedDeps = deps.toSorted()
       for (const dep of sortedDeps) {
@@ -103,33 +84,23 @@ export async function makeSplitSchemas(
         lines.push(`import{${depVar}}from'${depFile}'`)
       }
     }
-
     lines.push('')
     lines.push(decl)
-
     const fileName = `${uncapitalize(name)}.ts`
     const filePath = path.join(outputDir, fileName)
     const result = await core(lines.join('\n'), outputDir, filePath)
     if (!result.ok) return result
   }
-
-  // Generate barrel index
   const barrelCode = schemaNames
     .toSorted()
     .map((name) => `export*from'./${uncapitalize(name)}'`)
     .join('\n')
-
   const barrelPath = path.join(outputDir, 'index.ts')
   const barrelResult = await core(barrelCode, outputDir, barrelPath)
   if (!barrelResult.ok) return barrelResult
-
-  return { ok: true, value: undefined }
+  return { ok: true, value: undefined } as const
 }
 
-/**
- * Transforms a raw schema declaration by applying lazy wrapping, type annotations,
- * and circular reference handling based on schema library and circular dependency info.
- */
 function processDeclaration(
   rawDecl: string,
   name: string,
@@ -141,7 +112,7 @@ function processDeclaration(
     readonly cyclicGroupPascal: ReadonlySet<string>
     readonly readonly: boolean
   },
-): string {
+) {
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
   const needsLazy = ctx.circularNames.has(name)
@@ -167,7 +138,6 @@ function processDeclaration(
     )
     return addCircularTypeAnnotation(unwrapped, varName, schemaLib)
   }
-
   return unwrapNonCircularLazy(rawDecl, name, ctx.schemaNames, ctx.circularNames, schemaLib)
 }
 
@@ -186,21 +156,13 @@ function uncapitalize(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1)
 }
 
-/**
- * Adds `:z.ZodType<TypeName>` annotation to a const declaration.
- * `export const FooSchema = ...` → `export const FooSchema:z.ZodType<FooType> = ...`
- */
-function addTypeAnnotation(decl: string, varName: string, typeName: string): string {
+function addTypeAnnotation(decl: string, varName: string, typeName: string) {
   return decl.replace(
     new RegExp(`(export\\s+const\\s+${varName})\\s*=`),
     `$1:z.ZodType<${typeName}>=`,
   )
 }
 
-/**
- * Adds a type annotation for circular schemas in non-zod libraries
- * to prevent implicit any errors.
- */
 function addCircularTypeAnnotation(
   decl: string,
   varName: string,
@@ -215,40 +177,24 @@ function addCircularTypeAnnotation(
   return decl.replace(new RegExp(`(export\\s+const\\s+${varName})\\s*=`), `$1:${annotation}=`)
 }
 
-/**
- * Inside a circular schema wrapped with outer z.lazy(),
- * unwrap inner z.lazy() calls:
- *   - Self-reference: z.lazy(() => FooSchema) → FooSchema (direct, works inside outer z.lazy)
- *   - Non-circular ref: z.lazy(() => BarSchema) → BarSchema (direct, already defined)
- *   - Circular ref to other: z.lazy(() => BazSchema) → BazSchema (direct, works inside outer z.lazy)
- *
- * When the outer z.lazy(() => ...) is present, ALL inner z.lazy are unnecessary
- * because the outer one already defers evaluation.
- */
 function unwrapInnerLazy(
   decl: string,
   _selfVarName: string,
   _allSchemaNames: readonly string[],
   _circularNames: ReadonlySet<string>,
-): string {
-  // Inside outer z.lazy, all inner z.lazy(() => XxxSchema) can be unwrapped
+) {
   return decl.replace(/z\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g, '$1')
 }
 
-/**
- * Removes lazy wrappers for non-circular references in non-circular schemas.
- * For typebox circular schemas, replaces inner Type.Recursive self-refs with This.
- */
 function unwrapNonCircularLazy(
   decl: string,
   selfName: string,
   allSchemaNames: readonly string[],
   circularNames: ReadonlySet<string>,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   const selfPascal = toPascalCase(selfName)
   const selfVarName = `${selfPascal}Schema`
-
   const needsLazy = new Set<string>()
   for (const name of allSchemaNames) {
     if (circularNames.has(name)) {
@@ -258,7 +204,6 @@ function unwrapNonCircularLazy(
   if (circularNames.has(selfName)) {
     needsLazy.add(selfVarName)
   }
-
   switch (schemaLib) {
     case 'zod':
       return decl.replace(
@@ -269,7 +214,6 @@ function unwrapNonCircularLazy(
         },
       )
     case 'typebox':
-      // Inside Type.Recursive(This => ...), replace inner Type.Recursive((_Self) => SelfSchema) with This
       if (circularNames.has(selfName)) {
         decl = decl.replace(
           /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
@@ -285,14 +229,11 @@ function unwrapNonCircularLazy(
   }
 }
 
-/**
- * Wraps the outermost schema expression with a lazy wrapper.
- */
 function wrapWithLazy(
   decl: string,
   name: string,
   wrapper: { readonly open: string; readonly close: string },
-): string {
+) {
   const pascalName = toPascalCase(name)
   const pattern = new RegExp(`^(export\\s+const\\s+${pascalName}Schema[^=]*=\\s*)(.+)$`)
   const lines = decl.split('\n')

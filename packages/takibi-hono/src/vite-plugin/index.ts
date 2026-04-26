@@ -6,10 +6,6 @@ import { hono } from '../core/index.js'
 
 type Config = Extract<ReturnType<typeof parseConfig>, { ok: true }>['value']
 
-/**
- * Minimal Vite dev-server interface.
- * Defines only the surface area needed by this plugin.
- */
 type ViteDevServer = {
   watcher: {
     add: (paths: string | readonly string[]) => void
@@ -41,10 +37,6 @@ const debounce = (delayMs: number, callback: () => void): (() => void) => {
   return wrapped
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Split-mode file cleanup
- * ────────────────────────────────────────────────────────────── */
-
 const listTypeScriptFilesShallow = async (directoryPath: string): Promise<readonly string[]> =>
   fsp
     .stat(directoryPath)
@@ -70,10 +62,6 @@ const deleteTypeScriptFiles = async (filePaths: readonly string[]): Promise<read
         .catch(() => null),
     ),
   ).then((results) => results.filter((r) => r !== null))
-
-/* ──────────────────────────────────────────────────────────────
- * Output path extraction & stale cleanup
- * ────────────────────────────────────────────────────────────── */
 
 const isComponentConfig = (v: unknown): v is { readonly output: string } =>
   typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
@@ -116,15 +104,7 @@ const cleanupStaleOutputs = async (
   ).then((results) => results.filter((r) => r !== null))
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Config hot-reload
- * ────────────────────────────────────────────────────────────── */
-
-const readConfigWithHotReload = async (
-  server: ViteDevServer,
-): Promise<
-  { readonly ok: true; readonly value: Config } | { readonly ok: false; readonly error: string }
-> => {
+const readConfigWithHotReload = async (server: ViteDevServer) => {
   const absoluteConfigPath = toAbsolutePath('takibi-hono.config.ts')
   try {
     const resolved = await server.pluginContainer.resolveId(absoluteConfigPath)
@@ -139,17 +119,13 @@ const readConfigWithHotReload = async (
     const loadedModule = await server.ssrLoadModule(`${absoluteConfigPath}?t=${Date.now()}`)
     const defaultExport = loadedModule?.default
     if (typeof defaultExport !== 'object' || defaultExport === null) {
-      return { ok: false, error: 'Config must export default object' }
+      return { ok: false, error: 'Config must export default object' } as const
     }
     return parseConfig(defaultExport)
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) } as const
   }
 }
-
-/* ──────────────────────────────────────────────────────────────
- * Generation with split-aware cleanup
- * ────────────────────────────────────────────────────────────── */
 
 const runGeneration = async (config: Config): Promise<{ readonly logs: readonly string[] }> => {
   // Clean up split directories before regeneration
@@ -171,7 +147,6 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
     )
   }
 
-  // Also clean handlers directory
   const handlersCfg = config['takibi-hono']?.handlers
   if (handlersCfg?.output && !handlersCfg.output.endsWith('.ts')) {
     splitCleanups.push(
@@ -193,7 +168,6 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
     openapi: config.openapi,
     'takibi-hono': config['takibi-hono'],
   })
-
   return {
     logs: [
       ...cleanupLogs,
@@ -201,10 +175,6 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
     ],
   }
 }
-
-/* ──────────────────────────────────────────────────────────────
- * Watch helpers
- * ────────────────────────────────────────────────────────────── */
 
 const addInputGlobsToWatcher = (server: ViteDevServer, absoluteInputPath: string): string => {
   const inputDirectory = path.dirname(absoluteInputPath)
@@ -217,28 +187,6 @@ const addInputGlobsToWatcher = (server: ViteDevServer, absoluteInputPath: string
   return inputDirectory
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Plugin
- * ────────────────────────────────────────────────────────────── */
-
-/**
- * Creates a Vite plugin for takibi-hono code generation.
- *
- * Watches OpenAPI spec and config files for changes and
- * automatically regenerates TypeScript code with hot reload.
- * Handles split-mode file cleanup and stale output removal.
- *
- * @example
- * ```ts
- * // vite.config.ts
- * import { takibiHonoVite } from 'takibi-hono/vite-plugin'
- *
- * export default defineConfig({
- *   plugins: [takibiHonoVite()]
- * })
- * ```
- */
-// biome-ignore lint: plugin returns any for Vite compatibility
 export function takibiHonoVite(): any {
   const pluginState: {
     current: Config | null

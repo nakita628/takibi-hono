@@ -23,9 +23,6 @@ import { collectOperations, makeHandlerCode } from './handler.js'
 import { makeSchemasCode, makeSplitSchemas } from './schemas.js'
 import { makeWebhooksCode } from './webhooks.js'
 
-/**
- * Main orchestrator: generates all output files from an OpenAPI spec.
- */
 export async function hono(config: {
   readonly input: string
   readonly schema: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
@@ -134,21 +131,15 @@ export async function hono(config: {
           | undefined
       }
     | undefined
-}): Promise<
-  { readonly ok: true; readonly value: undefined } | { readonly ok: false; readonly error: string }
-> {
+}) {
   if (config.format) {
     setFormatOptions(config.format)
   }
-
   const parseResult = await parseOpenAPI(config.input)
   if (!parseResult.ok) return parseResult
-
   const openapi = parseResult.value
   const ohConfig = config['takibi-hono']
   const useOpenAPI = config.openapi === true
-
-  // Resolve output paths from config
   const handlersOutput = ohConfig?.handlers?.output ?? 'src/handlers'
   const componentsBaseOutput = ohConfig?.components?.output
   const schemasConfig = ohConfig?.components?.schemas
@@ -157,14 +148,10 @@ export async function hono(config: {
     (componentsBaseOutput ? `${componentsBaseOutput}/index.ts` : 'src/components/index.ts')
   const exportTypes = schemasConfig?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
   const isReadonly = ohConfig?.readonly ?? false
-
-  // Compute the directory for schemas output
   const schemasDir = schemasOutput.endsWith('.ts') ? path.dirname(schemasOutput) : schemasOutput
   const schemasFile = schemasOutput.endsWith('.ts')
     ? schemasOutput
     : path.join(schemasOutput, 'index.ts')
-
-  // Generate schemas when the spec has component schemas
   if (openapi.components?.schemas) {
     const schemasSplit = schemasConfig?.split ?? false
     if (schemasSplit) {
@@ -187,8 +174,6 @@ export async function hono(config: {
       if (!schemasResult.ok) return schemasResult
     }
   }
-
-  // Generate component files (only when openapi mode)
   if (useOpenAPI) {
     const componentsResult = await makeComponentFiles(
       openapi,
@@ -199,23 +184,15 @@ export async function hono(config: {
     )
     if (!componentsResult.ok) return componentsResult
   }
-
-  // Collect operations and generate handlers
   const groups = collectOperations(openapi)
   const handlerFileNames: string[] = []
-
-  // Compute handler directory
   const handlersDir = handlersOutput.endsWith('.ts') ? path.dirname(handlersOutput) : handlersOutput
-
-  // Build component import paths relative to handlers directory
   const componentPaths = makeComponentPaths(
     handlersDir,
     schemasFile,
     ohConfig,
     componentsBaseOutput,
   )
-
-  // Split mode: one file per path group
   for (const [groupName, operations] of groups) {
     handlerFileNames.push(groupName)
     const generatedCode = makeHandlerCode(groupName, operations, config.schema, {
@@ -228,8 +205,6 @@ export async function hono(config: {
     const handlerResult = await core(finalCode, handlersDir, handlerOutput)
     if (!handlerResult.ok) return handlerResult
   }
-
-  // Generate barrel file
   if (handlerFileNames.length > 0) {
     const generatedBarrel = makeBarrelCode(handlerFileNames)
     const barrelOutput = path.join(handlersDir, 'index.ts')
@@ -240,8 +215,6 @@ export async function hono(config: {
     const barrelResult = await core(finalBarrel, handlersDir, barrelOutput)
     if (!barrelResult.ok) return barrelResult
   }
-
-  // Delete stale handler files (removed from OpenAPI spec)
   const expectedFiles = new Set([...handlerFileNames.map((name) => `${name}.ts`), 'index.ts'])
   const existingFiles = await fsp
     .readdir(handlersDir, { withFileTypes: true })
@@ -254,8 +227,6 @@ export async function hono(config: {
       await fsp.unlink(path.join(handlersDir, file)).catch(() => {})
     }
   }
-
-  // Generate webhook handlers (only when openapi mode)
   if (useOpenAPI) {
     const webhooksConfig = ohConfig?.components?.webhooks
     if (openapi.webhooks) {
@@ -279,8 +250,6 @@ export async function hono(config: {
       }
     }
   }
-
-  // Generate app index in parent of handlers dir
   const appDir = path.dirname(handlersDir)
   const appCode = makeAppCode(openapi, handlerFileNames, {
     basePath: config.basePath,
@@ -291,31 +260,23 @@ export async function hono(config: {
   const finalApp = existingApp ? mergeAppFile(existingApp, appCode) : appCode
   const appResult = await core(finalApp, appDir, appOutput)
   if (!appResult.ok) return appResult
-
-  return { ok: true, value: undefined }
+  return { ok: true, value: undefined } as const
 }
 
-async function readFileOrNull(filePath: string): Promise<string | null> {
+async function readFileOrNull(filePath: string) {
   return fsp.readFile(filePath, 'utf-8').catch(() => null)
 }
 
-/**
- * Generates component files based on config.
- */
 async function makeComponentFiles(
   openapi: { readonly components?: import('../openapi/index.js').Components },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   ohConfig: NonNullable<Parameters<typeof hono>[0]['takibi-hono']> | undefined,
   schemasFile: string,
   componentsBaseOutput?: string,
-): Promise<
-  { readonly ok: true; readonly value: undefined } | { readonly ok: false; readonly error: string }
-> {
+) {
   const components = openapi.components
-  if (!components) return { ok: true, value: undefined }
-
+  if (!components) return { ok: true, value: undefined } as const
   const isReadonly = ohConfig?.readonly ?? false
-
   const generators = [
     {
       data: components.responses,
@@ -363,8 +324,6 @@ async function makeComponentFiles(
       make: () => makePathItemsCode(components.pathItems!, isReadonly),
     },
   ] as const
-
-  // Build component output file map for cross-component import resolution
   const componentFiles: Record<string, string> = {}
   if (schemasFile) componentFiles.schemas = schemasFile
   const componentKeyMap = {
@@ -378,12 +337,13 @@ async function makeComponentFiles(
     callbacks: ohConfig?.components?.callbacks,
     pathItems: ohConfig?.components?.pathItems,
   }
-  for (const [key, cfg] of Object.entries(componentKeyMap)) {
-    if (cfg) {
-      componentFiles[key] = cfg.output.endsWith('.ts') ? cfg.output : `${cfg.output}/index.ts`
+  for (const [k, config] of Object.entries(componentKeyMap)) {
+    if (config) {
+      componentFiles[k] = config.output.endsWith('.ts')
+        ? config.output
+        : `${config.output}/index.ts`
     }
   }
-  // Auto-populate component files from base output for types with data
   if (componentsBaseOutput) {
     const componentTypeKeys = [
       'parameters',
@@ -402,7 +362,6 @@ async function makeComponentFiles(
       }
     }
   }
-
   for (const gen of generators) {
     if (!gen.data) continue
     const componentConfig =
@@ -411,44 +370,29 @@ async function makeComponentFiles(
         ? { output: `${componentsBaseOutput}/${gen.configKey}/index.ts` }
         : undefined)
     if (!componentConfig) continue
-
     const output = componentConfig.output
     const isSplit = 'split' in componentConfig ? (componentConfig.split ?? false) : false
     const dir = output.endsWith('.ts') ? path.dirname(output) : output
     const file = output.endsWith('.ts') ? output : path.join(output, 'index.ts')
-
-    // Generate body code (declarations only)
     const bodyCode = await gen.make()
-
     if (isSplit && !output.endsWith('.ts')) {
-      // Split mode: each export const → individual file + barrel
       const splitResult = await splitComponentCode(bodyCode, dir, schemaLib, componentFiles)
       if (!splitResult.ok) return splitResult
     } else {
-      // Single file mode
-      // Build component paths relative to this component's file
       const paths = Object.fromEntries(
         Object.entries(componentFiles)
           .filter(([, f]) => f !== file)
           .map(([k, f]) => [k, makeModuleSpec(file, f)]),
       )
-
-      // Scan body and prepend imports
       const importLines = makeComponentImports(bodyCode, schemaLib, paths)
       const fullCode = importLines.length > 0 ? [...importLines, '', bodyCode].join('\n') : bodyCode
-
       const result = await core(fullCode, dir, file)
       if (!result.ok) return result
     }
   }
-
-  return { ok: true, value: undefined }
+  return { ok: true, value: undefined } as const
 }
 
-/**
- * Builds a map of component key → relative import path from the handlers directory.
- * Each configured component output path is resolved relative to the handlers dir.
- */
 function makeComponentPaths(
   handlersDir: string,
   schemasFile: string,
@@ -456,12 +400,8 @@ function makeComponentPaths(
   componentsBaseOutput?: string,
 ): Record<string, string> {
   const paths: Record<string, string> = {}
-
-  // Always include schemas (use import override if provided)
   const schemasImport = ohConfig?.components?.schemas?.import
   paths.schemas = schemasImport ?? computeRelativeImport(handlersDir, schemasFile)
-
-  // Map component config keys to import path keys
   const componentKeys = [
     'parameters',
     'headers',
@@ -473,93 +413,65 @@ function makeComponentPaths(
     'callbacks',
     'pathItems',
   ] as const
-
-  for (const key of componentKeys) {
-    const componentConfig = ohConfig?.components?.[key]
+  for (const k of componentKeys) {
+    const componentConfig = ohConfig?.components?.[k]
     if (componentConfig) {
-      // Use explicit import override if provided, otherwise compute relative path
       if (componentConfig.import) {
-        paths[key] = componentConfig.import
+        paths[k] = componentConfig.import
       } else {
         const output = componentConfig.output
         const file = output.endsWith('.ts') ? output : path.join(output, 'index.ts')
-        paths[key] = computeRelativeImport(handlersDir, file)
+        paths[k] = computeRelativeImport(handlersDir, file)
       }
     } else if (componentsBaseOutput) {
-      // Auto-derive path from base output directory
-      const file = path.join(componentsBaseOutput, key, 'index.ts')
-      paths[key] = computeRelativeImport(handlersDir, file)
+      const file = path.join(componentsBaseOutput, k, 'index.ts')
+      paths[k] = computeRelativeImport(handlersDir, file)
     }
   }
-
   return paths
 }
 
-/**
- * Splits component code into individual files with a barrel index.
- * Each `export const XxxYyy = ...` becomes its own file.
- */
 async function splitComponentCode(
   bodyCode: string,
   outputDir: string,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   componentFiles: Record<string, string>,
-): Promise<
-  { readonly ok: true; readonly value: undefined } | { readonly ok: false; readonly error: string }
-> {
-  // Split by `export const` declarations
+) {
   const declPattern = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/g
   const matches = Array.from(bodyCode.matchAll(declPattern), (m) => ({
     name: m[1],
     start: m.index!,
   }))
-
   const entries = matches.map((m, i) => {
     const end = i + 1 < matches.length ? matches[i + 1].start : bodyCode.length
     return { name: m.name, code: bodyCode.slice(m.start, end).trim() }
   })
-
   if (entries.length === 0) return { ok: true, value: undefined }
-
   const fileNames: string[] = []
-
   for (const entry of entries) {
-    // Convert PascalCase name to camelCase file name
     const fileName = entry.name.charAt(0).toLowerCase() + entry.name.slice(1)
     fileNames.push(fileName)
-
-    // Build component paths relative to this split file
     const filePath = path.join(outputDir, `${fileName}.ts`)
     const paths = Object.fromEntries(
       Object.entries(componentFiles).map(([k, f]) => [k, makeModuleSpec(filePath, f)]),
     )
-
     const importLines = makeComponentImports(entry.code, schemaLib, paths)
     const fullCode =
       importLines.length > 0 ? [...importLines, '', entry.code].join('\n') : entry.code
-
     const result = await core(fullCode, outputDir, filePath)
     if (!result.ok) return result
   }
-
-  // Generate barrel index
   const barrelCode = fileNames
     .toSorted()
     .map((name) => `export*from'./${name}'`)
     .join('\n')
-
   const barrelPath = path.join(outputDir, 'index.ts')
   const barrelResult = await core(barrelCode, outputDir, barrelPath)
   if (!barrelResult.ok) return barrelResult
-
-  return { ok: true, value: undefined }
+  return { ok: true, value: undefined } as const
 }
 
-/**
- * Computes a relative import path from a source directory to a target file.
- * Strips .ts extension for TypeScript import compatibility.
- */
-function computeRelativeImport(fromDir: string, toFile: string): string {
+function computeRelativeImport(fromDir: string, toFile: string) {
   const rel = path.relative(fromDir, toFile)
   const stripped = rel.replace(/\.ts$/, '').replace(/\/index$/, '')
   const normalized = stripped.replace(/\\/g, '/')

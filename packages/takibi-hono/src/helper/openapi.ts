@@ -11,15 +11,10 @@ import type {
 } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 
-// ─── Phase 1: Leaf functions (no internal dependency) ───
-
-/**
- * Wraps a schema expression with the library-specific optional wrapper.
- */
 export function makeOptional(
   expr: string,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   switch (schemaLib) {
     case 'zod':
       return `${expr}.optional()`
@@ -34,13 +29,10 @@ export function makeOptional(
   }
 }
 
-/**
- * Wraps fields into a library-specific object expression.
- */
 export function makeObjectExpression(
   fields: readonly string[],
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   const inner = fields.join(',')
   switch (schemaLib) {
     case 'zod':
@@ -56,13 +48,10 @@ export function makeObjectExpression(
   }
 }
 
-/**
- * Wraps a schema expression for validator middleware (resolver/Compile/standardSchemaV1).
- */
 export function wrapSchemaForValidator(
   expr: string,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   switch (schemaLib) {
     case 'effect':
       return `standardSchemaV1(${expr})`
@@ -75,9 +64,6 @@ export function wrapSchemaForValidator(
   }
 }
 
-/**
- * Generates externalDocs code fragment.
- */
 export function makeExternalDocsPart(externalDocs: NonNullable<Operation['externalDocs']>): string {
   const parts = [
     `url:${JSON.stringify(externalDocs.url)}`,
@@ -88,9 +74,6 @@ export function makeExternalDocsPart(externalDocs: NonNullable<Operation['extern
   return `externalDocs:{${parts.join(',')}}`
 }
 
-/**
- * Generates servers code fragment.
- */
 export function makeServersPart(servers: NonNullable<Operation['servers']>): string {
   const entries = servers.map((server) => {
     const parts = [
@@ -116,10 +99,6 @@ export function makeServersPart(servers: NonNullable<Operation['servers']>): str
   return `servers:[${entries.join(',')}]`
 }
 
-/**
- * Groups parameters by their location (path, query, header, cookie),
- * filtering out $ref objects and non-parameter values.
- */
 export function groupParametersByLocation(allParams: readonly unknown[]): {
   [k: string]: readonly {
     readonly name: string
@@ -137,30 +116,21 @@ export function groupParametersByLocation(allParams: readonly unknown[]): {
         [param.in]: [
           ...(acc[param.in] ?? []),
           { name: param.name, schema: param.schema, required: param.required === true },
-        ],
+        ] as const,
       }),
       {},
     )
 }
 
-// ─── Phase 2: Functions depending on Phase 1 + existing modules ───
-
-/**
- * Resolves a schema ($ref or inline) and wraps with resolver().
- */
 export function resolveSchema(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   const expr = schema.$ref ? resolveRef(schema.$ref) : schemaToInlineExpression(schema, schemaLib)
   const wrapped = wrapSchemaForValidator(expr, schemaLib)
   return `resolver(${wrapped})`
 }
 
-/**
- * Generates content entries from a content map (media type + schema).
- * When wrapWithResolver is true, schemas are wrapped with resolver().
- */
 export function makeContent(
   content: Content | { [k: string]: unknown },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -181,10 +151,7 @@ export function makeContent(
     })
 }
 
-/**
- * Generates a header entry code string.
- */
-export function makeHeader(headerName: string, header: Header | Reference): string {
+export function makeHeader(headerName: string, header: Header | Reference) {
   if (isRefObject(header) && header.$ref) {
     return `${JSON.stringify(headerName)}:${resolveRef(header.$ref)}`
   }
@@ -200,11 +167,6 @@ export function makeHeader(headerName: string, header: Header | Reference): stri
   return `${JSON.stringify(headerName)}:{${parts.join(',')}}`
 }
 
-// ─── Phase 3: Composite functions ───
-
-/**
- * Generates a response entry code string for a single status code.
- */
 export function makeResponse(
   statusCode: string,
   response: {
@@ -214,11 +176,10 @@ export function makeResponse(
     readonly headers?: { [k: string]: Header | Reference }
   },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   if (response.$ref) {
     return `${statusCode}:${resolveRef(response.$ref)}`
   }
-
   const parts = [
     ...(response.description ? [`description:${JSON.stringify(response.description)}`] : []),
     ...(response.content

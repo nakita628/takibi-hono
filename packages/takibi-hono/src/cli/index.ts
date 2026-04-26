@@ -1,17 +1,9 @@
 import { readConfig } from '../config/index.js'
 import { hono } from '../core/index.js'
 
-/**
- * CLI entry point for takibi-hono code generation.
- *
- * Reads `takibi-hono.config.ts` from the current directory and generates code.
- */
-export async function takibiHono(): Promise<
-  { readonly ok: true; readonly value: string } | { readonly ok: false; readonly error: string }
-> {
+export async function takibiHono() {
   const configResult = await readConfig()
   if (!configResult.ok) return configResult
-
   const config = configResult.value
   const result = await hono({
     input: config.input,
@@ -21,8 +13,6 @@ export async function takibiHono(): Promise<
     openapi: config.openapi,
     'takibi-hono': config['takibi-hono'],
   })
-
   if (!result.ok) return result
-
-  return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
+  return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` } as const
 }

@@ -1,24 +1,11 @@
 import type { Schema } from '../openapi/index.js'
 
-/**
- * Detects circular references in OpenAPI component schemas using Tarjan's SCC algorithm.
- *
- * Builds a directed graph from $ref relationships between schemas,
- * then finds all strongly connected components (SCCs) with more than one node
- * or self-referencing nodes.
- *
- * @param schemas - OpenAPI components.schemas map
- * @returns Set of schema names that participate in circular references
- */
-export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): ReadonlySet<string> {
-  // Build adjacency list
+export function detectCircularRefs(schemas: { readonly [k: string]: Schema }) {
   const graph = new Map<string, readonly string[]>()
   for (const [name, schema] of Object.entries(schemas)) {
     const refs = collectRefs(schema)
     graph.set(name, refs)
   }
-
-  // Tarjan's SCC algorithm
   const circularNames = new Set<string>()
   let index = 0
   const nodeIndex = new Map<string, number>()
@@ -32,7 +19,6 @@ export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): R
     index++
     stack.push(name)
     onStack.add(name)
-
     const neighbors = graph.get(name) ?? []
     for (const neighbor of neighbors) {
       if (!graph.has(neighbor)) continue // skip refs to non-existent schemas
@@ -52,8 +38,6 @@ export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): R
         onStack.delete(w)
         scc.push(w)
       } while (w !== name)
-
-      // An SCC is circular if it has more than one node, or a single node with a self-edge
       if (scc.length > 1) {
         for (const n of scc) circularNames.add(n)
       } else if (scc.length === 1) {
@@ -74,9 +58,6 @@ export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): R
   return circularNames
 }
 
-/**
- * Collects all schema names referenced by $ref in a schema (recursive).
- */
 function collectRefs(schema: Schema): readonly string[] {
   const refFromSchema = (s: Schema): readonly string[] => {
     const selfRef =
@@ -101,9 +82,6 @@ function collectRefs(schema: Schema): readonly string[] {
   return refFromSchema(schema)
 }
 
-/**
- * Returns the lazy wrapper syntax for circular schemas in each library.
- */
 export function getLazyWrapper(schemaLib: string): {
   readonly open: string
   readonly close: string
