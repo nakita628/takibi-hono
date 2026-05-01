@@ -21,7 +21,6 @@ export function schemaToInlineExpression(
   if (schema.$ref) {
     return resolveRef(schema.$ref)
   }
-
   // Handle allOf/anyOf/oneOf combinators before dispatching to library
   if (schema.allOf) {
     return handleAllOf(schema.allOf, schemaLib)
@@ -32,7 +31,6 @@ export function schemaToInlineExpression(
   if (schema.anyOf) {
     return handleUnion(schema.anyOf, schemaLib)
   }
-
   switch (schemaLib) {
     case 'zod':
       return zodInline(schema)
