@@ -1,10 +1,9 @@
 import path from 'node:path'
 
+import { emit } from '../emit/index.js'
 import { getLibraryConfig } from '../generator/imports.js'
 import { extractSchemaExports } from '../generator/schema-expression.js'
-import { ast } from '../helper/ast.js'
-import { detectCircularRefs, getLazyWrapper } from '../helper/circular.js'
-import { core } from '../helper/core.js'
+import { ast, detectCircularRefs, getLazyWrapper } from '../helper/ast.js'
 import { zodType } from '../helper/type.js'
 import type { Schema } from '../openapi/index.js'
 import { toPascalCase } from '../utils/index.js'
@@ -88,7 +87,7 @@ export async function makeSplitSchemas(
     lines.push(decl)
     const fileName = `${uncapitalize(name)}.ts`
     const filePath = path.join(outputDir, fileName)
-    const result = await core(lines.join('\n'), outputDir, filePath)
+    const result = await emit(lines.join('\n'), outputDir, filePath)
     if (!result.ok) return result
   }
   const barrelCode = schemaNames
@@ -96,7 +95,7 @@ export async function makeSplitSchemas(
     .map((name) => `export*from'./${uncapitalize(name)}'`)
     .join('\n')
   const barrelPath = path.join(outputDir, 'index.ts')
-  const barrelResult = await core(barrelCode, outputDir, barrelPath)
+  const barrelResult = await emit(barrelCode, outputDir, barrelPath)
   if (!barrelResult.ok) return barrelResult
   return { ok: true, value: undefined } as const
 }

@@ -1,5 +1,7 @@
 import ts from 'typescript'
 
+import type { Schema } from '../openapi/index.js'
+
 function makeSourceFile(code: string) {
   return ts.createSourceFile('temp.ts', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
 }
@@ -14,11 +16,11 @@ function getChildren(node: ts.Node): readonly ts.Node[] {
   return semanticChildren
 }
 
-function collectIdentifiers(node: ts.Node) {
+function collectIdentifiers(node: ts.Node): readonly string[] {
   const visit = (n: ts.Node): readonly string[] => {
-    const current = ts.isIdentifier(n) ? [n.text] : []
-    const children = getChildren(n).flatMap(visit)
-    return [...current, ...children] as const
+    const current: readonly string[] = ts.isIdentifier(n) ? [n.text] : []
+    const children: readonly string[] = getChildren(n).flatMap(visit)
+    return [...current, ...children]
   }
   return visit(node)
 }
@@ -29,12 +31,7 @@ function createDeclaration(
   refs: readonly string[],
   kind: 'variable' | 'type' | 'interface',
 ) {
-  return {
-    name,
-    fullText,
-    refs,
-    kind,
-  }
+  return { name, fullText, refs, kind }
 }
 
 function getDeclarationName(statement: ts.Statement) {
@@ -42,12 +39,8 @@ function getDeclarationName(statement: ts.Statement) {
     const declaration = statement.declarationList.declarations[0]
     return declaration && ts.isIdentifier(declaration.name) ? declaration.name.text : undefined
   }
-  if (ts.isTypeAliasDeclaration(statement)) {
-    return statement.name.text
-  }
-  if (ts.isInterfaceDeclaration(statement)) {
-    return statement.name.text
-  }
+  if (ts.isTypeAliasDeclaration(statement)) return statement.name.text
+  if (ts.isInterfaceDeclaration(statement)) return statement.name.text
   return undefined
 }
 
@@ -58,11 +51,10 @@ function getDeclarationKind(statement: ts.Statement) {
   return undefined
 }
 
-const isLazySchema = (statement: ts.Statement): boolean => {
+function isLazySchema(statement: ts.Statement): boolean {
   if (!ts.isVariableStatement(statement)) return false
   const declaration = statement.declarationList.declarations[0]
   if (!declaration?.initializer) return false
-
   const initText = declaration.initializer.getText()
   return (
     /^z\.lazy\s*\(/.test(initText) ||
@@ -78,15 +70,13 @@ function getStatementReferences(
   selfName: string,
   selfKind: 'variable' | 'type' | 'interface',
 ) {
-  if (isLazySchema(statement)) return []
+  if (isLazySchema(statement)) return [] as const
   const identifiers = collectIdentifiers(statement)
   return [
     ...new Set(
       identifiers.filter((id) => {
         if (!declNames.has(id)) return false
-        if (id === selfName && (selfKind === 'type' || selfKind === 'interface')) {
-          return true
-        }
+        if (id === selfName && (selfKind === 'type' || selfKind === 'interface')) return true
         return id !== selfName
       }),
     ),
@@ -163,4 +153,157 @@ export function ast(code: string): string {
   return topoSort(decls)
     .map((d) => d.fullText)
     .join('\n\n')
+}
+
+type TarjanState = {
+  readonly indices: Map<string, number>
+  readonly lowLinks: Map<string, number>
+  readonly onStack: Set<string>
+  readonly stack: readonly string[]
+  readonly sccs: readonly (readonly string[])[]
+  readonly index: number
+}
+
+function createInitialState(): TarjanState {
+  return {
+    indices: new Map(),
+    lowLinks: new Map(),
+    onStack: new Set(),
+    stack: [],
+    sccs: [],
+    index: 0,
+  }
+}
+
+function popStackUntil(
+  stack: readonly string[],
+  onStack: Set<string>,
+  name: string,
+): {
+  readonly scc: readonly string[]
+  readonly newStack: readonly string[]
+  readonly newOnStack: Set<string>
+} {
+  const idx = stack.lastIndexOf(name)
+  if (idx === -1) return { scc: [], newStack: stack, newOnStack: onStack }
+  const scc = stack.slice(idx)
+  const newStack = stack.slice(0, idx)
+  const newOnStack = new Set([...onStack].filter((n) => !scc.includes(n)))
+  return { scc, newStack, newOnStack }
+}
+
+function tarjanConnect(
+  name: string,
+  graph: ReadonlyMap<string, readonly string[]>,
+  state: TarjanState,
+): TarjanState {
+  const currentIndex = state.index
+  const indices = new Map(state.indices).set(name, currentIndex)
+  const lowLinks = new Map(state.lowLinks).set(name, currentIndex)
+  const stack: readonly string[] = [...state.stack, name]
+  const onStack = new Set([...state.onStack, name])
+
+  const initial: TarjanState = {
+    ...state,
+    indices,
+    lowLinks,
+    stack,
+    onStack,
+    index: currentIndex + 1,
+  }
+
+  const afterDeps = (graph.get(name) ?? []).reduce<TarjanState>((s, neighbor) => {
+    if (!graph.has(neighbor)) return s
+    if (!s.indices.has(neighbor)) {
+      const afterConnect = tarjanConnect(neighbor, graph, s)
+      const newLowLink = Math.min(
+        afterConnect.lowLinks.get(name) ?? 0,
+        afterConnect.lowLinks.get(neighbor) ?? 0,
+      )
+      const updatedLowLinks = new Map(afterConnect.lowLinks).set(name, newLowLink)
+      return { ...afterConnect, lowLinks: updatedLowLinks }
+    }
+    if (s.onStack.has(neighbor)) {
+      const newLowLink = Math.min(s.lowLinks.get(name) ?? 0, s.indices.get(neighbor) ?? 0)
+      const updatedLowLinks = new Map(s.lowLinks).set(name, newLowLink)
+      return { ...s, lowLinks: updatedLowLinks }
+    }
+    return s
+  }, initial)
+
+  if (afterDeps.lowLinks.get(name) === afterDeps.indices.get(name)) {
+    const { scc, newStack, newOnStack } = popStackUntil(afterDeps.stack, afterDeps.onStack, name)
+    return {
+      ...afterDeps,
+      stack: newStack,
+      onStack: newOnStack,
+      sccs: [...afterDeps.sccs, scc],
+    }
+  }
+  return afterDeps
+}
+
+function collectRefs(schema: Schema): readonly string[] {
+  const selfRef =
+    schema.$ref && schema.$ref.startsWith('#/components/schemas/')
+      ? [schema.$ref.split('/').at(-1) ?? '']
+      : []
+  const itemRefs = schema.items
+    ? Array.isArray(schema.items)
+      ? (schema.items as readonly Schema[]).flatMap(collectRefs)
+      : collectRefs(schema.items as Schema)
+    : []
+  const propRefs = schema.properties ? Object.values(schema.properties).flatMap(collectRefs) : []
+  const additionalRefs =
+    schema.additionalProperties && typeof schema.additionalProperties === 'object'
+      ? collectRefs(schema.additionalProperties)
+      : []
+  const compositionRefs = [
+    ...(schema.allOf ?? []),
+    ...(schema.oneOf ?? []),
+    ...(schema.anyOf ?? []),
+  ].flatMap(collectRefs)
+  const notRefs = schema.not ? collectRefs(schema.not) : []
+  return [
+    ...selfRef.filter((r) => r !== ''),
+    ...itemRefs,
+    ...propRefs,
+    ...additionalRefs,
+    ...compositionRefs,
+    ...notRefs,
+  ]
+}
+
+export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): ReadonlySet<string> {
+  const graph = new Map<string, readonly string[]>(
+    Object.entries(schemas).map(([name, schema]) => [name, collectRefs(schema)]),
+  )
+  const names = [...graph.keys()]
+  const finalState = names.reduce(
+    (state, n) => (state.indices.has(n) ? state : tarjanConnect(n, graph, state)),
+    createInitialState(),
+  )
+  return new Set(
+    finalState.sccs.flatMap((scc) => {
+      if (scc.length > 1) return [...scc]
+      const single = scc[0]
+      if (!single) return []
+      return (graph.get(single) ?? []).includes(single) ? [single] : []
+    }),
+  )
+}
+
+const LAZY_WRAPPERS: Record<string, { readonly open: string; readonly close: string }> = {
+  zod: { open: 'z.lazy(() => ', close: ')' },
+  valibot: { open: 'v.lazy(() => ', close: ')' },
+  typebox: { open: 'Type.Recursive(This => ', close: ')' },
+  arktype: { open: '', close: '' },
+  effect: { open: 'Schema.suspend(() => ', close: ')' },
+}
+
+export function getLazyWrapper(schemaLib: string): {
+  readonly open: string
+  readonly close: string
+} {
+  return LAZY_WRAPPERS[schemaLib] ?? { open: '', close: '' }
 }

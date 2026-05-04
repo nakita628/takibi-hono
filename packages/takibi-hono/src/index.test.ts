@@ -4,7 +4,6 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { register } from 'tsx/esm/api'
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from './config/index.js'
@@ -17,8 +16,6 @@ import { hono } from './core/index.js'
  *   1. readConfig() → parseConfig(mod.default)
  *   2. hono(config)
  *   3. Return success message or error
- *
- * Uses import() directly instead of `new Function('specifier', 'return import(specifier)')`.
  */
 async function runEntryPoint(
   dir: string,
@@ -31,7 +28,6 @@ async function runEntryPoint(
     const configPath = path.resolve(dir, 'takibi-hono.config.ts')
     if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
 
-    register()
     const url = pathToFileURL(configPath).href
     const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
     if (!('default' in mod) || mod.default === undefined)

@@ -415,7 +415,7 @@ describe('parseConfig', () => {
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.components.schemas: split mode requires directory, not .ts file',
+        'Invalid config: takibi-hono.components.schemas.output: split mode requires directory, not .ts file',
     })
   })
 

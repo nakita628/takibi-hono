@@ -1,8 +1,8 @@
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
+import { emit } from '../emit/index.js'
 import { setFormatOptions } from '../format/index.js'
-import { core } from '../helper/core.js'
 import { makeComponentImports, makeModuleSpec } from '../helper/imports.js'
 import { mergeAppFile, mergeBarrelFile, mergeHandlerFile } from '../merge/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
@@ -170,7 +170,7 @@ export async function hono(config: {
         exportTypes,
         readonly: isReadonly,
       })
-      const schemasResult = await core(schemasCode, schemasDir, schemasFile)
+      const schemasResult = await emit(schemasCode, schemasDir, schemasFile)
       if (!schemasResult.ok) return schemasResult
     }
   }
@@ -202,7 +202,7 @@ export async function hono(config: {
     const handlerOutput = path.join(handlersDir, `${groupName}.ts`)
     const existingCode = await readFileOrNull(handlerOutput)
     const finalCode = existingCode ? mergeHandlerFile(existingCode, generatedCode) : generatedCode
-    const handlerResult = await core(finalCode, handlersDir, handlerOutput)
+    const handlerResult = await emit(finalCode, handlersDir, handlerOutput)
     if (!handlerResult.ok) return handlerResult
   }
   if (handlerFileNames.length > 0) {
@@ -212,7 +212,7 @@ export async function hono(config: {
     const finalBarrel = existingBarrel
       ? mergeBarrelFile(existingBarrel, generatedBarrel)
       : generatedBarrel
-    const barrelResult = await core(finalBarrel, handlersDir, barrelOutput)
+    const barrelResult = await emit(finalBarrel, handlersDir, barrelOutput)
     if (!barrelResult.ok) return barrelResult
   }
   const expectedFiles = new Set([...handlerFileNames.map((name) => `${name}.ts`), 'index.ts'])
@@ -245,7 +245,7 @@ export async function hono(config: {
         const webhooksFile = webhooksOutput.endsWith('.ts')
           ? webhooksOutput
           : path.join(webhooksOutput, 'index.ts')
-        const webhooksResult = await core(webhooksCode, webhooksDir, webhooksFile)
+        const webhooksResult = await emit(webhooksCode, webhooksDir, webhooksFile)
         if (!webhooksResult.ok) return webhooksResult
       }
     }
@@ -258,7 +258,7 @@ export async function hono(config: {
   const appOutput = path.join(appDir, 'index.ts')
   const existingApp = await readFileOrNull(appOutput)
   const finalApp = existingApp ? mergeAppFile(existingApp, appCode) : appCode
-  const appResult = await core(finalApp, appDir, appOutput)
+  const appResult = await emit(finalApp, appDir, appOutput)
   if (!appResult.ok) return appResult
   return { ok: true, value: undefined } as const
 }
@@ -386,7 +386,7 @@ async function makeComponentFiles(
       )
       const importLines = makeComponentImports(bodyCode, schemaLib, paths)
       const fullCode = importLines.length > 0 ? [...importLines, '', bodyCode].join('\n') : bodyCode
-      const result = await core(fullCode, dir, file)
+      const result = await emit(fullCode, dir, file)
       if (!result.ok) return result
     }
   }
@@ -458,7 +458,7 @@ async function splitComponentCode(
     const importLines = makeComponentImports(entry.code, schemaLib, paths)
     const fullCode =
       importLines.length > 0 ? [...importLines, '', entry.code].join('\n') : entry.code
-    const result = await core(fullCode, outputDir, filePath)
+    const result = await emit(fullCode, outputDir, filePath)
     if (!result.ok) return result
   }
   const barrelCode = fileNames
@@ -466,7 +466,7 @@ async function splitComponentCode(
     .map((name) => `export*from'./${name}'`)
     .join('\n')
   const barrelPath = path.join(outputDir, 'index.ts')
-  const barrelResult = await core(barrelCode, outputDir, barrelPath)
+  const barrelResult = await emit(barrelCode, outputDir, barrelPath)
   if (!barrelResult.ok) return barrelResult
   return { ok: true, value: undefined } as const
 }

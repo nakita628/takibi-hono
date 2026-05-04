@@ -4,7 +4,6 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { register } from 'tsx/esm/api'
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from '../config/index.js'
@@ -18,10 +17,6 @@ import { hono } from '../core/index.js'
  * 2. Reads and dynamically imports the config file (just like readConfig)
  * 3. Parses with parseConfig (just like readConfig)
  * 4. Calls hono() (just like takibiHono)
- *
- * The only difference from the real CLI is using import() directly
- * instead of `new Function('specifier', 'return import(specifier)')`,
- * since the latter is not supported in the vite-plus test runner.
  */
 async function runCli(
   dir: string,
@@ -34,7 +29,6 @@ async function runCli(
     const configPath = path.resolve(dir, 'takibi-hono.config.ts')
     if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
 
-    register()
     const url = pathToFileURL(configPath).href
     const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
     if (!('default' in mod) || mod.default === undefined)
