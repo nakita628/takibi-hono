@@ -1,18 +1,9 @@
 import { Node, Project, type SourceFile, SyntaxKind } from 'ts-morph'
 
-const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'] as const
-
-type RouteInfo = {
-  readonly body: string
-  readonly comment: string | undefined
-}
-
-type Replacement = readonly [start: number, end: number, text: string]
-
 /**
  * Parses a code snippet into a temporary in-memory SourceFile for AST analysis.
  */
-function parseSnippet(code: string): SourceFile {
+function parseSnippet(code: string) {
   return new Project({ useInMemoryFileSystem: true }).createSourceFile('snippet.ts', code)
 }
 
@@ -31,7 +22,7 @@ function makeSourcePair(existingCode: string, generatedCode: string) {
  * Returns the source position just after the last import declaration.
  * Returns 0 if there are no import declarations.
  */
-function getBodyStart(file: SourceFile): number {
+function getBodyStart(file: SourceFile) {
   const decls = file.getImportDeclarations()
   return decls.length > 0 ? decls[decls.length - 1].getEnd() : 0
 }
@@ -40,7 +31,7 @@ function getBodyStart(file: SourceFile): number {
  * Returns the source slice that includes everything up to (and including) the
  * trailing newline after the last import. Empty string when there are no imports.
  */
-function extractImportSection(file: SourceFile, code: string): string {
+function extractImportSection(file: SourceFile, code: string) {
   const end = getBodyStart(file)
   return end === 0 ? '' : `${code.slice(0, end)}\n`
 }
@@ -50,7 +41,7 @@ function extractImportSection(file: SourceFile, code: string): string {
  * Each op is `[start, end, replacement]`. Ops are applied right-to-left so
  * earlier indices are not invalidated.
  */
-function applyRangeOps(code: string, ops: readonly Replacement[]): string {
+function applyRangeOps(code: string, ops: readonly [start: number, end: number, text: string][]) {
   return [...ops]
     .toSorted(([a], [b]) => b - a)
     .reduce((acc, [start, end, text]) => acc.slice(0, start) + text + acc.slice(end), code)
@@ -66,7 +57,7 @@ function* iterateRouteCalls(file: SourceFile) {
     const expr = call.getExpression()
     if (!Node.isPropertyAccessExpression(expr)) continue
     const method = expr.getName()
-    if (!HTTP_METHODS.includes(method as (typeof HTTP_METHODS)[number])) continue
+    if (!['get', 'post', 'put', 'patch', 'delete', 'options', 'head'].includes(method)) continue
     const args = call.getArguments()
     if (args.length < 2) continue
     const pathArg = args[0]
@@ -79,9 +70,12 @@ function* iterateRouteCalls(file: SourceFile) {
  * Extracts existing route handlers (final argument of each `.method()` call)
  * along with any leading JSDoc comment. Keyed by `${method}:${path}`.
  */
-function extractRouteInfo(code: string): ReadonlyMap<string, RouteInfo> {
+function extractRouteInfo(code: string) {
   const file = parseSnippet(code)
-  const result = new Map<string, RouteInfo>()
+  const result = new Map<string, {
+  readonly body: string
+  readonly comment: string | undefined
+}>()
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const dotPos = propAccess.getNameNode().getStart() - 1
     const before = code.slice(0, dotPos)
@@ -99,14 +93,14 @@ function extractRouteInfo(code: string): ReadonlyMap<string, RouteInfo> {
  * (and isn't a stub), substitute the generated last-argument with the existing
  * one. Returns the rewritten generated code.
  */
-function replaceRouteParts(
-  generatedCode: string,
-  existingRoutes: ReadonlyMap<string, RouteInfo>,
-): string {
+function replaceRouteParts(generatedCode: string, existingRoutes: ReadonlyMap<string, {
+  readonly body: string
+  readonly comment: string | undefined
+}>) {
   const file = parseSnippet(generatedCode)
   const seenPositions = new Set<number>()
   const STUBS = new Set(['(c)=>{}', '(c)=>{return}'])
-  const ops: Replacement[] = []
+  const ops: readonly[start: number, end: number, text: string][] = []
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const namePos = propAccess.getNameNode().getStart()
     if (seenPositions.has(namePos)) continue
@@ -129,7 +123,7 @@ function replaceRouteParts(
  * - Imports are reconciled: user imports kept, generator-managed imports overwritten.
  * - Leading JSDoc comments above route calls in existing are restored on output.
  */
-export function mergeHandlerFile(existingCode: string, generatedCode: string): string {
+export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   const existingRoutes = extractRouteInfo(existingCode)
   const mergedGenerated = replaceRouteParts(generatedCode, existingRoutes)
 
@@ -168,7 +162,7 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string): s
  * - Code after api is preserved.
  * - Imports are reconciled (user imports kept, hono/relative imports overwritten).
  */
-export function mergeAppFile(existingCode: string, generatedCode: string): string {
+export function mergeAppFile(existingCode: string, generatedCode: string) {
   const { existingFile, generatedFile } = makeSourcePair(existingCode, generatedCode)
   const existingApiStmt = findApiStatement(existingFile)
   const generatedApiStmt = findApiStatement(generatedFile)
@@ -188,7 +182,7 @@ export function mergeAppFile(existingCode: string, generatedCode: string): strin
     .trim()}\n`
 }
 
-export function mergeBarrelFile(_existingCode: string, generatedCode: string): string {
+export function mergeBarrelFile(_existingCode: string, generatedCode: string) {
   return generatedCode
 }
 
@@ -201,10 +195,10 @@ function findApiStatement(file: SourceFile) {
     )
 }
 
-function restoreRouteComments(
-  code: string,
-  existingRoutes: ReadonlyMap<string, RouteInfo>,
-): string {
+function restoreRouteComments(code: string, existingRoutes: ReadonlyMap<string, {
+  readonly body: string
+  readonly comment: string | undefined
+}>) {
   return [...existingRoutes.entries()]
     .filter(([, info]) => info.comment !== undefined)
     .reduce((result, [key, info]) => {
@@ -221,7 +215,7 @@ function restoreRouteComments(
  * Merges imports for an app file. Only `hono` and relative imports are
  * generator-managed; everything else from the user is preserved verbatim.
  */
-function mergeAppImports(existingFile: SourceFile, generatedImports: string): string {
+function mergeAppImports(existingFile: SourceFile, generatedImports: string) {
   const userImports = existingFile
     .getImportDeclarations()
     .filter((decl) => {
@@ -234,7 +228,7 @@ function mergeAppImports(existingFile: SourceFile, generatedImports: string): st
     : generatedImports
 }
 
-const HANDLER_IMPORT_SOURCES: ReadonlySet<string> = new Set([
+const HANDLER_IMPORT_SOURCES = new Set<string>([
   'hono',
   'hono-openapi',
   'hono-openapi/zod',
@@ -262,7 +256,7 @@ const HANDLER_IMPORT_SOURCES: ReadonlySet<string> = new Set([
  * are managed by the generator (handler import sources), are relative, or are
  * already declared by the generated file with the same names.
  */
-function mergeImports(existingFile: SourceFile, generatedImports: string): string {
+function mergeImports(existingFile: SourceFile, generatedImports: string) {
   const generatedFile = parseSnippet(generatedImports)
   const generatedDecls = generatedFile.getImportDeclarations()
   const generatedSpecifiers = new Set(generatedDecls.map((d) => d.getModuleSpecifierValue()))

@@ -21,15 +21,20 @@ type ViteDevServer = {
   ssrLoadModule: (moduleId: string) => Promise<{ [k: string]: unknown }>
 }
 
-const toAbsolutePath = (relativePath: string) => path.resolve(process.cwd(), relativePath)
+function toAbsolutePath(relativePath: string) {
+  return path.resolve(process.cwd(), relativePath)
+}
 
-const isInputFile = (filePath: string, inputDirectory: string): boolean =>
-  filePath.startsWith(inputDirectory) &&
-  (filePath.endsWith('.yaml') || filePath.endsWith('.json') || filePath.endsWith('.tsp'))
+function isInputFile(filePath: string, inputDirectory: string) {
+  return (
+    filePath.startsWith(inputDirectory) &&
+    (filePath.endsWith('.yaml') || filePath.endsWith('.json') || filePath.endsWith('.tsp'))
+  )
+}
 
-const debounce = (delayMs: number, callback: () => void): (() => void) => {
+function debounce(delayMs: number, callback: () => void) {
   const timerStorage = new WeakMap<() => void, ReturnType<typeof setTimeout>>()
-  const wrapped = (): void => {
+  const wrapped = () => {
     const prev = timerStorage.get(wrapped)
     if (prev !== undefined) clearTimeout(prev)
     timerStorage.set(wrapped, setTimeout(callback, delayMs))
@@ -37,8 +42,8 @@ const debounce = (delayMs: number, callback: () => void): (() => void) => {
   return wrapped
 }
 
-const listTypeScriptFilesShallow = async (directoryPath: string): Promise<readonly string[]> =>
-  fsp
+async function listTypeScriptFilesShallow(directoryPath: string) {
+  return fsp
     .stat(directoryPath)
     .then((stats) =>
       stats.isDirectory()
@@ -49,46 +54,46 @@ const listTypeScriptFilesShallow = async (directoryPath: string): Promise<readon
                 .filter((e) => e.isFile() && e.name.endsWith('.ts'))
                 .map((e) => path.join(directoryPath, e.name)),
             )
-        : [],
+        : ([] as string[]),
     )
-    .catch((): string[] => [])
+    .catch(() => [] as string[])
+}
 
-const deleteTypeScriptFiles = async (filePaths: readonly string[]): Promise<readonly string[]> =>
-  Promise.all(
+async function deleteTypeScriptFiles(filePaths: readonly string[]) {
+  const results = await Promise.all(
     filePaths.map((fp) =>
       fsp
         .unlink(fp)
         .then(() => fp)
         .catch(() => null),
     ),
-  ).then((results) => results.filter((r) => r !== null))
+  )
+  return results.filter((r) => r !== null)
+}
 
-const isComponentConfig = (v: unknown): v is { readonly output: string } =>
-  typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
+function isComponentConfig(v: unknown): v is { readonly output: string } {
+  return typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
+}
 
-const extractOutputPaths = (config: Config): readonly string[] =>
-  [
-    config['takibi-hono']?.handlers?.output,
-    ...Object.entries(config['takibi-hono']?.components ?? {})
-      .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
-      .map(([, v]) => (isComponentConfig(v) ? v.output : undefined)),
-    ...(typeof config['takibi-hono']?.components?.output === 'string'
-      ? [config['takibi-hono'].components.output]
-      : []),
-  ]
-    .filter((p): p is string => p !== undefined)
+function extractOutputPaths(config: Config) {
+  const takibiHono = config['takibi-hono']
+  const componentOutputs = Object.entries(takibiHono?.components ?? {})
+    .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
+    .map(([, v]) => (isComponentConfig(v) ? v.output : undefined))
+  const baseOutput =
+    typeof takibiHono?.components?.output === 'string' ? [takibiHono.components.output] : []
+  return [takibiHono?.handlers?.output, ...componentOutputs, ...baseOutput]
+    .filter((p) => p !== undefined)
     .map(toAbsolutePath)
+}
 
-const cleanupStaleOutputs = async (
-  previousConfig: Config,
-  currentConfig: Config,
-): Promise<readonly string[]> => {
+async function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
   const previousPaths = new Set(extractOutputPaths(previousConfig))
   const currentPaths = new Set(extractOutputPaths(currentConfig))
   const stalePaths = [...previousPaths].filter((p) => !currentPaths.has(p))
 
-  return Promise.all(
-    stalePaths.map(async (stalePath): Promise<string | null> => {
+  const results = await Promise.all(
+    stalePaths.map(async (stalePath) => {
       const stats = await fsp.stat(stalePath).catch(() => null)
       if (!stats) return null
       if (stats.isDirectory()) {
@@ -101,10 +106,11 @@ const cleanupStaleOutputs = async (
       }
       return null
     }),
-  ).then((results) => results.filter((r) => r !== null))
+  )
+  return results.filter((r) => r !== null)
 }
 
-const readConfigWithHotReload = async (server: ViteDevServer) => {
+async function readConfigWithHotReload(server: ViteDevServer) {
   const absoluteConfigPath = toAbsolutePath('takibi-hono.config.ts')
   try {
     const resolved = await server.pluginContainer.resolveId(absoluteConfigPath)
@@ -127,7 +133,7 @@ const readConfigWithHotReload = async (server: ViteDevServer) => {
   }
 }
 
-const runGeneration = async (config: Config): Promise<{ readonly logs: readonly string[] }> => {
+async function runGeneration(config: Config) {
   // Clean up split directories before regeneration
   const components = config['takibi-hono']?.components ?? {}
   const splitCleanups: Promise<string | null>[] = []
@@ -176,7 +182,7 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
   }
 }
 
-const addInputGlobsToWatcher = (server: ViteDevServer, absoluteInputPath: string): string => {
+function addInputGlobsToWatcher(server: ViteDevServer, absoluteInputPath: string) {
   const inputDirectory = path.dirname(absoluteInputPath)
   server.watcher.add([
     absoluteInputPath,

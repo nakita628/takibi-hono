@@ -13,14 +13,8 @@ const ConfigSchema = v.strictObject({
     'input must be .yaml | .json | .tsp',
   ),
   basePath: v.exactOptional(v.string()),
-  schema: v.union(
-    [
-      v.literal('zod'),
-      v.literal('valibot'),
-      v.literal('typebox'),
-      v.literal('arktype'),
-      v.literal('effect'),
-    ],
+  schema: v.picklist(
+    ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const,
     'schema must be "zod" | "valibot" | "typebox" | "arktype" | "effect"',
   ),
   openapi: v.exactOptional(v.boolean()),
@@ -50,7 +44,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -72,7 +66,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -94,7 +88,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -116,7 +110,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -138,7 +132,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -160,7 +154,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -182,7 +176,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -204,7 +198,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -226,7 +220,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -248,7 +242,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -270,7 +264,7 @@ const ConfigSchema = v.strictObject({
                 split: v.exactOptional(v.literal(false)),
                 output: v.pipe(
                   v.string(),
-                  v.transform((v: string) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
                 ),
                 import: v.exactOptional(v.string()),
                 exportTypes: v.exactOptional(v.boolean()),
@@ -287,7 +281,9 @@ export function parseConfig(config: unknown) {
   const result = v.safeParse(ConfigSchema, config)
   if (!result.success) {
     const issue = result.issues[0]
-    const path = issue.path ? issue.path.map((p) => ('key' in p ? p.key : String(p))).join('.') : ''
+    const path = issue.path
+      ? issue.path.map((p) => ('key' in p ? p.key : String(p))).join('.')
+      : ''
     const prefix = path ? `${path}: ` : ''
     return { ok: false, error: `Invalid config: ${prefix}${issue.message}` } as const
   }
