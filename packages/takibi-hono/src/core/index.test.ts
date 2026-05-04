@@ -785,13 +785,17 @@ export const petsHandler = new Hono()
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
+  .meta({
+    ref: 'Pet',
+    description: 'A pet in the store',
+    examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .meta({ description: 'Data for creating a new pet' })
+  .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -965,7 +969,11 @@ export default app
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
+  .meta({
+    ref: 'Pet',
+    description: 'A pet in the store',
+    examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  })
 
 export type Pet = z.infer<typeof PetSchema>
 `)
@@ -991,7 +999,7 @@ export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .meta({ description: 'Data for creating a new pet' })
+  .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -1342,26 +1350,30 @@ export const CreateUserBodyRequestBody = {
         const schemas = await fsp.readFile(path.join(d, 'schemas.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
 export type User = z.infer<typeof UserSchema>
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 
 export type Error = z.infer<typeof ErrorSchema>
 `)
@@ -1555,7 +1567,7 @@ export default app
 export const PetSchema = v.pipe(
   v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
   v.description('A pet in the store'),
-  v.metadata({ examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
+  v.metadata({ ref: 'Pet', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
 )
 
 export type Pet = v.InferOutput<typeof PetSchema>
@@ -1587,6 +1599,7 @@ export type Pet = v.InferOutput<typeof PetSchema>
 export const CreatePetSchema = v.pipe(
   v.object({ name: v.string(), tag: v.optional(v.string()) }),
   v.description('Data for creating a new pet'),
+  v.metadata({ ref: 'CreatePet' }),
 )
 
 export type CreatePet = v.InferOutput<typeof CreatePetSchema>
@@ -1647,6 +1660,7 @@ export const PetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({
+  identifier: 'Pet',
   description: 'A pet in the store',
   examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
 })
@@ -1680,7 +1694,7 @@ export type Pet = typeof PetSchema.Encoded
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'Data for creating a new pet' })
+}).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = typeof CreatePetSchema.Encoded
 `)
@@ -1860,26 +1874,30 @@ export * from './userListResponseResponse'
         const schemas = await fsp.readFile(path.join(d, 'schemas.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
 export type User = z.infer<typeof UserSchema>
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 
 export type Error = z.infer<typeof ErrorSchema>
 `)
@@ -2371,22 +2389,26 @@ export const CreatePetSchema = z
         const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 `)
 
         const responses = await fsp.readFile(

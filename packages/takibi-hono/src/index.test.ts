@@ -53,7 +53,13 @@ async function runEntryPoint(
     const ohConfig = config['takibi-hono']
     const useOpenAPI = config.openapi === true
     const layout = resolveLayout(ohConfig)
-    const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+    const schemasResult = await generateSchemas(
+      openapi,
+      config.schema,
+      useOpenAPI,
+      ohConfig,
+      layout,
+    )
     if (!schemasResult.ok) return schemasResult
     if (useOpenAPI) {
       const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
@@ -444,14 +450,14 @@ export const PetSchema = Schema.Struct({
   id: Schema.Number.pipe(Schema.int()),
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'A pet in the store' })
+}).annotations({ identifier: 'Pet', description: 'A pet in the store' })
 
 export type Pet = typeof PetSchema.Encoded
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'Data for creating a new pet' })
+}).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = typeof CreatePetSchema.Encoded
 `)

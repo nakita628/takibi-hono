@@ -41,7 +41,7 @@ export async function takibiHono() {
   const ohConfig = config['takibi-hono']
   const useOpenAPI = config.openapi === true
   const layout = resolveLayout(ohConfig)
-  const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+  const schemasResult = await generateSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
   if (!schemasResult.ok) return schemasResult
   if (useOpenAPI) {
     const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)

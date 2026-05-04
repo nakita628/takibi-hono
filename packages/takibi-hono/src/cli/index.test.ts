@@ -51,7 +51,13 @@ async function runCli(
     const ohConfig = config['takibi-hono']
     const useOpenAPI = config.openapi === true
     const layout = resolveLayout(ohConfig)
-    const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+    const schemasResult = await generateSchemas(
+      openapi,
+      config.schema,
+      useOpenAPI,
+      ohConfig,
+      layout,
+    )
     if (!schemasResult.ok) return schemasResult
     if (useOpenAPI) {
       const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
@@ -596,16 +602,18 @@ export const petsHandler = new Hono()
         const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 `)
 
         const responses = await fsp.readFile(

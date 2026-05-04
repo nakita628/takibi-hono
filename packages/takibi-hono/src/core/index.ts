@@ -91,6 +91,7 @@ export function resolveLayout(ohConfig: TakibiHonoOptions | undefined): Layout {
 export async function generateSchemas(
   openapi: OpenAPI,
   schemaLib: SchemaLib,
+  useOpenAPI: boolean,
   ohConfig: TakibiHonoOptions | undefined,
   layout: Layout,
 ) {
@@ -99,16 +100,21 @@ export async function generateSchemas(
   const exportTypes = schemasConfig?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
   const isReadonly = ohConfig?.readonly ?? false
   const split = schemasConfig?.split ?? false
+  // ref registration only matters when the project emits hono-openapi routes;
+  // in plain Hono mode (`openapi: false`) `components.schemas` is unused.
+  const registerRef = useOpenAPI
   if (split) {
     const splitDir = layout.schemasFile.replace(/\/index\.ts$/, '').replace(/\.ts$/, '')
     return makeSplitSchemas(openapi.components.schemas, schemaLib, splitDir, {
       exportTypes,
       readonly: isReadonly,
+      registerRef,
     })
   }
   const schemasCode = await makeSchemasCode(openapi.components.schemas, schemaLib, {
     exportTypes,
     readonly: isReadonly,
+    registerRef,
   })
   return emit(schemasCode, layout.schemasDir, layout.schemasFile)
 }
@@ -301,7 +307,7 @@ export async function hono(config: {
   const ohConfig = config['takibi-hono']
   const useOpenAPI = config.openapi === true
   const layout = resolveLayout(ohConfig)
-  const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+  const schemasResult = await generateSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
   if (!schemasResult.ok) return schemasResult
   if (useOpenAPI) {
     const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)

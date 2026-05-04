@@ -22,11 +22,9 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string(),age:z.int().optional()})',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string(),age:z.int().optional()})`,
     )
   })
 
@@ -45,11 +43,9 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"})',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"})`,
     )
   })
 
@@ -67,11 +63,9 @@ describe('makeSchemasCode', () => {
       'valibot',
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const UserSchema = v.object({name:v.string()})',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const UserSchema = v.object({name:v.string()})`,
     )
   })
 
@@ -92,13 +86,11 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()})',
-        '',
-        'export const TodoSchema = z.object({title:z.string()})',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()})
+
+export const TodoSchema = z.object({title:z.string()})`,
     )
   })
 
@@ -115,13 +107,11 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()})',
-        '',
-        'export type User = z.infer<typeof UserSchema>',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()})
+
+export type User = z.infer<typeof UserSchema>`,
     )
   })
 
@@ -138,13 +128,11 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const UserSchema = v.object({name:v.string()})',
-        '',
-        'export type User = v.InferOutput<typeof UserSchema>',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const UserSchema = v.object({name:v.string()})
+
+export type User = v.InferOutput<typeof UserSchema>`,
     )
   })
 
@@ -161,14 +149,12 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import Type from'typebox'",
-        "import type{Static}from'typebox'",
-        '',
-        'export const UserSchema = Type.Object({name:Type.String()})',
-        '',
-        'export type User = Static<typeof UserSchema>',
-      ].join('\n'),
+      `import Type from'typebox'
+import type{Static}from'typebox'
+
+export const UserSchema = Type.Object({name:Type.String()})
+
+export type User = Static<typeof UserSchema>`,
     )
   })
 
@@ -185,13 +171,11 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import{type}from'arktype'",
-        '',
-        'export const UserSchema = type({name:"string"})',
-        '',
-        'export type User = typeof UserSchema.infer',
-      ].join('\n'),
+      `import{type}from'arktype'
+
+export const UserSchema = type({name:"string"})
+
+export type User = typeof UserSchema.infer`,
     )
   })
 
@@ -208,13 +192,11 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import{Schema}from'effect'",
-        '',
-        'export const UserSchema = Schema.Struct({name:Schema.String})',
-        '',
-        'export type User = typeof UserSchema.Encoded',
-      ].join('\n'),
+      `import{Schema}from'effect'
+
+export const UserSchema = Schema.Struct({name:Schema.String})
+
+export type User = typeof UserSchema.Encoded`,
     )
   })
 
@@ -236,17 +218,15 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()})',
-        '',
-        'export type User = z.infer<typeof UserSchema>',
-        '',
-        'export const TodoSchema = z.object({title:z.string()})',
-        '',
-        'export type Todo = z.infer<typeof TodoSchema>',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()})
+
+export type User = z.infer<typeof UserSchema>
+
+export const TodoSchema = z.object({title:z.string()})
+
+export type Todo = z.infer<typeof TodoSchema>`,
     )
   })
 
@@ -265,13 +245,11 @@ describe('makeSchemasCode', () => {
       { exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import{Schema}from'effect'",
-        '',
-        'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})',
-        '',
-        'export type Pet = typeof PetSchema.Encoded',
-      ].join('\n'),
+      `import{Schema}from'effect'
+
+export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})
+
+export type Pet = typeof PetSchema.Encoded`,
     )
   })
 
@@ -288,9 +266,9 @@ describe('makeSchemasCode', () => {
       { exportTypes: false },
     )
     expect(result).toBe(
-      ["import*as z from'zod'", '', 'export const UserSchema = z.object({name:z.string()})'].join(
-        '\n',
-      ),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()})`,
     )
   })
 
@@ -306,11 +284,9 @@ describe('makeSchemasCode', () => {
       'typebox',
     )
     expect(result).toBe(
-      [
-        "import Type from'typebox'",
-        '',
-        'export const UserSchema = Type.Object({name:Type.String()})',
-      ].join('\n'),
+      `import Type from'typebox'
+
+export const UserSchema = Type.Object({name:Type.String()})`,
     )
   })
 
@@ -326,11 +302,9 @@ describe('makeSchemasCode', () => {
       'valibot',
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const UserSchema = v.object({name:v.string()})',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const UserSchema = v.object({name:v.string()})`,
     )
   })
 
@@ -346,11 +320,9 @@ describe('makeSchemasCode', () => {
       'effect',
     )
     expect(result).toBe(
-      [
-        "import{Schema}from'effect'",
-        '',
-        'export const UserSchema = Schema.Struct({name:Schema.String})',
-      ].join('\n'),
+      `import{Schema}from'effect'
+
+export const UserSchema = Schema.Struct({name:Schema.String})`,
     )
   })
 
@@ -369,11 +341,9 @@ describe('makeSchemasCode', () => {
       'arktype',
     )
     expect(result).toBe(
-      [
-        "import{type}from'arktype'",
-        '',
-        'export const UserSchema = type({name:"string","age?":"number.integer"})',
-      ].join('\n'),
+      `import{type}from'arktype'
+
+export const UserSchema = type({name:"string","age?":"number.integer"})`,
     )
   })
 
@@ -390,11 +360,9 @@ describe('makeSchemasCode', () => {
       { exportTypes: false },
     )
     expect(result).toBe(
-      [
-        "import Type from'typebox'",
-        '',
-        'export const UserSchema = Type.Object({name:Type.String()})',
-      ].join('\n'),
+      `import Type from'typebox'
+
+export const UserSchema = Type.Object({name:Type.String()})`,
     )
   })
 
@@ -412,11 +380,9 @@ describe('makeSchemasCode', () => {
       'valibot',
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.metadata({examples:[{name:"Fido"}]}))',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.metadata({examples:[{name:"Fido"}]}))`,
     )
   })
 
@@ -438,13 +404,11 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'type CategoryType={name:string;children?:CategoryType[]}',
-        '',
-        'export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).optional()}))',
-      ].join('\n'),
+      `import*as z from'zod'
+
+type CategoryType={name:string;children?:CategoryType[]}
+
+export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).optional()}))`,
     )
   })
 
@@ -466,11 +430,9 @@ describe('makeSchemasCode', () => {
       'valibot',
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const CategorySchema:v.GenericSchema= v.lazy(() => v.object({name:v.string(),children:v.optional(v.array(v.lazy(() => CategorySchema)))}))',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const CategorySchema:v.GenericSchema= v.lazy(() => v.object({name:v.string(),children:v.optional(v.array(v.lazy(() => CategorySchema)))}))`,
     )
   })
 
@@ -491,13 +453,11 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const PetSchema = z.object({name:z.string()})',
-        '',
-        'export const OwnerSchema = z.object({pet:PetSchema})',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const PetSchema = z.object({name:z.string()})
+
+export const OwnerSchema = z.object({pet:PetSchema})`,
     )
   })
 
@@ -523,13 +483,11 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const BaseSchema = z.object({id:z.int()})',
-        '',
-        'export const ExtendedSchema = z.intersection(BaseSchema,z.object({name:z.string()}))',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const BaseSchema = z.object({id:z.int()})
+
+export const ExtendedSchema = z.intersection(BaseSchema,z.object({name:z.string()}))`,
     )
   })
 
@@ -552,11 +510,9 @@ describe('makeSchemasCode', () => {
       'effect',
     )
     expect(result).toBe(
-      [
-        "import{Schema}from'effect'",
-        '',
-        'export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Struct({name:Schema.String,children:Schema.optional(Schema.Array(Schema.suspend(() => CategorySchema)))}))',
-      ].join('\n'),
+      `import{Schema}from'effect'
+
+export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Struct({name:Schema.String,children:Schema.optional(Schema.Array(Schema.suspend(() => CategorySchema)))}))`,
     )
   })
 
@@ -579,11 +535,9 @@ describe('makeSchemasCode', () => {
       'typebox',
     )
     expect(result).toBe(
-      [
-        "import Type from'typebox'",
-        '',
-        'export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.String(),children:Type.Optional(Type.Array(This))}))',
-      ].join('\n'),
+      `import Type from'typebox'
+
+export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.String(),children:Type.Optional(Type.Array(This))}))`,
     )
   })
 
@@ -606,11 +560,9 @@ describe('makeSchemasCode', () => {
       'arktype',
     )
     expect(result).toBe(
-      [
-        "import{type}from'arktype'",
-        '',
-        'export const CategorySchema = type({name:"string","children?":"CategorySchema[]"})',
-      ].join('\n'),
+      `import{type}from'arktype'
+
+export const CategorySchema = type({name:"string","children?":"CategorySchema[]"})`,
     )
   })
 
@@ -636,17 +588,15 @@ describe('makeSchemasCode', () => {
       'zod',
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const BSchema:z.ZodType<BType>= z.lazy(() => z.object({a:ASchema}))',
-        '',
-        'type AType={b:z.infer<typeof BSchema>}',
-        '',
-        'export const ASchema:z.ZodType<AType>= z.lazy(() => z.object({b:BSchema}))',
-        '',
-        'type BType={a:z.infer<typeof ASchema>}',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const BSchema:z.ZodType<BType>= z.lazy(() => z.object({a:ASchema}))
+
+type AType={b:z.infer<typeof BSchema>}
+
+export const ASchema:z.ZodType<AType>= z.lazy(() => z.object({b:BSchema}))
+
+type BType={a:z.infer<typeof ASchema>}`,
     )
   })
 
@@ -664,11 +614,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()}).readonly()',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()}).readonly()`,
     )
   })
 
@@ -685,11 +633,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import*as v from'valibot'",
-        '',
-        'export const UserSchema = v.pipe(v.object({name:v.string()}),v.readonly())',
-      ].join('\n'),
+      `import*as v from'valibot'
+
+export const UserSchema = v.pipe(v.object({name:v.string()}),v.readonly())`,
     )
   })
 
@@ -706,11 +652,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import Type from'typebox'",
-        '',
-        'export const UserSchema = Type.Readonly(Type.Object({name:Type.String()}))',
-      ].join('\n'),
+      `import Type from'typebox'
+
+export const UserSchema = Type.Readonly(Type.Object({name:Type.String()}))`,
     )
   })
 
@@ -727,11 +671,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import{type}from'arktype'",
-        '',
-        'export const UserSchema = type({name:"string"}).readonly()',
-      ].join('\n'),
+      `import{type}from'arktype'
+
+export const UserSchema = type({name:"string"}).readonly()`,
     )
   })
 
@@ -748,11 +690,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import{Schema}from'effect'",
-        '',
-        'export const UserSchema = Schema.Struct({name:Schema.String})',
-      ].join('\n'),
+      `import{Schema}from'effect'
+
+export const UserSchema = Schema.Struct({name:Schema.String})`,
     )
   })
 
@@ -770,13 +710,11 @@ describe('makeSchemasCode', () => {
       { readonly: true, exportTypes: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()}).readonly()',
-        '',
-        'export type User = z.infer<typeof UserSchema>',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()}).readonly()
+
+export type User = z.infer<typeof UserSchema>`,
     )
   })
 
@@ -799,13 +737,11 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const UserSchema = z.object({name:z.string()}).readonly()',
-        '',
-        'export const TodoSchema = z.object({title:z.string()}).readonly()',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const UserSchema = z.object({name:z.string()}).readonly()
+
+export const TodoSchema = z.object({title:z.string()}).readonly()`,
     )
   })
 
@@ -824,11 +760,9 @@ describe('makeSchemasCode', () => {
       { readonly: true },
     )
     expect(result).toBe(
-      [
-        "import*as z from'zod'",
-        '',
-        'export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"}).readonly()',
-      ].join('\n'),
+      `import*as z from'zod'
+
+export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"}).readonly()`,
     )
   })
 })
@@ -876,23 +810,19 @@ describe('makeSplitSchemas', () => {
 
     const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
     expect(petContent).toBe(
-      [
-        "import * as z from 'zod'",
-        '',
-        'export const PetSchema = z.object({ name: z.string() })',
-        '',
-      ].join('\n'),
+      `import * as z from 'zod'
+
+export const PetSchema = z.object({ name: z.string() })
+`,
     )
 
     const ownerContent = fs.readFileSync(path.join(tmpDir, 'owner.ts'), 'utf-8')
     expect(ownerContent).toBe(
-      [
-        "import * as z from 'zod'",
-        "import { PetSchema } from './pet'",
-        '',
-        'export const OwnerSchema = z.object({ pet: PetSchema, name: z.string() })',
-        '',
-      ].join('\n'),
+      `import * as z from 'zod'
+import { PetSchema } from './pet'
+
+export const OwnerSchema = z.object({ pet: PetSchema, name: z.string() })
+`,
     )
   })
 
@@ -917,14 +847,12 @@ describe('makeSplitSchemas', () => {
 
     const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
     expect(petContent).toBe(
-      [
-        "import * as z from 'zod'",
-        '',
-        'export const PetSchema = z.object({ name: z.string() })',
-        '',
-        'export type Pet = z.infer<typeof PetSchema>',
-        '',
-      ].join('\n'),
+      `import * as z from 'zod'
+
+export const PetSchema = z.object({ name: z.string() })
+
+export type Pet = z.infer<typeof PetSchema>
+`,
     )
   })
 
@@ -949,14 +877,12 @@ describe('makeSplitSchemas', () => {
 
     const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
     expect(petContent).toBe(
-      [
-        "import { Schema } from 'effect'",
-        '',
-        'export const PetSchema = Schema.Struct({ name: Schema.String })',
-        '',
-        'export type Pet = typeof PetSchema.Encoded',
-        '',
-      ].join('\n'),
+      `import { Schema } from 'effect'
+
+export const PetSchema = Schema.Struct({ name: Schema.String })
+
+export type Pet = typeof PetSchema.Encoded
+`,
     )
   })
 
@@ -981,15 +907,13 @@ describe('makeSplitSchemas', () => {
 
     const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
     expect(petContent).toBe(
-      [
-        "import Type from 'typebox'",
-        "import type { Static } from 'typebox'",
-        '',
-        'export const PetSchema = Type.Object({ name: Type.String() })',
-        '',
-        'export type Pet = Static<typeof PetSchema>',
-        '',
-      ].join('\n'),
+      `import Type from 'typebox'
+import type { Static } from 'typebox'
+
+export const PetSchema = Type.Object({ name: Type.String() })
+
+export type Pet = Static<typeof PetSchema>
+`,
     )
   })
 
@@ -1013,12 +937,10 @@ describe('makeSplitSchemas', () => {
 
     const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
     expect(petContent).toBe(
-      [
-        "import Type from 'typebox'",
-        '',
-        'export const PetSchema = Type.Object({ name: Type.String() })',
-        '',
-      ].join('\n'),
+      `import Type from 'typebox'
+
+export const PetSchema = Type.Object({ name: Type.String() })
+`,
     )
   })
 
@@ -1050,14 +972,12 @@ describe('makeSplitSchemas', () => {
     // Imports must be in alphabetical order — Alpha before Beta — regardless
     // of how the schema body references them.
     expect(combined).toBe(
-      [
-        "import * as z from 'zod'",
-        "import { AlphaSchema } from './alpha'",
-        "import { BetaSchema } from './beta'",
-        '',
-        'export const CombinedSchema = z.object({ b: BetaSchema, a: AlphaSchema })',
-        '',
-      ].join('\n'),
+      `import * as z from 'zod'
+import { AlphaSchema } from './alpha'
+import { BetaSchema } from './beta'
+
+export const CombinedSchema = z.object({ b: BetaSchema, a: AlphaSchema })
+`,
     )
   })
 })
