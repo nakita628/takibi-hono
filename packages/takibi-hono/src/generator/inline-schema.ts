@@ -1,6 +1,7 @@
 import { isNullable, isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
+import { extractSchemaExports } from './schema-expression.js'
 
 /**
  * Extracts a single Schema from items (ignoring array/tuple form).
@@ -13,6 +14,14 @@ function singleItems(items: Schema | readonly Schema[] | undefined) {
 
 /**
  * Converts an OpenAPI Schema to an inline validation library expression.
+ *
+ * - Top-level `$ref`: returns bare reference (e.g. `UserSchema`).
+ * - With meta (`description` / `example` / `examples` / `deprecated`):
+ *   delegates to `schema-to-library` so each library gets its idiomatic meta
+ *   encoding (`.meta` / `v.pipe(...,v.metadata)` / `Type.X(...,opts)` /
+ *   `.describe` / `.annotations`). Lazy/suspend wrappers around nested $refs
+ *   are unwrapped because inline schemas live next to their referenced ones.
+ * - Without meta: hand-written body generation for backward-compat.
  */
 export function schemaToInlineExpression(
   schema: Schema,
@@ -20,6 +29,9 @@ export function schemaToInlineExpression(
 ) {
   if (schema.$ref) {
     return resolveRef(schema.$ref)
+  }
+  if (hasMeta(schema)) {
+    return inlineViaSchemaLibrary(schema, schemaLib)
   }
   // Handle allOf/anyOf/oneOf combinators before dispatching to library
   if (schema.allOf) {
@@ -42,6 +54,56 @@ export function schemaToInlineExpression(
       return arktypeInline(schema)
     case 'effect':
       return effectInline(schema)
+  }
+}
+
+function hasMeta(schema: Schema): boolean {
+  return Boolean(
+    schema.description ||
+    schema.example !== undefined ||
+    schema.examples !== undefined ||
+    schema.deprecated === true,
+  )
+}
+
+function inlineViaSchemaLibrary(
+  schema: Schema,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+): string {
+  // exportType=false suppresses the trailing `export type X = ...` line.
+  const code = extractSchemaExports('Inline', schema, schemaLib, false, false)
+  // Strip the leading `export const <Name>Schema = `.
+  const expr = code
+    .trim()
+    .replace(/^export\s+const\s+[A-Za-z_$][\w$]*Schema\s*=\s*/, '')
+    .trim()
+  return unwrapLazyRefs(expr, schemaLib)
+}
+
+/**
+ * schema-to-library wraps every $ref with `z.lazy(() => X)` (zod),
+ * `v.lazy(() => X)` (valibot), or `Schema.suspend(() => X)` (effect) to support
+ * forward references in component declarations. For inline schemas embedded in
+ * handler files, the referenced schemas are imported alongside, so we strip
+ * those wrappers to keep the generated code compact.
+ */
+function unwrapLazyRefs(
+  expr: string,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+): string {
+  const refToken = /([A-Za-z_$][A-Za-z0-9_$]*Schema)/.source
+  switch (schemaLib) {
+    case 'zod':
+      return expr.replace(new RegExp(`z\\.lazy\\(\\(\\)\\s*=>\\s*${refToken}\\)`, 'g'), '$1')
+    case 'valibot':
+      return expr.replace(new RegExp(`v\\.lazy\\(\\(\\)\\s*=>\\s*${refToken}\\)`, 'g'), '$1')
+    case 'effect':
+      return expr.replace(
+        new RegExp(`Schema\\.suspend\\(\\(\\)\\s*=>\\s*${refToken}\\)`, 'g'),
+        '$1',
+      )
+    default:
+      return expr
   }
 }
 

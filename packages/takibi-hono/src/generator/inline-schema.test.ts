@@ -1244,4 +1244,173 @@ describe('schemaToInlineExpression', () => {
       )
     })
   })
+
+  describe('meta-aware inline schemas (delegated to schema-to-library)', () => {
+    // When the inline schema has any of description / example / examples /
+    // deprecated, schemaToInlineExpression delegates to schema-to-library so
+    // each library gets its idiomatic meta encoding. Lazy/suspend wrappers
+    // around nested $refs are unwrapped because inline schemas live next to
+    // their referenced ones in the same generated file.
+
+    const userSchema: Schema = {
+      type: 'object',
+      description: 'A user',
+      properties: { id: { type: 'integer' }, name: { type: 'string' } },
+      required: ['id', 'name'],
+    }
+
+    it.concurrent('zod: description only → .meta({description})', () => {
+      expect(schemaToInlineExpression(userSchema, 'zod')).toBe(
+        'z.object({id:z.int(),name:z.string()}).meta({description:"A user"})',
+      )
+    })
+
+    it.concurrent('valibot: description only → v.pipe(...,v.description)', () => {
+      expect(schemaToInlineExpression(userSchema, 'valibot')).toBe(
+        'v.pipe(v.object({id:v.pipe(v.number(),v.integer()),name:v.string()}),v.description("A user"))',
+      )
+    })
+
+    it.concurrent('typebox: description only → Type.Object(...,{description})', () => {
+      expect(schemaToInlineExpression(userSchema, 'typebox')).toBe(
+        'Type.Object({id:Type.Integer(),name:Type.String()},{description:"A user"})',
+      )
+    })
+
+    it.concurrent('arktype: description only → .describe()', () => {
+      expect(schemaToInlineExpression(userSchema, 'arktype')).toBe(
+        'type({id:"number.integer",name:"string"}).describe("A user")',
+      )
+    })
+
+    it.concurrent('effect: description only → .annotations({description})', () => {
+      expect(schemaToInlineExpression(userSchema, 'effect')).toBe(
+        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user"})',
+      )
+    })
+
+    const userWithExample: Schema = {
+      type: 'object',
+      description: 'A user',
+      example: { id: 1, name: 'Alice' },
+      properties: { id: { type: 'integer' }, name: { type: 'string' } },
+      required: ['id', 'name'],
+    }
+
+    it.concurrent('zod: description + example → meta({description,examples:[example]})', () => {
+      expect(schemaToInlineExpression(userWithExample, 'zod')).toBe(
+        'z.object({id:z.int(),name:z.string()}).meta({description:"A user",examples:[{id:1,name:"Alice"}]})',
+      )
+    })
+
+    it.concurrent('valibot: description + example → pipe + v.metadata({examples})', () => {
+      expect(schemaToInlineExpression(userWithExample, 'valibot')).toBe(
+        'v.pipe(v.object({id:v.pipe(v.number(),v.integer()),name:v.string()}),v.description("A user"),v.metadata({examples:[{id:1,name:"Alice"}]}))',
+      )
+    })
+
+    it.concurrent('typebox: description + example → constructor opts {description,examples}', () => {
+      expect(schemaToInlineExpression(userWithExample, 'typebox')).toBe(
+        'Type.Object({id:Type.Integer(),name:Type.String()},{description:"A user",examples:[{id:1,name:"Alice"}]})',
+      )
+    })
+
+    it.concurrent('arktype: example is ignored — only .describe() emitted', () => {
+      // arktype has no equivalent for examples; schema-to-library only emits .describe().
+      expect(schemaToInlineExpression(userWithExample, 'arktype')).toBe(
+        'type({id:"number.integer",name:"string"}).describe("A user")',
+      )
+    })
+
+    it.concurrent('effect: description + example → .annotations({description,examples})', () => {
+      expect(schemaToInlineExpression(userWithExample, 'effect')).toBe(
+        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user",examples:[{id:1,name:"Alice"}]})',
+      )
+    })
+
+    const deprecatedSchema: Schema = {
+      type: 'object',
+      deprecated: true,
+      properties: { id: { type: 'integer' } },
+      required: ['id'],
+    }
+
+    it.concurrent('zod: deprecated → .meta({deprecated:true})', () => {
+      expect(schemaToInlineExpression(deprecatedSchema, 'zod')).toBe(
+        'z.object({id:z.int()}).meta({deprecated:true})',
+      )
+    })
+
+    it.concurrent('valibot: deprecated → v.pipe(...,v.metadata({deprecated:true}))', () => {
+      expect(schemaToInlineExpression(deprecatedSchema, 'valibot')).toBe(
+        'v.pipe(v.object({id:v.pipe(v.number(),v.integer())}),v.metadata({deprecated:true}))',
+      )
+    })
+
+    it.concurrent('typebox: deprecated → Type.Object(...,{deprecated:true})', () => {
+      expect(schemaToInlineExpression(deprecatedSchema, 'typebox')).toBe(
+        'Type.Object({id:Type.Integer()},{deprecated:true})',
+      )
+    })
+
+    it.concurrent('effect: deprecated nests under jsonSchema annotation', () => {
+      expect(schemaToInlineExpression(deprecatedSchema, 'effect')).toBe(
+        'Schema.Struct({id:Schema.Number.pipe(Schema.int())}).annotations({jsonSchema:{deprecated:true}})',
+      )
+    })
+
+    const wrapperWithRef: Schema = {
+      type: 'object',
+      description: 'A wrapper',
+      properties: { user: { $ref: '#/components/schemas/User' } },
+      required: ['user'],
+    }
+
+    it.concurrent('zod: nested $ref is unwrapped from z.lazy(() => UserSchema)', () => {
+      expect(schemaToInlineExpression(wrapperWithRef, 'zod')).toBe(
+        'z.object({user:UserSchema}).meta({description:"A wrapper"})',
+      )
+    })
+
+    it.concurrent('valibot: nested $ref is unwrapped from v.lazy(() => UserSchema)', () => {
+      expect(schemaToInlineExpression(wrapperWithRef, 'valibot')).toBe(
+        'v.pipe(v.object({user:UserSchema}),v.description("A wrapper"))',
+      )
+    })
+
+    it.concurrent('effect: nested $ref is unwrapped from Schema.suspend(() => UserSchema)', () => {
+      expect(schemaToInlineExpression(wrapperWithRef, 'effect')).toBe(
+        'Schema.Struct({user:UserSchema}).annotations({description:"A wrapper"})',
+      )
+    })
+
+    it.concurrent('typebox: nested $ref already bare (no unwrap needed)', () => {
+      expect(schemaToInlineExpression(wrapperWithRef, 'typebox')).toBe(
+        'Type.Object({user:UserSchema},{description:"A wrapper"})',
+      )
+    })
+
+    it.concurrent('top-level $ref returns bare reference (meta lives on referenced schema)', () => {
+      const ref: Schema = { $ref: '#/components/schemas/User' }
+      expect(schemaToInlineExpression(ref, 'zod')).toBe('UserSchema')
+      expect(schemaToInlineExpression(ref, 'valibot')).toBe('UserSchema')
+      expect(schemaToInlineExpression(ref, 'typebox')).toBe('UserSchema')
+      expect(schemaToInlineExpression(ref, 'arktype')).toBe('UserSchema')
+      expect(schemaToInlineExpression(ref, 'effect')).toBe('UserSchema')
+    })
+
+    it.concurrent('zod: integer constraints are preserved on meta path (regression vs non-meta path)', () => {
+      // The non-meta hand-written path drops min/max for integer; the meta
+      // path delegates to schema-to-library which keeps them.
+      const schema: Schema = {
+        type: 'object',
+        description: 'D',
+        properties: { age: { type: 'integer', minimum: 0, maximum: 120 } },
+        required: ['age'],
+      }
+      expect(schemaToInlineExpression(schema, 'zod')).toBe(
+        'z.object({age:z.int().min(0).max(120)}).meta({description:"D"})',
+      )
+    })
+  })
 })

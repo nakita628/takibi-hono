@@ -1,3 +1,9 @@
+import { schemaToArktype } from 'schema-to-library/arktype'
+import { schemaToEffect } from 'schema-to-library/effect'
+import { schemaToTypebox } from 'schema-to-library/typebox'
+import { schemaToValibot } from 'schema-to-library/valibot'
+import { schemaToZod } from 'schema-to-library/zod'
+
 import type { Schema } from '../openapi/index.js'
 import { toPascalCase } from '../utils/index.js'
 
@@ -135,7 +141,7 @@ function findClosingParen(code: string, openIdx: number): number {
 /**
  * Extracts schema export declarations from a schema-to-library generated output.
  */
-export async function extractSchemaExports(
+export function extractSchemaExports(
   name: string,
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -143,36 +149,26 @@ export async function extractSchemaExports(
   readonly = false,
 ) {
   const jsonSchema = toJSONSchema(name, schema)
-  const code = await makeSchemaCode(jsonSchema, schemaLib, exportType, readonly)
+  const code = makeSchemaCode(jsonSchema, schemaLib, exportType, readonly)
   return postProcess(stripImportLines(code), name, schemaLib)
 }
 
-async function makeSchemaCode(
+function makeSchemaCode(
   jsonSchema: Record<string, unknown>,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   exportType: boolean,
   readonly: boolean,
 ) {
   switch (schemaLib) {
-    case 'zod': {
-      const { schemaToZod } = await import('schema-to-library/zod')
+    case 'zod':
       return schemaToZod(jsonSchema, { exportType, openapi: true, readonly })
-    }
-    case 'valibot': {
-      const { schemaToValibot } = await import('schema-to-library/valibot')
+    case 'valibot':
       return schemaToValibot(jsonSchema, { exportType, openapi: true, readonly })
-    }
-    case 'typebox': {
-      const { schemaToTypebox } = await import('schema-to-library/typebox')
+    case 'typebox':
       return schemaToTypebox(jsonSchema, { exportType, openapi: true, readonly })
-    }
-    case 'arktype': {
-      const { schemaToArktype } = await import('schema-to-library/arktype')
+    case 'arktype':
       return schemaToArktype(jsonSchema, { exportType, openapi: true, readonly })
-    }
-    case 'effect': {
-      const { schemaToEffect } = await import('schema-to-library/effect')
+    case 'effect':
       return schemaToEffect(jsonSchema, { exportType, openapi: true, readonly })
-    }
   }
 }

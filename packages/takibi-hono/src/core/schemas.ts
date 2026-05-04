@@ -24,7 +24,7 @@ export async function makeSchemasCode(
   const schemaNames = Object.keys(schemas)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
   for (const [name, schema] of Object.entries(schemas)) {
-    const rawDecl = await extractSchemaExports(name, schema, schemaLib, exportTypes, readonly)
+    const rawDecl = extractSchemaExports(name, schema, schemaLib, exportTypes, readonly)
     declarations.push(
       processDeclaration(rawDecl, name, schema, schemaLib, {
         schemaNames,
@@ -56,13 +56,7 @@ export async function makeSplitSchemas(
   const circularNames = detectCircularRefs(schemas)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
   for (const name of schemaNames) {
-    const rawDecl = await extractSchemaExports(
-      name,
-      schemas[name],
-      schemaLib,
-      exportTypes,
-      readonly,
-    )
+    const rawDecl = extractSchemaExports(name, schemas[name], schemaLib, exportTypes, readonly)
     const decl = processDeclaration(rawDecl, name, schemas[name], schemaLib, {
       schemaNames,
       circularNames,

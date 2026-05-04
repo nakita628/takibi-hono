@@ -466,4 +466,96 @@ describe('makeDescribeRoute', () => {
       'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(UserSchema)}}},404:{description:"Not found",content:{\'application/json\':{schema:resolver(ErrorSchema)}}},500:{description:"Internal error"}}})',
     )
   })
+
+  // --- field ordering and edge cases ---
+
+  it.concurrent('emits fields in fixed order: description, summary, tags, operationId, deprecated, security, externalDocs, servers, responses', () => {
+    // `security` is typed as a single object; we exercise the array form which
+    // the impl JSON-stringifies as-is. Cast at the test boundary.
+    const result = makeDescribeRoute(
+      {
+        security: [{ name: ['s1'] }],
+        responses: { 200: { description: 'OK' } },
+        summary: 's',
+        tags: ['t1', 't2'],
+        deprecated: true,
+        operationId: 'op',
+        description: 'd',
+      } as never,
+      'zod',
+    )
+    expect(result).toBe(
+      'describeRoute({description:"d",summary:"s",tags:["t1","t2"],operationId:"op",deprecated:true,security:[{"name":["s1"]}],responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('omits responses key when operation has no responses object', () => {
+    // Operation type marks `responses` as required; cast for this edge case.
+    expect(makeDescribeRoute({ summary: 'X' } as never, 'zod')).toBe('describeRoute({summary:"X"})')
+  })
+
+  it.concurrent('omits empty tags array entirely', () => {
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', tags: [], responses: { 200: { description: 'OK' } } },
+        'zod',
+      ),
+    ).toBe('describeRoute({summary:"X",responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('omits empty servers array entirely', () => {
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', servers: [], responses: { 200: { description: 'OK' } } },
+        'zod',
+      ),
+    ).toBe('describeRoute({summary:"X",responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('emits empty security array (truthy check, not length-gated)', () => {
+    // Documented behavior: an empty `security: []` is emitted as-is, which is a
+    // valid OpenAPI signal meaning "no security required". The generator does
+    // not strip it the way it strips empty `tags` / `servers`.
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', security: [], responses: { 200: { description: 'OK' } } } as never,
+        'zod',
+      ),
+    ).toBe('describeRoute({summary:"X",security:[],responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('escapes embedded newlines and quotes in description via JSON.stringify', () => {
+    expect(
+      makeDescribeRoute(
+        {
+          description: 'Line one\nLine "two"',
+          responses: { 200: { description: 'OK' } },
+        },
+        'zod',
+      ),
+    ).toBe(
+      'describeRoute({description:"Line one\\nLine \\"two\\"",responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('preserves status-code key order from input object iteration', () => {
+    // Object.entries follows insertion order for string keys: numeric-like
+    // keys are sorted ascending, so 200,400,404,500 always serialize in that order.
+    expect(
+      makeDescribeRoute(
+        {
+          summary: 'X',
+          responses: {
+            500: { description: 'Err' },
+            200: { description: 'OK' },
+            404: { description: 'NF' },
+            400: { description: 'Bad' },
+          },
+        },
+        'zod',
+      ),
+    ).toBe(
+      'describeRoute({summary:"X",responses:{200:{description:"OK"},400:{description:"Bad"},404:{description:"NF"},500:{description:"Err"}}})',
+    )
+  })
 })

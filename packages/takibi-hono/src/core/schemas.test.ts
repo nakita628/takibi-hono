@@ -959,4 +959,105 @@ describe('makeSplitSchemas', () => {
       ].join('\n'),
     )
   })
+
+  it.concurrent('should add `import type { Static }` line for typebox split + exportTypes', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'split-schemas-types-typebox-'))
+    tmpDirs.push(tmpDir)
+
+    const result = await makeSplitSchemas(
+      {
+        Pet: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      },
+      'typebox',
+      tmpDir,
+      { exportTypes: true },
+    )
+
+    expect(result).toStrictEqual({ ok: true, value: undefined })
+
+    const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
+    expect(petContent).toBe(
+      [
+        "import Type from 'typebox'",
+        "import type { Static } from 'typebox'",
+        '',
+        'export const PetSchema = Type.Object({ name: Type.String() })',
+        '',
+        'export type Pet = Static<typeof PetSchema>',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it.concurrent('should NOT add `import type { Static }` for typebox split when exportTypes is false', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'split-schemas-no-types-typebox-'))
+    tmpDirs.push(tmpDir)
+
+    const result = await makeSplitSchemas(
+      {
+        Pet: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      },
+      'typebox',
+      tmpDir,
+    )
+
+    expect(result).toStrictEqual({ ok: true, value: undefined })
+
+    const petContent = fs.readFileSync(path.join(tmpDir, 'pet.ts'), 'utf-8')
+    expect(petContent).toBe(
+      [
+        "import Type from 'typebox'",
+        '',
+        'export const PetSchema = Type.Object({ name: Type.String() })',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it.concurrent('split: deps are sorted alphabetically and import lines deduplicate by name', async () => {
+    // Order in input is intentionally not alphabetical to ensure we sort.
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'split-schemas-dep-sort-'))
+    tmpDirs.push(tmpDir)
+
+    const result = await makeSplitSchemas(
+      {
+        Beta: { type: 'object', properties: { id: { type: 'integer' } }, required: ['id'] },
+        Alpha: { type: 'object', properties: { id: { type: 'integer' } }, required: ['id'] },
+        Combined: {
+          type: 'object',
+          properties: {
+            b: { $ref: '#/components/schemas/Beta' },
+            a: { $ref: '#/components/schemas/Alpha' },
+          },
+          required: ['a', 'b'],
+        },
+      },
+      'zod',
+      tmpDir,
+    )
+
+    expect(result).toStrictEqual({ ok: true, value: undefined })
+
+    const combined = fs.readFileSync(path.join(tmpDir, 'combined.ts'), 'utf-8')
+    // Imports must be in alphabetical order — Alpha before Beta — regardless
+    // of how the schema body references them.
+    expect(combined).toBe(
+      [
+        "import * as z from 'zod'",
+        "import { AlphaSchema } from './alpha'",
+        "import { BetaSchema } from './beta'",
+        '',
+        'export const CombinedSchema = z.object({ b: BetaSchema, a: AlphaSchema })',
+        '',
+      ].join('\n'),
+    )
+  })
 })
