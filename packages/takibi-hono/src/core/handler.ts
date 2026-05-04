@@ -4,7 +4,8 @@ import { makeStandardValidators, makeValidators } from '../generator/validator.j
 import { isHttpMethod, isOperation, isParameter } from '../guard/index.js'
 import { makeImports, makeStandardImports } from '../helper/imports.js'
 import type { OpenAPI, Operation, Parameter } from '../openapi/index.js'
-import { makeHandlerFileName, toCamelCase, toHonoPath } from '../utils/index.js'
+import {
+  makeHandlerFileName, toCamelCase, toHonoPath, } from '../utils/index.js'
 
 export function collectOperations(openapi: OpenAPI): ReadonlyMap<
   string,

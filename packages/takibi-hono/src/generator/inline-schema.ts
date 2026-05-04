@@ -1,6 +1,7 @@
 import { isNullable, isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import {
+  resolveRef, } from '../utils/index.js'
 
 /**
  * Extracts a single Schema from items (ignoring array/tuple form).

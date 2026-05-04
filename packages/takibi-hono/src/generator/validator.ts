@@ -6,7 +6,8 @@ import {
   wrapSchemaForValidator,
 } from '../helper/openapi.js'
 import type { Media, Operation, Parameter } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import {
+  resolveRef, } from '../utils/index.js'
 import { coerceQueryExpression } from './coerce.js'
 import { getLibraryConfig, getStandardValidatorConfig } from './imports.js'
 import { schemaToInlineExpression } from './inline-schema.js'

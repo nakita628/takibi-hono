@@ -1,7 +1,8 @@
 import { schemaToInlineExpression } from '../../generator/inline-schema.js'
 import { makeOptional } from '../../helper/openapi.js'
 import type { Components } from '../../openapi/index.js'
-import { resolveRef, toPascalCase } from '../../utils/index.js'
+import {
+  resolveRef, toPascalCase, } from '../../utils/index.js'
 
 /**
  * Generates header component code from OpenAPI components.headers.

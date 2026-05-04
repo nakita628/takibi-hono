@@ -9,7 +9,8 @@ import type {
   Reference,
   Schema,
 } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import {
+  resolveRef, } from '../utils/index.js'
 
 export function makeOptional(
   expr: string,

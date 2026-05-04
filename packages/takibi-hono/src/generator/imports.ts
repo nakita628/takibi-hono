@@ -1,3 +1,4 @@
+
 type LibraryConfig = {
   readonly modulePath: string
   readonly validatorAlias: string

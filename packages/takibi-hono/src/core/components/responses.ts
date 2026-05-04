@@ -1,6 +1,7 @@
 import { makeContent, makeHeader } from '../../helper/openapi.js'
 import type { Components } from '../../openapi/index.js'
-import { toPascalCase } from '../../utils/index.js'
+import {
+  toPascalCase, } from '../../utils/index.js'
 
 export async function makeResponsesCode(
   responses: NonNullable<Components['responses']>,

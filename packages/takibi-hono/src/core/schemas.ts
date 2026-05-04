@@ -6,7 +6,8 @@ import { extractSchemaExports } from '../generator/schema-expression.js'
 import { ast, detectCircularRefs, getLazyWrapper } from '../helper/ast.js'
 import { zodType } from '../helper/type.js'
 import type { Schema } from '../openapi/index.js'
-import { toPascalCase } from '../utils/index.js'
+import {
+  toPascalCase, } from '../utils/index.js'
 
 export async function makeSchemasCode(
   schemas: { readonly [k: string]: Schema },
@@ -121,7 +122,10 @@ function processDeclaration(
     const wrapper = getLazyWrapper(schemaLib)
     const annotated = addTypeAnnotation(rawDecl, varName, `${pascalName}Type`)
     const wrapped = wrapper.open ? wrapWithLazy(annotated, name, wrapper) : annotated
-    const unwrapped = unwrapInnerLazy(wrapped, varName, ctx.schemaNames, ctx.circularNames)
+    const unwrapped = wrapped.replace(
+      /z\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
+      '$1',
+    )
     return `${typeDef}\n\n${unwrapped}`
   }
 
@@ -174,15 +178,6 @@ function addCircularTypeAnnotation(
   const annotation = typeMap[schemaLib]
   if (!annotation) return decl
   return decl.replace(new RegExp(`(export\\s+const\\s+${varName})\\s*=`), `$1:${annotation}=`)
-}
-
-function unwrapInnerLazy(
-  decl: string,
-  _selfVarName: string,
-  _allSchemaNames: readonly string[],
-  _circularNames: ReadonlySet<string>,
-) {
-  return decl.replace(/z\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g, '$1')
 }
 
 function unwrapNonCircularLazy(

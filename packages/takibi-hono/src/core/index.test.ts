@@ -355,13 +355,13 @@ describe('hono', () => {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -498,7 +498,7 @@ export default app
 export const PetSchema = v.pipe(
   v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
   v.description('A pet in the store'),
-  v.examples([{ id: 1, name: 'Buddy', tag: 'dog' }]),
+  v.metadata({ examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
 )
 
 export type Pet = v.InferOutput<typeof PetSchema>
@@ -785,13 +785,13 @@ export const petsHandler = new Hono()
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -965,7 +965,7 @@ export default app
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 `)
@@ -991,7 +991,7 @@ export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -1555,7 +1555,7 @@ export default app
 export const PetSchema = v.pipe(
   v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
   v.description('A pet in the store'),
-  v.examples([{ id: 1, name: 'Buddy', tag: 'dog' }]),
+  v.metadata({ examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
 )
 
 export type Pet = v.InferOutput<typeof PetSchema>
@@ -2173,13 +2173,13 @@ export const webhooksHandler = new Hono().post(
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2206,11 +2206,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2236,11 +2236,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2309,11 +2309,11 @@ export type CreatePet = typeof CreatePetSchema.Encoded
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2341,11 +2341,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2504,13 +2504,13 @@ export const CreateUserBodyRequestBody = {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2656,13 +2656,13 @@ export * from './pet'
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
       },
     )
@@ -2688,11 +2688,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2717,13 +2717,13 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
     })
 
@@ -2748,15 +2748,15 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2783,11 +2783,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )

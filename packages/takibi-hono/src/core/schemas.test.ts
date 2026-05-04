@@ -48,7 +48,7 @@ describe('makeSchemasCode', () => {
       [
         "import*as z from'zod'",
         '',
-        'export const PetSchema = z.object({name:z.string()}).describe("A pet")',
+        'export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"})',
       ].join('\n'),
     )
   })
@@ -268,7 +268,7 @@ describe('makeSchemasCode', () => {
       [
         "import{Schema}from'effect'",
         '',
-        'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{"name":"Buddy"}]})',
+        'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})',
         '',
         'export type Pet = typeof PetSchema.Encoded',
       ].join('\n'),
@@ -415,7 +415,7 @@ describe('makeSchemasCode', () => {
       [
         "import*as v from'valibot'",
         '',
-        'export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.examples([{"name":"Fido"}]))',
+        'export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.metadata({examples:[{name:"Fido"}]}))',
       ].join('\n'),
     )
   })
@@ -827,7 +827,7 @@ describe('makeSchemasCode', () => {
       [
         "import*as z from'zod'",
         '',
-        'export const PetSchema = z.object({name:z.string()}).readonly().describe("A pet")',
+        'export const PetSchema = z.object({name:z.string()}).meta({description:"A pet"}).readonly()',
       ].join('\n'),
     )
   })

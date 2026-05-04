@@ -31,7 +31,7 @@ describe('extractSchemaExports', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const PetSchema = z.object({name:z.string()}).describe("A pet object")\n\nexport type Pet = z.infer<typeof PetSchema>',
+      'export const PetSchema = z.object({name:z.string()}).meta({description:"A pet object"})\n\nexport type Pet = z.infer<typeof PetSchema>',
     )
   })
 
@@ -82,7 +82,7 @@ describe('extractSchemaExports', () => {
       'valibot',
     )
     expect(result).toBe(
-      'export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.examples([{"name":"Buddy"}]))\n\nexport type Pet = v.InferOutput<typeof PetSchema>',
+      'export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet"),v.metadata({examples:[{name:"Buddy"}]}))\n\nexport type Pet = v.InferOutput<typeof PetSchema>',
     )
   })
 
@@ -133,7 +133,7 @@ describe('extractSchemaExports', () => {
       'typebox',
     )
     expect(result).toBe(
-      'export const PetSchema = Type.Object({name:Type.String()},{description:"A pet",examples:[{"name":"Buddy"}]})\n\nexport type Pet = Static<typeof PetSchema>',
+      'export const PetSchema = Type.Object({name:Type.String()},{description:"A pet",examples:[{name:"Buddy"}]})\n\nexport type Pet = Static<typeof PetSchema>',
     )
   })
 
@@ -151,7 +151,7 @@ describe('extractSchemaExports', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{"name":"Buddy"}]})\n\nexport type Pet = typeof PetSchema.Encoded',
+      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})\n\nexport type Pet = typeof PetSchema.Encoded',
     )
   })
 })
@@ -252,7 +252,7 @@ describe('extractSchemaExports: description metadata', () => {
   it.concurrent('zod: description', async () => {
     const result = await extractSchemaExports('Item', schema, 'zod')
     expect(result).toBe(
-      'export const ItemSchema = z.object({name:z.string()}).describe("An item")\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({name:z.string()}).meta({description:"An item"})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -301,7 +301,7 @@ describe('extractSchemaExports: example metadata', () => {
       'valibot',
     )
     expect(result).toBe(
-      'export const ItemSchema = v.pipe(v.object({name:v.string()}),v.examples([{"name":"test"}]))\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
+      'export const ItemSchema = v.pipe(v.object({name:v.string()}),v.metadata({examples:[{name:"test"}]}))\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
     )
   })
 
@@ -317,7 +317,7 @@ describe('extractSchemaExports: example metadata', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({examples:[{"name":"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({examples:[{name:"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
     )
   })
 })
@@ -405,24 +405,24 @@ describe('extractSchemaExports: appendMeta with description and example', () => 
     required: ['name'],
   }
 
-  it.concurrent('zod: description only (example ignored)', async () => {
+  it.concurrent('zod: meta with description and examples', async () => {
     const result = await extractSchemaExports('Item', schema, 'zod')
     expect(result).toBe(
-      'export const ItemSchema = z.object({name:z.string()}).describe("An item")\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({name:z.string()}).meta({description:"An item",examples:[{name:"test"}]})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
   it.concurrent('valibot: v.pipe with description and examples', async () => {
     const result = await extractSchemaExports('Item', schema, 'valibot')
     expect(result).toBe(
-      'export const ItemSchema = v.pipe(v.object({name:v.string()}),v.description("An item"),v.examples([{"name":"test"}]))\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
+      'export const ItemSchema = v.pipe(v.object({name:v.string()}),v.description("An item"),v.metadata({examples:[{name:"test"}]}))\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
     )
   })
 
   it.concurrent('typebox: constructor options with description and examples', async () => {
     const result = await extractSchemaExports('Item', schema, 'typebox')
     expect(result).toBe(
-      'export const ItemSchema = Type.Object({name:Type.String()},{description:"An item",examples:[{"name":"test"}]})\n\nexport type Item = Static<typeof ItemSchema>',
+      'export const ItemSchema = Type.Object({name:Type.String()},{description:"An item",examples:[{name:"test"}]})\n\nexport type Item = Static<typeof ItemSchema>',
     )
   })
 
@@ -436,7 +436,7 @@ describe('extractSchemaExports: appendMeta with description and example', () => 
   it.concurrent('effect: annotations with description and examples', async () => {
     const result = await extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",examples:[{"name":"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",examples:[{name:"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
     )
   })
 })
@@ -449,10 +449,10 @@ describe('extractSchemaExports: oneOf schema', () => {
     oneOf: [{ type: 'string' as const }, { type: 'integer' as const }],
   }
 
-  it.concurrent('zod: oneOf — z.union', async () => {
+  it.concurrent('zod: oneOf without discriminator — z.xor', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'zod')
     expect(result).toBe(
-      'export const ShapeSchema = z.union([z.string(),z.int()])\n\nexport type Shape = z.infer<typeof ShapeSchema>',
+      'export const ShapeSchema = z.xor([z.string(),z.int()])\n\nexport type Shape = z.infer<typeof ShapeSchema>',
     )
   })
 
@@ -530,24 +530,24 @@ describe('extractSchemaExports: anyOf schema', () => {
 })
 
 // ===================================================================
-// 9. extractSchemaExports — not schema (fallback behavior)
+// 9. extractSchemaExports — not schema (typed-predicate refinement)
 // ===================================================================
-describe('extractSchemaExports: not schema (fallback)', () => {
+describe('extractSchemaExports: not schema (typed predicate)', () => {
   const schema = {
     not: { type: 'string' as const },
   }
 
-  it.concurrent('zod: not — fallback to z.any()', async () => {
+  it.concurrent('zod: not — z.any().refine', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'zod')
     expect(result).toBe(
-      'export const ShapeSchema = z.any()\n\nexport type Shape = z.infer<typeof ShapeSchema>',
+      "export const ShapeSchema = z.any().refine((v) => typeof v !== 'string')\n\nexport type Shape = z.infer<typeof ShapeSchema>",
     )
   })
 
-  it.concurrent('valibot: not — fallback to v.any()', async () => {
+  it.concurrent('valibot: not — v.custom predicate', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'valibot')
     expect(result).toBe(
-      'export const ShapeSchema = v.any()\n\nexport type Shape = v.InferOutput<typeof ShapeSchema>',
+      "export const ShapeSchema = v.custom<unknown>((v) => typeof v !== 'string')\n\nexport type Shape = v.InferOutput<typeof ShapeSchema>",
     )
   })
 
@@ -558,17 +558,17 @@ describe('extractSchemaExports: not schema (fallback)', () => {
     )
   })
 
-  it.concurrent('arktype: not — fallback to type("unknown")', async () => {
+  it.concurrent('arktype: not — type("unknown").narrow', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'arktype')
     expect(result).toBe(
-      'export const ShapeSchema = type("unknown")\n\nexport type Shape = typeof ShapeSchema.infer',
+      "export const ShapeSchema = type(\"unknown\").narrow((v: unknown) => typeof v !== 'string')\n\nexport type Shape = typeof ShapeSchema.infer",
     )
   })
 
-  it.concurrent('effect: not — fallback to Schema.Unknown', async () => {
+  it.concurrent('effect: not — Schema.Unknown.pipe(Schema.filter)', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'effect')
     expect(result).toBe(
-      'export const ShapeSchema = Schema.Unknown\n\nexport type Shape = typeof ShapeSchema.Encoded',
+      "export const ShapeSchema = Schema.Unknown.pipe(Schema.filter((v) => typeof v !== 'string'))\n\nexport type Shape = typeof ShapeSchema.Encoded",
     )
   })
 })
@@ -824,28 +824,28 @@ describe('extractSchemaExports: readonly + description', () => {
   it.concurrent('zod: readonly + description', async () => {
     const result = await extractSchemaExports('Item', schema, 'zod', true, true)
     expect(result).toBe(
-      'export const ItemSchema = z.object({name:z.string()}).readonly().describe("An item")\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({name:z.string()}).meta({description:"An item"}).readonly()\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
   it.concurrent('valibot: readonly + description', async () => {
     const result = await extractSchemaExports('Item', schema, 'valibot', true, true)
     expect(result).toBe(
-      'export const ItemSchema = v.pipe(v.pipe(v.object({name:v.string()}),v.readonly()),v.description("An item"))\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
+      'export const ItemSchema = v.pipe(v.pipe(v.object({name:v.string()}),v.description("An item")),v.readonly())\n\nexport type Item = v.InferOutput<typeof ItemSchema>',
     )
   })
 
   it.concurrent('typebox: readonly + description', async () => {
     const result = await extractSchemaExports('Item', schema, 'typebox', true, true)
     expect(result).toBe(
-      'export const ItemSchema = Type.Readonly(Type.Object({name:Type.String()}),{description:"An item"})\n\nexport type Item = Static<typeof ItemSchema>',
+      'export const ItemSchema = Type.Readonly(Type.Object({name:Type.String()},{description:"An item"}))\n\nexport type Item = Static<typeof ItemSchema>',
     )
   })
 
   it.concurrent('arktype: readonly + description', async () => {
     const result = await extractSchemaExports('Item', schema, 'arktype', true, true)
     expect(result).toBe(
-      'export const ItemSchema = type({name:"string"}).readonly().describe("An item")\n\nexport type Item = typeof ItemSchema.infer',
+      'export const ItemSchema = type({name:"string"}).describe("An item").readonly()\n\nexport type Item = typeof ItemSchema.infer',
     )
   })
 

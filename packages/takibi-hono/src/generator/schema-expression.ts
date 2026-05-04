@@ -13,116 +13,50 @@ function stripImportLines(code: string): string {
 }
 
 /**
- * Converts an OpenAPI Schema to a plain object compatible with schema-to-library's JSONSchema.
- * Removes OpenAPI-specific properties that conflict with JSONSchema types.
- * Appends 'Schema' suffix to match OpenAPI component naming convention.
+ * Convert an OpenAPI Schema to a JSONSchema-shaped record for schema-to-library.
+ *
+ * The only adjustment is appending the `Schema` suffix to `title` so the
+ * generated `export const` matches OpenAPI component naming. Metadata fields
+ * (`description`, `example`, `examples`, `deprecated`, etc.) are passed through
+ * — schema-to-library 0.2.0 emits the appropriate library-specific metadata
+ * call (`.meta`, `v.pipe(...,v.description,v.metadata)`, `Type.Object(...,opts)`,
+ * `.describe`, `.annotations`) for each library.
  */
 function toJSONSchema(name: string, schema: Schema): Record<string, unknown> {
-  const { examples: _examples, example: _example, description: _description, ...rest } = schema
-  return { title: `${name}Schema`, ...rest }
-}
-
-type SchemaMeta = {
-  readonly description?: string | undefined
-  readonly example?: unknown
-}
-
-/**
- * Appends library-specific metadata to the schema const declaration.
- *
- * zod:     .describe("desc")
- * valibot: wraps with v.pipe(schema, v.description("desc"), v.examples([...]))
- * typebox: options already in constructor, skip
- * arktype: .describe("desc")
- * effect:  .annotations({ description: "desc", examples: [...] })
- */
-function appendMeta(
-  expr: string,
-  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-  meta: SchemaMeta,
-): string {
-  const { description, example } = meta
-
-  switch (schemaLib) {
-    case 'zod':
-      return description ? `${expr}.describe(${JSON.stringify(description)})` : expr
-
-    case 'valibot': {
-      const pipes = [
-        ...(description ? [`v.description(${JSON.stringify(description)})`] : []),
-        ...(example !== undefined ? [`v.examples([${JSON.stringify(example)}])`] : []),
-      ]
-      return pipes.length === 0 ? expr : `v.pipe(${expr},${pipes.join(',')})`
-    }
-
-    case 'typebox': {
-      const opts = [
-        ...(description ? [`description:${JSON.stringify(description)}`] : []),
-        ...(example !== undefined ? [`examples:[${JSON.stringify(example)}]`] : []),
-      ]
-      if (opts.length === 0) return expr
-      // Inject options as 2nd arg: Type.Object({...}) → Type.Object({...},{description:...})
-      const lastParen = expr.lastIndexOf(')')
-      if (lastParen === -1) return expr
-      return `${expr.slice(0, lastParen)},{${opts.join(',')}})`
-    }
-
-    case 'arktype':
-      return description ? `${expr}.describe(${JSON.stringify(description)})` : expr
-
-    case 'effect': {
-      const annParts = [
-        ...(description ? [`description:${JSON.stringify(description)}`] : []),
-        ...(example !== undefined ? [`examples:[${JSON.stringify(example)}]`] : []),
-      ]
-      return annParts.length === 0 ? expr : `${expr}.annotations({${annParts.join(',')}})`
-    }
-  }
+  return { ...schema, title: `${name}Schema` }
 }
 
 /**
  * Post-processes schema-to-library output:
- * 1. Appends library-specific metadata (description, examples)
- * 2. Fixes type export names to remove Schema suffix
+ * - Renames type alias `${varName}` / `${varName}Output` / `${varName}Encoded`
+ *   to the bare `${pascalName}` to match OpenAPI component naming.
+ * - Drops valibot's `${varName}Input` (we keep only Output).
+ * - Nests multi-arg `z.intersection` / `Schema.extend` calls into 2-arg form.
  */
-function postProcess(
-  code: string,
-  name: string,
-  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-  meta: SchemaMeta,
-): string {
+function postProcess(code: string, name: string, schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string {
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
 
   const transforms: readonly ((s: string) => string)[] = [
-    // Append metadata to the const declaration
-    meta.description || meta.example !== undefined
-      ? (s) =>
-          s.replace(
-            new RegExp(`(export\\s+const\\s+${varName}\\s*=\\s*)(.+)`),
-            (_, prefix, expr) => `${prefix}${appendMeta(expr, schemaLib, meta)}`,
-          )
-      : (s) => s,
-    // Fix type export: `export type PetSchema = ...` → `export type Pet = ...`
-    // For effect: remove .Type line entirely (we only keep .Encoded)
+    // Effect emits `${varName}Encoded`; other libs emit `${varName}` directly.
     schemaLib === 'effect'
-      ? (s) => s.replace(new RegExp(`\\n*export\\s+type\\s+${varName}\\s*=[^\\n]*`), '')
+      ? (s) => s
       : (s) =>
           s.replace(new RegExp(`export\\s+type\\s+${varName}\\s*=`), `export type ${pascalName} =`),
-    // Handle valibot: remove Input type (if present), keep only Output type
+    // Valibot: drop `${varName}Input`, rename `${varName}Output` → `${pascalName}`.
     (s) => s.replace(new RegExp(`\\n*export\\s+type\\s+${varName}Input\\s*=\\s*[^\\n]+\\n?`), ''),
     (s) =>
       s.replace(
         new RegExp(`export\\s+type\\s+${varName}Output\\s*=`),
         `export type ${pascalName} =`,
       ),
-    // Handle effect: `export type PetSchemaEncoded = ...` → `export type Pet = ...`
+    // Effect: rename `${varName}Encoded` → `${pascalName}`.
     (s) =>
       s.replace(
         new RegExp(`export\\s+type\\s+${varName}Encoded\\s*=`),
         `export type ${pascalName} =`,
       ),
-    // Fix multi-arg z.intersection/Schema.extend
+    // Nest multi-arg calls into 2-arg form.
     schemaLib === 'zod' ? (s) => fixMultiArgCall(s, 'z.intersection') : (s) => s,
     schemaLib === 'effect' ? (s) => fixMultiArgCall(s, 'Schema.extend') : (s) => s,
   ]
@@ -206,13 +140,8 @@ export async function extractSchemaExports(
   readonly = false,
 ): Promise<string> {
   const jsonSchema = toJSONSchema(name, schema)
-
   const code = await makeSchemaCode(jsonSchema, schemaLib, exportType, readonly)
-  const stripped = stripImportLines(code)
-  return postProcess(stripped, name, schemaLib, {
-    description: schema.description,
-    example: schema.example,
-  })
+  return postProcess(stripImportLines(code), name, schemaLib)
 }
 
 async function makeSchemaCode(
