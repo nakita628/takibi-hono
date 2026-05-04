@@ -1,11 +1,10 @@
 import { makeDescribeRoute } from '../generator/describe-route.js'
-import { makeHandlerStub } from '../generator/response.js'
+import { HANDLER_STUB } from '../generator/response.js'
 import { makeStandardValidators, makeValidators } from '../generator/validator.js'
 import { isHttpMethod, isOperation, isParameter } from '../guard/index.js'
 import { makeImports, makeStandardImports } from '../helper/imports.js'
 import type { OpenAPI, Operation, Parameter } from '../openapi/index.js'
-import {
-  makeHandlerFileName, toCamelCase, toHonoPath, } from '../utils/index.js'
+import { makeHandlerFileName, toCamelCase, toHonoPath } from '../utils/index.js'
 
 export function collectOperations(openapi: OpenAPI): ReadonlyMap<
   string,
@@ -19,15 +18,11 @@ export function collectOperations(openapi: OpenAPI): ReadonlyMap<
   return Object.entries(openapi.paths).reduce(
     (groups, [pathStr, pathItem]) => {
       const groupName = makeHandlerFileName(pathStr)
-      const pathItemParameters: readonly Parameter[] | undefined = Array.isArray(
-        pathItem.parameters,
-      )
-        ? (pathItem.parameters.filter(isParameter) as readonly Parameter[])
+      const pathItemParameters = Array.isArray(pathItem.parameters)
+        ? pathItem.parameters.filter(isParameter)
         : undefined
       const ops = Object.entries(pathItem)
-        .filter(
-          (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
-        )
+        .filter((entry) => isHttpMethod(entry[0]) && isOperation(entry[1]))
         .map(([method, operation]) => ({ method, path: pathStr, operation, pathItemParameters }))
 
       return ops.length > 0
@@ -68,14 +63,14 @@ export function makeHandlerCode(
         const middlewares = [
           makeDescribeRoute(operation, schemaLib),
           ...makeValidators(operation, pathItemParameters, schemaLib),
-          makeHandlerStub(),
+          HANDLER_STUB,
         ]
         return `.${method}(${[`'${honoPath}'`, ...middlewares].join(',')})`
       })
     : operations.map(({ method, path, operation, pathItemParameters }) => {
         const honoPath = toHonoPath(path)
         const validators = makeStandardValidators(operation, pathItemParameters, schemaLib)
-        const args = [`'${honoPath}'`, ...validators, makeHandlerStub()]
+        const args = [`'${honoPath}'`, ...validators, HANDLER_STUB]
         return `.${method}(${args.join(',')})`
       })
   const handlerCode = `export const ${handlerName}=new Hono()${routeLines.join('')}`

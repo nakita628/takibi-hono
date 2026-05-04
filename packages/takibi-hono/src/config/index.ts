@@ -8,8 +8,7 @@ import * as v from 'valibot'
 const ConfigSchema = v.strictObject({
   input: v.custom<`${string}.yaml` | `${string}.json` | `${string}.tsp`>(
     (v) =>
-      typeof v === 'string' &&
-      (v.endsWith('.yaml') || v.endsWith('.json') || v.endsWith('.tsp')),
+      typeof v === 'string' && (v.endsWith('.yaml') || v.endsWith('.json') || v.endsWith('.tsp')),
     'input must be .yaml | .json | .tsp',
   ),
   basePath: v.exactOptional(v.string()),
@@ -281,9 +280,7 @@ export function parseConfig(config: unknown) {
   const result = v.safeParse(ConfigSchema, config)
   if (!result.success) {
     const issue = result.issues[0]
-    const path = issue.path
-      ? issue.path.map((p) => ('key' in p ? p.key : String(p))).join('.')
-      : ''
+    const path = issue.path ? issue.path.map((p) => ('key' in p ? p.key : String(p))).join('.') : ''
     const prefix = path ? `${path}: ` : ''
     return { ok: false, error: `Invalid config: ${prefix}${issue.message}` } as const
   }

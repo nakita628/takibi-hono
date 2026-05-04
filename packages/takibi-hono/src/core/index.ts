@@ -5,6 +5,7 @@ import { emit } from '../emit/index.js'
 import { setFormatOptions } from '../format/index.js'
 import { makeComponentImports, makeModuleSpec } from '../helper/imports.js'
 import { mergeAppFile, mergeBarrelFile, mergeHandlerFile } from '../merge/index.js'
+import type { Components, OpenAPI } from '../openapi/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
 import { makeAppCode } from './app.js'
 import { makeBarrelCode } from './barrel.js'
@@ -23,256 +24,95 @@ import { collectOperations, makeHandlerCode } from './handler.js'
 import { makeSchemasCode, makeSplitSchemas } from './schemas.js'
 import { makeWebhooksCode } from './webhooks.js'
 
-export async function hono(config: {
-  readonly input: string
-  readonly schema: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
-  readonly basePath?: string | undefined
-  readonly format?: Record<string, unknown> | undefined
-  readonly openapi?: boolean | undefined
-  readonly 'takibi-hono'?:
+type SchemaLib = 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
+
+type ComponentEntryConfig = {
+  readonly output: string
+  readonly exportTypes?: boolean | undefined
+  readonly split?: boolean | undefined
+  readonly import?: string | undefined
+}
+
+export type TakibiHonoOptions = {
+  readonly readonly?: boolean | undefined
+  readonly exportSchemasTypes?: boolean | undefined
+  readonly exportParametersTypes?: boolean | undefined
+  readonly exportHeadersTypes?: boolean | undefined
+  readonly handlers?: { readonly output: string } | undefined
+  readonly components?:
     | {
-        readonly readonly?: boolean | undefined
-        readonly exportSchemasTypes?: boolean | undefined
-        readonly exportParametersTypes?: boolean | undefined
-        readonly exportHeadersTypes?: boolean | undefined
-        readonly handlers?: { readonly output: string } | undefined
-        readonly components?:
-          | {
-              readonly output?: string | undefined
-              readonly schemas?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly parameters?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly headers?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly securitySchemes?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly requestBodies?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly responses?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly examples?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly links?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly callbacks?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly pathItems?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-              readonly webhooks?:
-                | {
-                    readonly output: string
-                    readonly exportTypes?: boolean | undefined
-                    readonly split?: boolean | undefined
-                    readonly import?: string | undefined
-                  }
-                | undefined
-            }
-          | undefined
+        readonly output?: string | undefined
+        readonly schemas?: ComponentEntryConfig | undefined
+        readonly parameters?: ComponentEntryConfig | undefined
+        readonly headers?: ComponentEntryConfig | undefined
+        readonly securitySchemes?: ComponentEntryConfig | undefined
+        readonly requestBodies?: ComponentEntryConfig | undefined
+        readonly responses?: ComponentEntryConfig | undefined
+        readonly examples?: ComponentEntryConfig | undefined
+        readonly links?: ComponentEntryConfig | undefined
+        readonly callbacks?: ComponentEntryConfig | undefined
+        readonly pathItems?: ComponentEntryConfig | undefined
+        readonly webhooks?: ComponentEntryConfig | undefined
       }
     | undefined
-}) {
-  if (config.format) {
-    setFormatOptions(config.format)
-  }
-  const parseResult = await parseOpenAPI(config.input)
-  if (!parseResult.ok) return parseResult
-  const openapi = parseResult.value
-  const ohConfig = config['takibi-hono']
-  const useOpenAPI = config.openapi === true
+}
+
+export type Layout = {
+  readonly schemasFile: string
+  readonly schemasDir: string
+  readonly handlersDir: string
+  readonly componentsBaseOutput: string | undefined
+  readonly componentPaths: Record<string, string>
+  readonly appDir: string
+}
+
+export function resolveLayout(ohConfig: TakibiHonoOptions | undefined): Layout {
   const handlersOutput = ohConfig?.handlers?.output ?? 'src/handlers'
   const componentsBaseOutput = ohConfig?.components?.output
   const schemasConfig = ohConfig?.components?.schemas
   const schemasOutput =
     schemasConfig?.output ??
     (componentsBaseOutput ? `${componentsBaseOutput}/index.ts` : 'src/components/index.ts')
-  const exportTypes = schemasConfig?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
-  const isReadonly = ohConfig?.readonly ?? false
   const schemasDir = schemasOutput.endsWith('.ts') ? path.dirname(schemasOutput) : schemasOutput
   const schemasFile = schemasOutput.endsWith('.ts')
     ? schemasOutput
     : path.join(schemasOutput, 'index.ts')
-  if (openapi.components?.schemas) {
-    const schemasSplit = schemasConfig?.split ?? false
-    if (schemasSplit) {
-      const splitDir = schemasOutput.endsWith('.ts')
-        ? schemasOutput.replace(/\.ts$/, '')
-        : schemasOutput
-      const splitResult = await makeSplitSchemas(
-        openapi.components.schemas,
-        config.schema,
-        splitDir,
-        { exportTypes, readonly: isReadonly },
-      )
-      if (!splitResult.ok) return splitResult
-    } else {
-      const schemasCode = await makeSchemasCode(openapi.components.schemas, config.schema, {
-        exportTypes,
-        readonly: isReadonly,
-      })
-      const schemasResult = await emit(schemasCode, schemasDir, schemasFile)
-      if (!schemasResult.ok) return schemasResult
-    }
-  }
-  if (useOpenAPI) {
-    const componentsResult = await makeComponentFiles(
-      openapi,
-      config.schema,
-      ohConfig,
-      schemasFile,
-      componentsBaseOutput,
-    )
-    if (!componentsResult.ok) return componentsResult
-  }
-  const groups = collectOperations(openapi)
-  const handlerFileNames: string[] = []
   const handlersDir = handlersOutput.endsWith('.ts') ? path.dirname(handlersOutput) : handlersOutput
-  const componentPaths = makeComponentPaths(
-    handlersDir,
-    schemasFile,
-    ohConfig,
-    componentsBaseOutput,
-  )
-  for (const [groupName, operations] of groups) {
-    handlerFileNames.push(groupName)
-    const generatedCode = makeHandlerCode(groupName, operations, config.schema, {
-      componentPaths,
-      openapi: useOpenAPI,
-    })
-    const handlerOutput = path.join(handlersDir, `${groupName}.ts`)
-    const existingCode = await readFileOrNull(handlerOutput)
-    const finalCode = existingCode ? mergeHandlerFile(existingCode, generatedCode) : generatedCode
-    const handlerResult = await emit(finalCode, handlersDir, handlerOutput)
-    if (!handlerResult.ok) return handlerResult
-  }
-  if (handlerFileNames.length > 0) {
-    const generatedBarrel = makeBarrelCode(handlerFileNames)
-    const barrelOutput = path.join(handlersDir, 'index.ts')
-    const existingBarrel = await readFileOrNull(barrelOutput)
-    const finalBarrel = existingBarrel
-      ? mergeBarrelFile(existingBarrel, generatedBarrel)
-      : generatedBarrel
-    const barrelResult = await emit(finalBarrel, handlersDir, barrelOutput)
-    if (!barrelResult.ok) return barrelResult
-  }
-  const expectedFiles = new Set([...handlerFileNames.map((name) => `${name}.ts`), 'index.ts'])
-  const existingFiles = await fsp
-    .readdir(handlersDir, { withFileTypes: true })
-    .then((entries) =>
-      entries.filter((e) => e.isFile() && e.name.endsWith('.ts')).map((e) => e.name),
-    )
-    .catch((): string[] => [])
-  for (const file of existingFiles) {
-    if (!expectedFiles.has(file)) {
-      await fsp.unlink(path.join(handlersDir, file)).catch(() => {})
-    }
-  }
-  if (useOpenAPI) {
-    const webhooksConfig = ohConfig?.components?.webhooks
-    if (openapi.webhooks) {
-      const webhooksCode = makeWebhooksCode(openapi, config.schema, {
-        componentPaths,
-      })
-      if (webhooksCode) {
-        const webhooksOutput =
-          webhooksConfig?.output ??
-          (componentsBaseOutput
-            ? `${componentsBaseOutput}/webhooks/index.ts`
-            : path.join(handlersDir, 'webhooks.ts'))
-        const webhooksDir = webhooksOutput.endsWith('.ts')
-          ? path.dirname(webhooksOutput)
-          : webhooksOutput
-        const webhooksFile = webhooksOutput.endsWith('.ts')
-          ? webhooksOutput
-          : path.join(webhooksOutput, 'index.ts')
-        const webhooksResult = await emit(webhooksCode, webhooksDir, webhooksFile)
-        if (!webhooksResult.ok) return webhooksResult
-      }
-    }
-  }
+  const componentPaths = makeComponentPaths(handlersDir, schemasFile, ohConfig, componentsBaseOutput)
   const appDir = path.dirname(handlersDir)
-  const appCode = makeAppCode(openapi, handlerFileNames, {
-    basePath: config.basePath,
-    handlersImportPath: `./${path.relative(appDir, handlersDir)}`,
+  return { schemasFile, schemasDir, handlersDir, componentsBaseOutput, componentPaths, appDir }
+}
+
+export async function generateSchemas(
+  openapi: OpenAPI,
+  schemaLib: SchemaLib,
+  ohConfig: TakibiHonoOptions | undefined,
+  layout: Layout,
+) {
+  if (!openapi.components?.schemas) return { ok: true, value: undefined } as const
+  const schemasConfig = ohConfig?.components?.schemas
+  const exportTypes = schemasConfig?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
+  const isReadonly = ohConfig?.readonly ?? false
+  const split = schemasConfig?.split ?? false
+  if (split) {
+    const splitDir = layout.schemasFile.replace(/\/index\.ts$/, '').replace(/\.ts$/, '')
+    return makeSplitSchemas(openapi.components.schemas, schemaLib, splitDir, {
+      exportTypes,
+      readonly: isReadonly,
+    })
+  }
+  const schemasCode = await makeSchemasCode(openapi.components.schemas, schemaLib, {
+    exportTypes,
+    readonly: isReadonly,
   })
-  const appOutput = path.join(appDir, 'index.ts')
-  const existingApp = await readFileOrNull(appOutput)
-  const finalApp = existingApp ? mergeAppFile(existingApp, appCode) : appCode
-  const appResult = await emit(finalApp, appDir, appOutput)
-  if (!appResult.ok) return appResult
-  return { ok: true, value: undefined } as const
+  return emit(schemasCode, layout.schemasDir, layout.schemasFile)
 }
 
-async function readFileOrNull(filePath: string) {
-  return fsp.readFile(filePath, 'utf-8').catch(() => null)
-}
-
-async function makeComponentFiles(
-  openapi: { readonly components?: import('../openapi/index.js').Components },
-  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-  ohConfig: NonNullable<Parameters<typeof hono>[0]['takibi-hono']> | undefined,
-  schemasFile: string,
-  componentsBaseOutput?: string,
+export async function generateComponents(
+  openapi: OpenAPI,
+  schemaLib: SchemaLib,
+  ohConfig: TakibiHonoOptions | undefined,
+  layout: Layout,
 ) {
   const components = openapi.components
   if (!components) return { ok: true, value: undefined } as const
@@ -324,50 +164,13 @@ async function makeComponentFiles(
       make: () => makePathItemsCode(components.pathItems!, isReadonly),
     },
   ] as const
-  const componentFiles: Record<string, string> = {}
-  if (schemasFile) componentFiles.schemas = schemasFile
-  const componentKeyMap = {
-    parameters: ohConfig?.components?.parameters,
-    headers: ohConfig?.components?.headers,
-    securitySchemes: ohConfig?.components?.securitySchemes,
-    requestBodies: ohConfig?.components?.requestBodies,
-    responses: ohConfig?.components?.responses,
-    examples: ohConfig?.components?.examples,
-    links: ohConfig?.components?.links,
-    callbacks: ohConfig?.components?.callbacks,
-    pathItems: ohConfig?.components?.pathItems,
-  }
-  for (const [k, config] of Object.entries(componentKeyMap)) {
-    if (config) {
-      componentFiles[k] = config.output.endsWith('.ts')
-        ? config.output
-        : `${config.output}/index.ts`
-    }
-  }
-  if (componentsBaseOutput) {
-    const componentTypeKeys = [
-      'parameters',
-      'headers',
-      'securitySchemes',
-      'requestBodies',
-      'responses',
-      'examples',
-      'links',
-      'callbacks',
-      'pathItems',
-    ] as const
-    for (const key of componentTypeKeys) {
-      if (!componentFiles[key] && components[key]) {
-        componentFiles[key] = `${componentsBaseOutput}/${key}/index.ts`
-      }
-    }
-  }
+  const componentFiles = makeComponentFileMap(components, ohConfig, layout)
   for (const gen of generators) {
     if (!gen.data) continue
     const componentConfig =
       ohConfig?.components?.[gen.configKey] ??
-      (componentsBaseOutput
-        ? { output: `${componentsBaseOutput}/${gen.configKey}/index.ts` }
+      (layout.componentsBaseOutput
+        ? { output: `${layout.componentsBaseOutput}/${gen.configKey}/index.ts` }
         : undefined)
     if (!componentConfig) continue
     const output = componentConfig.output
@@ -393,10 +196,177 @@ async function makeComponentFiles(
   return { ok: true, value: undefined } as const
 }
 
+export async function generateHandlers(
+  openapi: OpenAPI,
+  schemaLib: SchemaLib,
+  useOpenAPI: boolean,
+  layout: Layout,
+) {
+  const groups = collectOperations(openapi)
+  const handlerFileNames: string[] = []
+  for (const [groupName, operations] of groups) {
+    handlerFileNames.push(groupName)
+    const generatedCode = makeHandlerCode(groupName, operations, schemaLib, {
+      componentPaths: layout.componentPaths,
+      openapi: useOpenAPI,
+    })
+    const handlerOutput = path.join(layout.handlersDir, `${groupName}.ts`)
+    const existingCode = await readFileOrNull(handlerOutput)
+    const finalCode = existingCode ? mergeHandlerFile(existingCode, generatedCode) : generatedCode
+    const handlerResult = await emit(finalCode, layout.handlersDir, handlerOutput)
+    if (!handlerResult.ok) return handlerResult
+  }
+  if (handlerFileNames.length > 0) {
+    const generatedBarrel = makeBarrelCode(handlerFileNames)
+    const barrelOutput = path.join(layout.handlersDir, 'index.ts')
+    const existingBarrel = await readFileOrNull(barrelOutput)
+    const finalBarrel = existingBarrel
+      ? mergeBarrelFile(existingBarrel, generatedBarrel)
+      : generatedBarrel
+    const barrelResult = await emit(finalBarrel, layout.handlersDir, barrelOutput)
+    if (!barrelResult.ok) return barrelResult
+  }
+  const expectedFiles = new Set([...handlerFileNames.map((name) => `${name}.ts`), 'index.ts'])
+  const existingFiles = await fsp
+    .readdir(layout.handlersDir, { withFileTypes: true })
+    .then((entries) =>
+      entries.filter((e) => e.isFile() && e.name.endsWith('.ts')).map((e) => e.name),
+    )
+    .catch((): string[] => [])
+  for (const file of existingFiles) {
+    if (!expectedFiles.has(file)) {
+      await fsp.unlink(path.join(layout.handlersDir, file)).catch(() => {})
+    }
+  }
+  return { ok: true, value: { handlerFileNames: handlerFileNames as readonly string[] } } as const
+}
+
+export async function generateWebhooks(
+  openapi: OpenAPI,
+  schemaLib: SchemaLib,
+  ohConfig: TakibiHonoOptions | undefined,
+  layout: Layout,
+) {
+  if (!openapi.webhooks) return { ok: true, value: undefined } as const
+  const webhooksCode = makeWebhooksCode(openapi, schemaLib, {
+    componentPaths: layout.componentPaths,
+  })
+  if (!webhooksCode) return { ok: true, value: undefined } as const
+  const webhooksConfig = ohConfig?.components?.webhooks
+  const webhooksOutput =
+    webhooksConfig?.output ??
+    (layout.componentsBaseOutput
+      ? `${layout.componentsBaseOutput}/webhooks/index.ts`
+      : path.join(layout.handlersDir, 'webhooks.ts'))
+  const webhooksDir = webhooksOutput.endsWith('.ts')
+    ? path.dirname(webhooksOutput)
+    : webhooksOutput
+  const webhooksFile = webhooksOutput.endsWith('.ts')
+    ? webhooksOutput
+    : path.join(webhooksOutput, 'index.ts')
+  return emit(webhooksCode, webhooksDir, webhooksFile)
+}
+
+export async function generateApp(
+  openapi: OpenAPI,
+  handlerFileNames: readonly string[],
+  basePath: string | undefined,
+  layout: Layout,
+) {
+  const appCode = makeAppCode(openapi, [...handlerFileNames], {
+    basePath,
+    handlersImportPath: `./${path.relative(layout.appDir, layout.handlersDir)}`,
+  })
+  const appOutput = path.join(layout.appDir, 'index.ts')
+  const existingApp = await readFileOrNull(appOutput)
+  const finalApp = existingApp ? mergeAppFile(existingApp, appCode) : appCode
+  return emit(finalApp, layout.appDir, appOutput)
+}
+
+export async function hono(config: {
+  readonly input: string
+  readonly schema: SchemaLib
+  readonly basePath?: string | undefined
+  readonly format?: Record<string, unknown> | undefined
+  readonly openapi?: boolean | undefined
+  readonly 'takibi-hono'?: TakibiHonoOptions | undefined
+}) {
+  if (config.format) setFormatOptions(config.format)
+  const parseResult = await parseOpenAPI(config.input)
+  if (!parseResult.ok) return parseResult
+  const openapi = parseResult.value
+  const ohConfig = config['takibi-hono']
+  const useOpenAPI = config.openapi === true
+  const layout = resolveLayout(ohConfig)
+  const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+  if (!schemasResult.ok) return schemasResult
+  if (useOpenAPI) {
+    const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
+    if (!componentsResult.ok) return componentsResult
+  }
+  const handlersResult = await generateHandlers(openapi, config.schema, useOpenAPI, layout)
+  if (!handlersResult.ok) return handlersResult
+  if (useOpenAPI) {
+    const webhooksResult = await generateWebhooks(openapi, config.schema, ohConfig, layout)
+    if (!webhooksResult.ok) return webhooksResult
+  }
+  return generateApp(openapi, handlersResult.value.handlerFileNames, config.basePath, layout)
+}
+
+async function readFileOrNull(filePath: string) {
+  return fsp.readFile(filePath, 'utf-8').catch(() => null)
+}
+
+function makeComponentFileMap(
+  components: Components,
+  ohConfig: TakibiHonoOptions | undefined,
+  layout: Layout,
+): Record<string, string> {
+  const componentFiles: Record<string, string> = {}
+  if (layout.schemasFile) componentFiles.schemas = layout.schemasFile
+  const componentKeyMap = {
+    parameters: ohConfig?.components?.parameters,
+    headers: ohConfig?.components?.headers,
+    securitySchemes: ohConfig?.components?.securitySchemes,
+    requestBodies: ohConfig?.components?.requestBodies,
+    responses: ohConfig?.components?.responses,
+    examples: ohConfig?.components?.examples,
+    links: ohConfig?.components?.links,
+    callbacks: ohConfig?.components?.callbacks,
+    pathItems: ohConfig?.components?.pathItems,
+  }
+  for (const [k, config] of Object.entries(componentKeyMap)) {
+    if (config) {
+      componentFiles[k] = config.output.endsWith('.ts')
+        ? config.output
+        : `${config.output}/index.ts`
+    }
+  }
+  if (layout.componentsBaseOutput) {
+    const componentTypeKeys = [
+      'parameters',
+      'headers',
+      'securitySchemes',
+      'requestBodies',
+      'responses',
+      'examples',
+      'links',
+      'callbacks',
+      'pathItems',
+    ] as const
+    for (const key of componentTypeKeys) {
+      if (!componentFiles[key] && components[key]) {
+        componentFiles[key] = `${layout.componentsBaseOutput}/${key}/index.ts`
+      }
+    }
+  }
+  return componentFiles
+}
+
 function makeComponentPaths(
   handlersDir: string,
   schemasFile: string,
-  ohConfig: NonNullable<Parameters<typeof hono>[0]['takibi-hono']> | undefined,
+  ohConfig: TakibiHonoOptions | undefined,
   componentsBaseOutput?: string,
 ): Record<string, string> {
   const paths: Record<string, string> = {}
@@ -434,7 +404,7 @@ function makeComponentPaths(
 async function splitComponentCode(
   bodyCode: string,
   outputDir: string,
-  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  schemaLib: SchemaLib,
   componentFiles: Record<string, string>,
 ) {
   const declPattern = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/g

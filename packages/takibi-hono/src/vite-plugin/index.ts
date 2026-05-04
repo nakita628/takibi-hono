@@ -42,7 +42,7 @@ function debounce(delayMs: number, callback: () => void) {
   return wrapped
 }
 
-async function listTypeScriptFilesShallow(directoryPath: string) {
+async function listTypeScriptFilesShallow(directoryPath: string): Promise<string[]> {
   return fsp
     .stat(directoryPath)
     .then((stats) =>
@@ -54,9 +54,9 @@ async function listTypeScriptFilesShallow(directoryPath: string) {
                 .filter((e) => e.isFile() && e.name.endsWith('.ts'))
                 .map((e) => path.join(directoryPath, e.name)),
             )
-        : ([] as string[]),
+        : [],
     )
-    .catch(() => [] as string[])
+    .catch(() => [])
 }
 
 async function deleteTypeScriptFiles(filePaths: readonly string[]) {
@@ -91,7 +91,6 @@ async function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config
   const previousPaths = new Set(extractOutputPaths(previousConfig))
   const currentPaths = new Set(extractOutputPaths(currentConfig))
   const stalePaths = [...previousPaths].filter((p) => !currentPaths.has(p))
-
   const results = await Promise.all(
     stalePaths.map(async (stalePath) => {
       const stats = await fsp.stat(stalePath).catch(() => null)
@@ -121,7 +120,6 @@ async function readConfigWithHotReload(server: ViteDevServer) {
     } else {
       server.moduleGraph.invalidateAll()
     }
-
     const loadedModule = await server.ssrLoadModule(`${absoluteConfigPath}?t=${Date.now()}`)
     const defaultExport = loadedModule?.default
     if (typeof defaultExport !== 'object' || defaultExport === null) {
@@ -152,7 +150,6 @@ async function runGeneration(config: Config) {
       })(),
     )
   }
-
   const handlersCfg = config['takibi-hono']?.handlers
   if (handlersCfg?.output && !handlersCfg.output.endsWith('.ts')) {
     splitCleanups.push(
@@ -164,9 +161,7 @@ async function runGeneration(config: Config) {
       })(),
     )
   }
-
   const cleanupLogs = (await Promise.all(splitCleanups)).filter((l) => l !== null)
-
   const result = await hono({
     input: config.input,
     schema: config.schema,
@@ -204,7 +199,6 @@ export function takibiHonoVite(): any {
     inputDirectory: null,
   }
   const absoluteConfigFilePath = toAbsolutePath('takibi-hono.config.ts')
-
   const runGenerationAndReload = async (server?: ViteDevServer) => {
     if (!pluginState.current) return
     console.log('🔥 takibi-hono')
@@ -212,19 +206,17 @@ export function takibiHonoVite(): any {
     for (const log of logs) console.log(log)
     if (server) server.ws.send({ type: 'full-reload' })
   }
-
   const handleConfigChange = async (server: ViteDevServer) => {
     const nextConfig = await readConfigWithHotReload(server)
     if (!nextConfig.ok) {
       console.error(`❌ config: ${nextConfig.error}`)
       return
     }
-
     if (pluginState.current) {
       const cleaned = await cleanupStaleOutputs(pluginState.current, nextConfig.value)
       for (const p of cleaned) console.log(`🧹 cleanup: ${p}`)
     }
-
+    l
     pluginState.previous = pluginState.current
     pluginState.current = nextConfig.value
     pluginState.inputDirectory = addInputGlobsToWatcher(
@@ -246,11 +238,9 @@ export function takibiHonoVite(): any {
       }
       return
     },
-
     async buildStart() {
       // Dev-only: handled by configureServer
     },
-
     configureServer(server: ViteDevServer) {
       ;(async () => {
         const initialConfig = await readConfigWithHotReload(server)
@@ -265,9 +255,7 @@ export function takibiHonoVite(): any {
           toAbsolutePath(pluginState.current.input),
         )
         server.watcher.add(absoluteConfigFilePath)
-
         const debouncedRegenerate = debounce(200, () => void runGenerationAndReload(server))
-
         server.watcher.on('all', async (_eventType, filePath) => {
           const absoluteChanged = path.resolve(filePath)
           if (absoluteChanged === absoluteConfigFilePath) {
@@ -281,7 +269,6 @@ export function takibiHonoVite(): any {
             debouncedRegenerate()
           }
         })
-
         await runGenerationAndReload(server)
       })().catch((err) => console.error('❌ watch error:', err))
     },

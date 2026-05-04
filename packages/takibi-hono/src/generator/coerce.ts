@@ -15,7 +15,10 @@ import { schemaToInlineExpression } from './inline-schema.js'
  *
  * Returns undefined if no coercion is needed (e.g., string type).
  */
-export function coerceQueryExpression(schema: Schema, schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string | undefined {
+export function coerceQueryExpression(
+  schema: Schema,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+) {
   const type = schema.type
   if (!type || Array.isArray(type)) return undefined
 
@@ -35,7 +38,7 @@ export function coerceQueryExpression(schema: Schema, schemaLib: 'zod' | 'valibo
   }
 }
 
-function coerceNumber(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string {
+function coerceNumber(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect') {
   switch (schemaLib) {
     case 'zod':
       return 'z.coerce.number()'
@@ -50,7 +53,7 @@ function coerceNumber(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'ef
   }
 }
 
-function coerceInteger(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string {
+function coerceInteger(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect') {
   switch (schemaLib) {
     case 'zod':
       return 'z.coerce.number().pipe(z.int())'
@@ -65,7 +68,7 @@ function coerceInteger(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'e
   }
 }
 
-function coerceBoolean(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string {
+function coerceBoolean(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect') {
   switch (schemaLib) {
     case 'zod':
       return 'z.stringbool()'
@@ -85,7 +88,10 @@ function coerceBoolean(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'e
  * Query arrays arrive as string[] (e.g., ?tag=a&tag=b).
  * Items of non-string types need per-element coercion.
  */
-function coerceArray(schema: Schema, schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string | undefined {
+function coerceArray(
+  schema: Schema,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+): string | undefined {
   const itemSchema = singleItems(schema.items)
   if (!itemSchema) return undefined
 
@@ -113,7 +119,10 @@ function coerceArray(schema: Schema, schemaLib: 'zod' | 'valibot' | 'typebox' | 
  * Returns a coerced object expression for query parameters.
  * Query objects arrive as JSON strings, so we parse them.
  */
-function coerceObject(schema: Schema, schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string | undefined {
+function coerceObject(
+  schema: Schema,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+) {
   const inner = schemaToInlineExpression(schema, schemaLib)
   switch (schemaLib) {
     case 'zod':
@@ -129,7 +138,7 @@ function coerceObject(schema: Schema, schemaLib: 'zod' | 'valibot' | 'typebox' |
   }
 }
 
-function singleItems(items: Schema | readonly Schema[] | undefined): Schema | undefined {
+function singleItems(items: Schema | readonly Schema[] | undefined) {
   if (!items) return undefined
   if (isSchemaArray(items)) return items[0]
   return items

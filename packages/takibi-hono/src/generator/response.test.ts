@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { makeHandlerStub } from './response.js'
+import { HANDLER_STUB } from './response.js'
 
-describe('makeHandlerStub', () => {
-  it.concurrent('should return empty handler stub', () => {
-    expect(makeHandlerStub()).toBe('(c)=>{}')
+describe('HANDLER_STUB', () => {
+  it.concurrent('should be empty handler stub', () => {
+    expect(HANDLER_STUB).toBe('(c)=>{}')
   })
 })

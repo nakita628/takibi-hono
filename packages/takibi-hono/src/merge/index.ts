@@ -72,10 +72,13 @@ function* iterateRouteCalls(file: SourceFile) {
  */
 function extractRouteInfo(code: string) {
   const file = parseSnippet(code)
-  const result = new Map<string, {
-  readonly body: string
-  readonly comment: string | undefined
-}>()
+  const result = new Map<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >()
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const dotPos = propAccess.getNameNode().getStart() - 1
     const before = code.slice(0, dotPos)
@@ -93,14 +96,20 @@ function extractRouteInfo(code: string) {
  * (and isn't a stub), substitute the generated last-argument with the existing
  * one. Returns the rewritten generated code.
  */
-function replaceRouteParts(generatedCode: string, existingRoutes: ReadonlyMap<string, {
-  readonly body: string
-  readonly comment: string | undefined
-}>) {
+function replaceRouteParts(
+  generatedCode: string,
+  existingRoutes: ReadonlyMap<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >,
+) {
   const file = parseSnippet(generatedCode)
   const seenPositions = new Set<number>()
   const STUBS = new Set(['(c)=>{}', '(c)=>{return}'])
-  const ops: readonly[start: number, end: number, text: string][] = []
+  const ops: Replacement[] = []
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const namePos = propAccess.getNameNode().getStart()
     if (seenPositions.has(namePos)) continue
@@ -146,11 +155,10 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   const mergedImports = mergeImports(existingFile, generatedImportText)
   const mergedGeneratedBody = mergedGenerated.slice(generatedImportText.length).trimStart()
   const nonHandlerSection = nonHandlerCode.length > 0 ? `${nonHandlerCode.join('\n\n')}\n\n` : ''
-  const assembled =
-    `${[mergedImports, '', nonHandlerSection + mergedGeneratedBody]
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()}\n`
+  const assembled = `${[mergedImports, '', nonHandlerSection + mergedGeneratedBody]
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()}\n`
   return restoreRouteComments(assembled, existingRoutes)
 }
 
@@ -195,10 +203,16 @@ function findApiStatement(file: SourceFile) {
     )
 }
 
-function restoreRouteComments(code: string, existingRoutes: ReadonlyMap<string, {
-  readonly body: string
-  readonly comment: string | undefined
-}>) {
+function restoreRouteComments(
+  code: string,
+  existingRoutes: ReadonlyMap<
+    string,
+    {
+      readonly body: string
+      readonly comment: string | undefined
+    }
+  >,
+) {
   return [...existingRoutes.entries()]
     .filter(([, info]) => info.comment !== undefined)
     .reduce((result, [key, info]) => {

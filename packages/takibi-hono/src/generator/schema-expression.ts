@@ -4,7 +4,7 @@ import { toPascalCase } from '../utils/index.js'
 /**
  * Strips import lines from schema-to-library output, returning only declarations.
  */
-function stripImportLines(code: string): string {
+function stripImportLines(code: string) {
   return code
     .split('\n')
     .filter((line) => !line.startsWith('import '))
@@ -22,8 +22,8 @@ function stripImportLines(code: string): string {
  * call (`.meta`, `v.pipe(...,v.description,v.metadata)`, `Type.Object(...,opts)`,
  * `.describe`, `.annotations`) for each library.
  */
-function toJSONSchema(name: string, schema: Schema): Record<string, unknown> {
-  return { ...schema, title: `${name}Schema` }
+function toJSONSchema(name: string, schema: Schema) {
+  return { ...schema, title: `${name}Schema` } as const
 }
 
 /**
@@ -33,10 +33,13 @@ function toJSONSchema(name: string, schema: Schema): Record<string, unknown> {
  * - Drops valibot's `${varName}Input` (we keep only Output).
  * - Nests multi-arg `z.intersection` / `Schema.extend` calls into 2-arg form.
  */
-function postProcess(code: string, name: string, schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'): string {
+function postProcess(
+  code: string,
+  name: string,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+) {
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
-
   const transforms: readonly ((s: string) => string)[] = [
     // Effect emits `${varName}Encoded`; other libs emit `${varName}` directly.
     schemaLib === 'effect'
@@ -138,7 +141,7 @@ export async function extractSchemaExports(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   exportType = true,
   readonly = false,
-): Promise<string> {
+) {
   const jsonSchema = toJSONSchema(name, schema)
   const code = await makeSchemaCode(jsonSchema, schemaLib, exportType, readonly)
   return postProcess(stripImportLines(code), name, schemaLib)
@@ -149,7 +152,7 @@ async function makeSchemaCode(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   exportType: boolean,
   readonly: boolean,
-): Promise<string> {
+) {
   switch (schemaLib) {
     case 'zod': {
       const { schemaToZod } = await import('schema-to-library/zod')

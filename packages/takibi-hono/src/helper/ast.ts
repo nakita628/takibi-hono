@@ -1,5 +1,6 @@
 import ts from 'typescript'
 
+import { isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
 
 function makeSourceFile(code: string) {
@@ -249,9 +250,9 @@ function collectRefs(schema: Schema): readonly string[] {
       ? [schema.$ref.split('/').at(-1) ?? '']
       : []
   const itemRefs = schema.items
-    ? Array.isArray(schema.items)
-      ? (schema.items as readonly Schema[]).flatMap(collectRefs)
-      : collectRefs(schema.items as Schema)
+    ? isSchemaArray(schema.items)
+      ? schema.items.flatMap(collectRefs)
+      : collectRefs(schema.items)
     : []
   const propRefs = schema.properties ? Object.values(schema.properties).flatMap(collectRefs) : []
   const additionalRefs =

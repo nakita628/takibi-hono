@@ -15,7 +15,6 @@ export function makeAppCode(
   const handlerImports = sorted.map(
     (name) => `${toCamelCase(name === '__root' ? 'root' : name)}Handler`,
   )
-
   const routeChain = sorted
     .map((name) => {
       const handlerName = `${toCamelCase(name === '__root' ? 'root' : name)}Handler`

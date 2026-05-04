@@ -51,7 +51,7 @@ export function makeTypeString(
       ? `'${schema.const}'`
       : typeof schema.const === 'object' && schema.const !== null
         ? JSON.stringify(schema.const)
-        : String(schema.const as string | number | boolean)
+        : String(schema.const)
   }
   const types = normalizeType(schema)
   const isNullable = schema.nullable === true || types.includes('null')

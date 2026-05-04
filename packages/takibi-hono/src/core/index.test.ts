@@ -5,7 +5,49 @@ import path from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
-import { hono } from './index.js'
+import { setFormatOptions } from '../format/index.js'
+import { parseOpenAPI } from '../openapi/index.js'
+import {
+  generateApp,
+  generateComponents,
+  generateHandlers,
+  generateSchemas,
+  generateWebhooks,
+  resolveLayout,
+  type TakibiHonoOptions,
+} from './index.js'
+
+type SchemaLib = 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
+
+async function runHono(config: {
+  readonly input: string
+  readonly schema: SchemaLib
+  readonly basePath?: string | undefined
+  readonly format?: Record<string, unknown> | undefined
+  readonly openapi?: boolean | undefined
+  readonly 'takibi-hono'?: TakibiHonoOptions | undefined
+}) {
+  if (config.format) setFormatOptions(config.format)
+  const parseResult = await parseOpenAPI(config.input)
+  if (!parseResult.ok) return parseResult
+  const openapi = parseResult.value
+  const ohConfig = config['takibi-hono']
+  const useOpenAPI = config.openapi === true
+  const layout = resolveLayout(ohConfig)
+  const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+  if (!schemasResult.ok) return schemasResult
+  if (useOpenAPI) {
+    const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
+    if (!componentsResult.ok) return componentsResult
+  }
+  const handlersResult = await generateHandlers(openapi, config.schema, useOpenAPI, layout)
+  if (!handlersResult.ok) return handlersResult
+  if (useOpenAPI) {
+    const webhooksResult = await generateWebhooks(openapi, config.schema, ohConfig, layout)
+    if (!webhooksResult.ok) return webhooksResult
+  }
+  return generateApp(openapi, handlersResult.value.handlerFileNames, config.basePath, layout)
+}
 
 const PETSTORE_YAML = `openapi: 3.0.3
 info:
@@ -340,7 +382,7 @@ describe('hono', () => {
   describe('zod: standard mode (openapi unset)', () => {
     it.concurrent('schemas.ts', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_standard_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -372,7 +414,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('zod_standard_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -403,7 +445,7 @@ export const petsHandler = new Hono()
 
     it.concurrent('handlers/__root.ts: no validator imports', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_standard_root')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -422,7 +464,7 @@ export const rootHandler = new Hono().get('/', (c) => {})
 
     it.concurrent('handlers/index.ts: barrel exports', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_standard_barrel')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -440,7 +482,7 @@ export * from './pets'
 
     it.concurrent('index.ts: app with routes', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_standard_app')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -464,7 +506,7 @@ export default app
 
     it.concurrent('handler files list', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_standard_files')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -482,7 +524,7 @@ export default app
   describe('valibot: standard mode (openapi unset)', () => {
     it.concurrent('schemas.ts', { timeout: 30000 }, async () => {
       const d = tmpDir('valibot_standard_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'valibot',
         'takibi-hono': {
@@ -517,7 +559,7 @@ export type CreatePet = v.InferOutput<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('valibot_standard_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'valibot',
           'takibi-hono': {
@@ -553,7 +595,7 @@ export const petsHandler = new Hono()
   describe('typebox: standard mode (openapi unset)', () => {
     it.concurrent('schemas.ts', { timeout: 30000 }, async () => {
       const d = tmpDir('typebox_standard_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'typebox',
         'takibi-hono': {
@@ -588,7 +630,7 @@ export type CreatePet = Static<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('typebox_standard_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'typebox',
           'takibi-hono': {
@@ -624,7 +666,7 @@ export const petsHandler = new Hono()
   describe('arktype: standard mode (openapi unset)', () => {
     it.concurrent('schemas.ts', { timeout: 30000 }, async () => {
       const d = tmpDir('arktype_standard_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'arktype',
         'takibi-hono': {
@@ -656,7 +698,7 @@ export type CreatePet = typeof CreatePetSchema.infer
       { timeout: 30000 },
       async () => {
         const d = tmpDir('arktype_standard_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'arktype',
           'takibi-hono': {
@@ -689,7 +731,7 @@ export const petsHandler = new Hono()
   describe('effect: standard mode (openapi unset)', () => {
     it.concurrent('schemas.ts', { timeout: 30000 }, async () => {
       const d = tmpDir('effect_standard_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'effect',
         'takibi-hono': {
@@ -727,7 +769,7 @@ export type CreatePet = typeof CreatePetSchema.Encoded
       { timeout: 30000 },
       async () => {
         const d = tmpDir('effect_standard_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'effect',
           'takibi-hono': {
@@ -769,7 +811,7 @@ export const petsHandler = new Hono()
   describe('openapi mode', () => {
     it.concurrent('zod: schemas.ts with openapi: true', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_openapi_schemas')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
@@ -802,7 +844,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('zod_openapi_pets')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
@@ -874,7 +916,7 @@ export const petsHandler = new Hono()
 
     it.concurrent('zod: handler files list', { timeout: 30000 }, async () => {
       const d = tmpDir('zod_openapi_files')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
@@ -893,7 +935,7 @@ export const petsHandler = new Hono()
   describe('basePath', () => {
     it.concurrent('index.ts includes basePath', { timeout: 30000 }, async () => {
       const d = tmpDir('basepath')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
@@ -923,7 +965,7 @@ export default app
       'returns ok: false with error string for invalid input path',
       { timeout: 30000 },
       async () => {
-        const result = await hono({
+        const result = await runHono({
           input: nonexistentYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -947,7 +989,7 @@ export default app
   describe('split schemas mode (openapi: true, schemas split)', () => {
     it.concurrent('schemas/pet.ts: individual schema file', { timeout: 30000 }, async () => {
       const d = tmpDir('split_schemas_pet')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
@@ -973,7 +1015,7 @@ export type Pet = z.infer<typeof PetSchema>
 
     it.concurrent('schemas/createPet.ts: individual schema file', { timeout: 30000 }, async () => {
       const d = tmpDir('split_schemas_createpet')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
@@ -1002,7 +1044,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('split_schemas_barrel')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
@@ -1027,7 +1069,7 @@ export * from './pet'
       { timeout: 30000 },
       async () => {
         const d = tmpDir('split_schemas_files')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
@@ -1049,7 +1091,7 @@ export * from './pet'
   describe('handlers always use split mode', () => {
     it.concurrent('handlers/index.ts: barrel exports', { timeout: 30000 }, async () => {
       const d = tmpDir('always_split_barrel')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -1067,7 +1109,7 @@ export * from './pets'
 
     it.concurrent('index.ts: app routes split handlers', { timeout: 30000 }, async () => {
       const d = tmpDir('always_split_app')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -1091,7 +1133,7 @@ export default app
 
     it.concurrent('handlers dir has split files', { timeout: 30000 }, async () => {
       const d = tmpDir('always_split_dirlist')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -1112,7 +1154,7 @@ export default app
       { timeout: 30000 },
       async () => {
         const d = tmpDir('comp_responses')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -1155,7 +1197,7 @@ export const UnauthorizedResponseResponse = {
 
     it.concurrent('parameters.ts: parameter schemas', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_parameters')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1180,7 +1222,7 @@ export const LimitParamParamsSchema = z.int().optional()
 
     it.concurrent('headers.ts: header schemas', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_headers')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1205,7 +1247,7 @@ export const XRateLimitHeaderSchema = z.int().optional()
 
     it.concurrent('examples.ts: example objects', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_examples')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1234,7 +1276,7 @@ export const ErrorExampleExample = {
 
     it.concurrent('security-schemes.ts: security scheme objects', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_security')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1270,7 +1312,7 @@ export const ApiKeySecurityScheme = {
       { timeout: 30000 },
       async () => {
         const d = tmpDir('comp_reqbodies')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -1298,7 +1340,7 @@ export const CreateUserBodyRequestBody = {
 
     it.concurrent('links.ts: link objects', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_links')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1326,7 +1368,7 @@ export const CreateUserBodyRequestBody = {
       { timeout: 30000 },
       async () => {
         const d = tmpDir('comp_schemas')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -1373,7 +1415,7 @@ export type Error = z.infer<typeof ErrorSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('comp_handler_users')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -1460,7 +1502,7 @@ export const rootHandler = new Hono().get('/', (c) => {})
 `
         for (const schema of ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const) {
           const d = tmpDir(`shared_root_${schema}`)
-          const result = await hono({
+          const result = await runHono({
             input: petstoreYaml,
             schema,
             'takibi-hono': {
@@ -1484,7 +1526,7 @@ export * from './pets'
 `
         for (const schema of ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const) {
           const d = tmpDir(`shared_barrel_${schema}`)
-          const result = await hono({
+          const result = await runHono({
             input: petstoreYaml,
             schema,
             'takibi-hono': {
@@ -1514,7 +1556,7 @@ export default app
 `
         for (const schema of ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const) {
           const d = tmpDir(`shared_app_${schema}`)
-          const result = await hono({
+          const result = await runHono({
             input: petstoreYaml,
             schema,
             'takibi-hono': {
@@ -1536,7 +1578,7 @@ export default app
       { timeout: 30000 },
       async () => {
         const d = tmpDir('valibot_split_schemas_pet')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
@@ -1568,7 +1610,7 @@ export type Pet = v.InferOutput<typeof PetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('valibot_split_schemas_createpet')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
@@ -1599,7 +1641,7 @@ export type CreatePet = v.InferOutput<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('valibot_split_schemas_barrel')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
@@ -1626,7 +1668,7 @@ export * from './pet'
       { timeout: 30000 },
       async () => {
         const d = tmpDir('effect_split_schemas_pet')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
@@ -1661,7 +1703,7 @@ export type Pet = typeof PetSchema.Encoded
       { timeout: 30000 },
       async () => {
         const d = tmpDir('effect_split_schemas_createpet')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
@@ -1692,7 +1734,7 @@ export type CreatePet = typeof CreatePetSchema.Encoded
       { timeout: 30000 },
       async () => {
         const d = tmpDir('effect_split_schemas_barrel')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
@@ -1716,7 +1758,7 @@ export * from './pet'
   describe('valibot: handlers always use split mode', () => {
     it.concurrent('handlers/index.ts: barrel exports for valibot', { timeout: 30000 }, async () => {
       const d = tmpDir('valibot_always_split_barrel')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'valibot',
         'takibi-hono': {
@@ -1734,7 +1776,7 @@ export * from './pets'
 
     it.concurrent('index.ts: app routes split valibot handlers', { timeout: 30000 }, async () => {
       const d = tmpDir('valibot_always_split_app')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'valibot',
         'takibi-hono': {
@@ -1758,7 +1800,7 @@ export default app
 
     it.concurrent('handlers dir has split files', { timeout: 30000 }, async () => {
       const d = tmpDir('valibot_always_split_dirlist')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'valibot',
         'takibi-hono': {
@@ -1776,7 +1818,7 @@ export default app
   describe('component responses with split (responses.split: true)', () => {
     it.concurrent('individual response files and barrel', { timeout: 30000 }, async () => {
       const d = tmpDir('comp_responses_split')
-      const result = await hono({
+      const result = await runHono({
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
@@ -1840,7 +1882,7 @@ export * from './userListResponseResponse'
       { timeout: 30000 },
       async () => {
         const d = tmpDir('multi_components')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -2048,7 +2090,7 @@ components:
 `,
         )
 
-        const result = await hono({
+        const result = await runHono({
           input: webhookSpec,
           schema: 'zod',
           openapi: true,
@@ -2097,7 +2139,7 @@ export const webhooksHandler = new Hono().post(
         const d = tmpDir('stale_handler_cleanup')
 
         // First generation: petstore has /pets and / (root)
-        const result1 = await hono({
+        const result1 = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2127,7 +2169,7 @@ export const webhooksHandler = new Hono().post(
         expect(filesWithStale).toContain('orders.ts')
 
         // Second generation: same spec, stale file should be deleted
-        const result2 = await hono({
+        const result2 = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2157,7 +2199,7 @@ export const webhooksHandler = new Hono().post(
       { timeout: 30000 },
       async () => {
         const d = tmpDir('export_schemas_types_toplevel')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2191,7 +2233,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('no_export_types_default')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2220,7 +2262,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('export_types_priority')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2250,7 +2292,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('export_schemas_types_effect')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'effect',
           'takibi-hono': {
@@ -2292,7 +2334,7 @@ export type CreatePet = typeof CreatePetSchema.Encoded
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_schemas')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2323,7 +2365,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_override')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2355,7 +2397,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_all')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -2486,7 +2528,7 @@ export const CreateUserBodyRequestBody = {
 
     it.concurrent('components.output with exportSchemasTypes', { timeout: 30000 }, async () => {
       const d = tmpDir('components_output_export_types')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -2521,7 +2563,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_handler_import')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2557,7 +2599,7 @@ export const petsHandler = new Hono()
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_only_existing')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
@@ -2586,7 +2628,7 @@ export const petsHandler = new Hono()
       { timeout: 30000 },
       async () => {
         const d = tmpDir('components_output_partial_override')
-        const result = await hono({
+        const result = await runHono({
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
@@ -2610,7 +2652,7 @@ export const petsHandler = new Hono()
 
     it.concurrent('components.output with schemas split: true', { timeout: 30000 }, async () => {
       const d = tmpDir('components_output_split')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -2640,7 +2682,7 @@ export * from './pet'
       { timeout: 30000 },
       async () => {
         const d = tmpDir('readonly_zod')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2672,7 +2714,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('readonly_false_zod')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2699,7 +2741,7 @@ export const CreatePetSchema = z
 
     it.concurrent('readonly with components.output', { timeout: 30000 }, async () => {
       const d = tmpDir('readonly_components_output')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'zod',
         'takibi-hono': {
@@ -2732,7 +2774,7 @@ export const CreatePetSchema = z
       { timeout: 30000 },
       async () => {
         const d = tmpDir('readonly_export_types')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2768,7 +2810,7 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       { timeout: 30000 },
       async () => {
         const d = tmpDir('readonly_undefined')
-        const result = await hono({
+        const result = await runHono({
           input: petstoreYaml,
           schema: 'zod',
           'takibi-hono': {
@@ -2794,7 +2836,7 @@ export const CreatePetSchema = z
 
     it.concurrent('readonly with effect schema library', { timeout: 30000 }, async () => {
       const d = tmpDir('readonly_effect')
-      const result = await hono({
+      const result = await runHono({
         input: petstoreYaml,
         schema: 'effect',
         'takibi-hono': {

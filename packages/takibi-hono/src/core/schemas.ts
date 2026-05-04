@@ -6,8 +6,7 @@ import { extractSchemaExports } from '../generator/schema-expression.js'
 import { ast, detectCircularRefs, getLazyWrapper } from '../helper/ast.js'
 import { zodType } from '../helper/type.js'
 import type { Schema } from '../openapi/index.js'
-import {
-  toPascalCase, } from '../utils/index.js'
+import { toPascalCase } from '../utils/index.js'
 
 export async function makeSchemasCode(
   schemas: { readonly [k: string]: Schema },
@@ -116,7 +115,6 @@ function processDeclaration(
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
   const needsLazy = ctx.circularNames.has(name)
-
   if (needsLazy && schemaLib === 'zod') {
     const typeDef = zodType(schema, pascalName, ctx.cyclicGroupPascal, ctx.readonly)
     const wrapper = getLazyWrapper(schemaLib)

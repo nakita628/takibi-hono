@@ -1,12 +1,11 @@
 import { isNullable, isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
-import {
-  resolveRef, } from '../utils/index.js'
+import { resolveRef } from '../utils/index.js'
 
 /**
  * Extracts a single Schema from items (ignoring array/tuple form).
  */
-function singleItems(items: Schema | readonly Schema[] | undefined): Schema | undefined {
+function singleItems(items: Schema | readonly Schema[] | undefined) {
   if (!items) return undefined
   if (isSchemaArray(items)) return items[0]
   return items
@@ -18,7 +17,7 @@ function singleItems(items: Schema | readonly Schema[] | undefined): Schema | un
 export function schemaToInlineExpression(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   if (schema.$ref) {
     return resolveRef(schema.$ref)
   }
@@ -100,7 +99,7 @@ function wrapNullable(
   expr: string,
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
+) {
   if (!isNullable(schema)) return expr
   switch (schemaLib) {
     case 'zod':
@@ -122,7 +121,7 @@ function wrapNullable(
  * Extracts the arktype string from a type('...') expression.
  * Returns the inner string if matched, otherwise returns the original expression.
  */
-function extractArktypeString(expr: string): string {
+function extractArktypeString(expr: string) {
   const match = expr.match(/^type\('(.+)'\)$/)
   if (match) return match[1]
   return expr
@@ -132,7 +131,7 @@ function extractArktypeString(expr: string): string {
  * Returns true if the expression is an arktype string-definition form: type('...').
  * Returns false for object-definition form: type({...}), variable refs, or chained calls.
  */
-function isArktypeStringForm(expr: string): boolean {
+function isArktypeStringForm(expr: string) {
   return /^type\('(.+)'\)$/.test(expr)
 }
 
@@ -181,7 +180,7 @@ function zodInlineExpr(schema: Schema): string {
   }
 }
 
-function zodInline(schema: Schema): string {
+function zodInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
     const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
@@ -237,7 +236,7 @@ function valibotInline(schema: Schema): string {
   return wrapNullable(expr, schema, 'valibot')
 }
 
-function typeboxInline(schema: Schema): string {
+function typeboxInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
     const values = schema.enum.map((v) => `Type.Literal(${JSON.stringify(v)})`).join(',')
@@ -287,7 +286,7 @@ function typeboxInline(schema: Schema): string {
   return wrapNullable(expr, schema, 'typebox')
 }
 
-function arktypeInline(schema: Schema): string {
+function arktypeInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
     const values = schema.enum.map((v) => JSON.stringify(v)).join(' | ')
@@ -341,7 +340,7 @@ function arktypeInline(schema: Schema): string {
   return wrapNullable(expr, schema, 'arktype')
 }
 
-function effectInline(schema: Schema): string {
+function effectInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
     const values = schema.enum.map((v) => `Schema.Literal(${JSON.stringify(v)})`).join(',')

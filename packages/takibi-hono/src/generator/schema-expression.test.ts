@@ -561,7 +561,7 @@ describe('extractSchemaExports: not schema (typed predicate)', () => {
   it.concurrent('arktype: not — type("unknown").narrow', async () => {
     const result = await extractSchemaExports('Shape', schema as any, 'arktype')
     expect(result).toBe(
-      "export const ShapeSchema = type(\"unknown\").narrow((v: unknown) => typeof v !== 'string')\n\nexport type Shape = typeof ShapeSchema.infer",
+      'export const ShapeSchema = type("unknown").narrow((v: unknown) => typeof v !== \'string\')\n\nexport type Shape = typeof ShapeSchema.infer',
     )
   })
 

@@ -7,14 +7,23 @@ import { pathToFileURL } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from './config/index.js'
-import { hono } from './core/index.js'
+import {
+  generateApp,
+  generateComponents,
+  generateHandlers,
+  generateSchemas,
+  generateWebhooks,
+  resolveLayout,
+} from './core/index.js'
+import { setFormatOptions } from './format/index.js'
+import { parseOpenAPI } from './openapi/index.js'
 
 /**
  * Entry point integration test helper.
  *
  * Replicates the exact logic of src/index.ts + src/cli/index.ts:
  *   1. readConfig() → parseConfig(mod.default)
- *   2. hono(config)
+ *   2. orchestrate generators
  *   3. Return success message or error
  */
 async function runEntryPoint(
@@ -37,15 +46,32 @@ async function runEntryPoint(
     if (!configResult.ok) return configResult
 
     const config = configResult.value
-    const result = await hono({
-      input: config.input,
-      schema: config.schema,
-      basePath: config.basePath,
-      format: config.format,
-      openapi: config.openapi,
-      'takibi-hono': config['takibi-hono'],
-    })
-    if (!result.ok) return result
+    if (config.format) setFormatOptions(config.format)
+    const openAPIResult = await parseOpenAPI(config.input)
+    if (!openAPIResult.ok) return openAPIResult
+    const openapi = openAPIResult.value
+    const ohConfig = config['takibi-hono']
+    const useOpenAPI = config.openapi === true
+    const layout = resolveLayout(ohConfig)
+    const schemasResult = await generateSchemas(openapi, config.schema, ohConfig, layout)
+    if (!schemasResult.ok) return schemasResult
+    if (useOpenAPI) {
+      const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
+      if (!componentsResult.ok) return componentsResult
+    }
+    const handlersResult = await generateHandlers(openapi, config.schema, useOpenAPI, layout)
+    if (!handlersResult.ok) return handlersResult
+    if (useOpenAPI) {
+      const webhooksResult = await generateWebhooks(openapi, config.schema, ohConfig, layout)
+      if (!webhooksResult.ok) return webhooksResult
+    }
+    const appResult = await generateApp(
+      openapi,
+      handlersResult.value.handlerFileNames,
+      config.basePath,
+      layout,
+    )
+    if (!appResult.ok) return appResult
     return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
   } finally {
     process.chdir(originalCwd)

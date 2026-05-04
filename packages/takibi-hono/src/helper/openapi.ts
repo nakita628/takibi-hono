@@ -9,8 +9,7 @@ import type {
   Reference,
   Schema,
 } from '../openapi/index.js'
-import {
-  resolveRef, } from '../utils/index.js'
+import { resolveRef } from '../utils/index.js'
 
 export function makeOptional(
   expr: string,
@@ -77,40 +76,34 @@ export function makeExternalDocsPart(externalDocs: NonNullable<Operation['extern
 
 export function makeServersPart(servers: NonNullable<Operation['servers']>): string {
   const entries = servers.map((server) => {
-    const parts = [
+    const result = [
       `url:${JSON.stringify(server.url)}`,
       ...(server.description ? [`description:${JSON.stringify(server.description)}`] : []),
       ...(server.variables
         ? [
             `variables:{${Object.entries(server.variables)
-              .map(([key, val]) => {
-                const vParts = [
-                  ...(val.enum ? [`enum:${JSON.stringify(val.enum)}`] : []),
-                  ...(val.default !== undefined ? [`default:${JSON.stringify(val.default)}`] : []),
-                  ...(val.description ? [`description:${JSON.stringify(val.description)}`] : []),
+              .map(([k, v]) => {
+                const result = [
+                  ...(v.enum ? [`enum:${JSON.stringify(v.enum)}`] : []),
+                  ...(v.default !== undefined ? [`default:${JSON.stringify(v.default)}`] : []),
+                  ...(v.description ? [`description:${JSON.stringify(v.description)}`] : []),
                 ]
-                return `${key}:{${vParts.join(',')}}`
+                return `${k}:{${result.join(',')}}`
               })
               .join(',')}}`,
           ]
         : []),
     ]
-    return `{${parts.join(',')}}`
+    return `{${result.join(',')}}`
   })
   return `servers:[${entries.join(',')}]`
 }
 
-export function groupParametersByLocation(allParams: readonly unknown[]): {
-  [k: string]: readonly {
-    readonly name: string
-    readonly schema: Schema
-    readonly required: boolean
-  }[]
-} {
+export function groupParametersByLocation(allParams: readonly unknown[]) {
   return allParams
     .filter((param): param is Parameter => !isRefObject(param) && isParameter(param))
     .reduce<{
-      [k: string]: { readonly name: string; readonly schema: Schema; readonly required: boolean }[]
+      readonly[k: string]: { readonly name: string; readonly schema: Schema; readonly required: boolean }[]
     }>(
       (acc, param) => ({
         ...acc,

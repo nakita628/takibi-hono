@@ -7,8 +7,8 @@ import type { Operation } from '../openapi/index.js'
 export function makeDescribeRoute(
   operation: Operation,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
-  const parts = [
+) {
+  const result = [
     ...(operation.description ? [`description:${JSON.stringify(operation.description)}`] : []),
     ...(operation.summary ? [`summary:${JSON.stringify(operation.summary)}`] : []),
     ...(operation.tags && operation.tags.length > 0
@@ -30,5 +30,5 @@ export function makeDescribeRoute(
         })()
       : []),
   ]
-  return `describeRoute({${parts.join(',')}})`
+  return `describeRoute({${result.join(',')}})`
 }
