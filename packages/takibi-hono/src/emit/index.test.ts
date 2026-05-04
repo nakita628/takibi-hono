@@ -38,4 +38,26 @@ describe('emit', () => {
     fs.chmodSync(readonlyDir, 0o755)
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
+
+  it('returns fmt error and writes nothing when input has syntax errors', async () => {
+    const out = `${testDir}/syntax-err.ts`
+    const result = await emit('const = ;)(', testDir, out)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(typeof result.error).toBe('string')
+      expect(result.error.length).toBeGreaterThan(0)
+    }
+    expect(fs.existsSync(out)).toBe(false)
+  })
+
+  it('returns mkdir error when target directory path is occupied by a file', async () => {
+    const filePath = `${testDir}/occupied`
+    fs.writeFileSync(filePath, 'placeholder')
+    const result = await emit('const x = 1', filePath, `${filePath}/out.ts`)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(typeof result.error).toBe('string')
+      expect(result.error.length).toBeGreaterThan(0)
+    }
+  })
 })

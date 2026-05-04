@@ -17,7 +17,9 @@ export function collectWebhookOperations(openapi: OpenAPI): readonly {
       ? pathItem.parameters.filter(isParameter)
       : undefined
     return Object.entries(pathItem)
-      .filter((entry) => isHttpMethod(entry[0]) && isOperation(entry[1]))
+      .filter(
+        (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
+      )
       .map(([method, operation]) => ({ webhookName, method, operation, pathItemParameters }))
   })
 }

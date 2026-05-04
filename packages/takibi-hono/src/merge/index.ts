@@ -109,7 +109,7 @@ function replaceRouteParts(
   const file = parseSnippet(generatedCode)
   const seenPositions = new Set<number>()
   const STUBS = new Set(['(c)=>{}', '(c)=>{return}'])
-  const ops: Replacement[] = []
+  const ops: [start: number, end: number, text: string][] = []
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const namePos = propAccess.getNameNode().getStart()
     if (seenPositions.has(namePos)) continue

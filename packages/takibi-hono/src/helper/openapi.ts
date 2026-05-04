@@ -103,7 +103,11 @@ export function groupParametersByLocation(allParams: readonly unknown[]) {
   return allParams
     .filter((param): param is Parameter => !isRefObject(param) && isParameter(param))
     .reduce<{
-      readonly[k: string]: { readonly name: string; readonly schema: Schema; readonly required: boolean }[]
+      readonly [k: string]: {
+        readonly name: string
+        readonly schema: Schema
+        readonly required: boolean
+      }[]
     }>(
       (acc, param) => ({
         ...acc,

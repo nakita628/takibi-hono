@@ -33,7 +33,7 @@ type ComponentEntryConfig = {
   readonly import?: string | undefined
 }
 
-export type TakibiHonoOptions = {
+type TakibiHonoOptions = {
   readonly readonly?: boolean | undefined
   readonly exportSchemasTypes?: boolean | undefined
   readonly exportParametersTypes?: boolean | undefined
@@ -57,7 +57,7 @@ export type TakibiHonoOptions = {
     | undefined
 }
 
-export type Layout = {
+type Layout = {
   readonly schemasFile: string
   readonly schemasDir: string
   readonly handlersDir: string
@@ -78,7 +78,12 @@ export function resolveLayout(ohConfig: TakibiHonoOptions | undefined): Layout {
     ? schemasOutput
     : path.join(schemasOutput, 'index.ts')
   const handlersDir = handlersOutput.endsWith('.ts') ? path.dirname(handlersOutput) : handlersOutput
-  const componentPaths = makeComponentPaths(handlersDir, schemasFile, ohConfig, componentsBaseOutput)
+  const componentPaths = makeComponentPaths(
+    handlersDir,
+    schemasFile,
+    ohConfig,
+    componentsBaseOutput,
+  )
   const appDir = path.dirname(handlersDir)
   return { schemasFile, schemasDir, handlersDir, componentsBaseOutput, componentPaths, appDir }
 }
@@ -258,9 +263,7 @@ export async function generateWebhooks(
     (layout.componentsBaseOutput
       ? `${layout.componentsBaseOutput}/webhooks/index.ts`
       : path.join(layout.handlersDir, 'webhooks.ts'))
-  const webhooksDir = webhooksOutput.endsWith('.ts')
-    ? path.dirname(webhooksOutput)
-    : webhooksOutput
+  const webhooksDir = webhooksOutput.endsWith('.ts') ? path.dirname(webhooksOutput) : webhooksOutput
   const webhooksFile = webhooksOutput.endsWith('.ts')
     ? webhooksOutput
     : path.join(webhooksOutput, 'index.ts')
@@ -416,7 +419,7 @@ async function splitComponentCode(
     const end = i + 1 < matches.length ? matches[i + 1].start : bodyCode.length
     return { name: m.name, code: bodyCode.slice(m.start, end).trim() }
   })
-  if (entries.length === 0) return { ok: true, value: undefined }
+  if (entries.length === 0) return { ok: true, value: undefined } as const
   const fileNames: string[] = []
   for (const entry of entries) {
     const fileName = entry.name.charAt(0).toLowerCase() + entry.name.slice(1)

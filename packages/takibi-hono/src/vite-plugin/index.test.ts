@@ -956,3 +956,141 @@ describe('takibiHonoVite: config change cleanup', () => {
     consoleSpy.mockRestore()
   })
 })
+
+// ===================================================================
+// 8. Error catch paths
+// ===================================================================
+describe('takibiHonoVite: error catch paths', () => {
+  it('logs "❌ hot-update error" when handleConfigChange rejects', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const plugin = takibiHonoVite()
+    const configPath = path.resolve(process.cwd(), 'takibi-hono.config.ts')
+    let onCallback: ((eventType: string, filePath: string) => void) | undefined
+    let addCount = 0
+    const server: MockViteDevServer = {
+      watcher: {
+        add: () => {
+          addCount += 1
+          // First call from initial configureServer succeeds; subsequent call
+          // (during handleConfigChange's addInputGlobsToWatcher) throws.
+          if (addCount > 2) throw new Error('watcher.add boom')
+        },
+        on: (_event, cb) => {
+          onCallback = cb
+        },
+      },
+      ws: { send: () => {} },
+      pluginContainer: { resolveId: async () => null },
+      moduleGraph: {
+        getModuleById: () => null,
+        invalidateAll: () => {},
+        invalidateModule: () => {},
+      },
+      ssrLoadModule: async () => ({ default: { input: 'openapi.yaml', schema: 'zod' } }),
+    }
+
+    plugin.configureServer(server)
+    await vi.waitFor(() => {
+      expect(onCallback).toBeDefined()
+    })
+
+    const result = plugin.handleHotUpdate({ file: configPath, server })
+    expect(result).toStrictEqual([])
+
+    await vi.waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '❌ hot-update error:',
+        expect.objectContaining({ message: 'watcher.add boom' }),
+      )
+    })
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('logs "❌ watch error" when configureServer IIFE rejects', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const plugin = takibiHonoVite()
+    const server: MockViteDevServer = {
+      watcher: {
+        add: () => {
+          throw new Error('watcher.add boom on initial')
+        },
+        on: () => {},
+      },
+      ws: { send: () => {} },
+      pluginContainer: { resolveId: async () => null },
+      moduleGraph: {
+        getModuleById: () => null,
+        invalidateAll: () => {},
+        invalidateModule: () => {},
+      },
+      ssrLoadModule: async () => ({ default: { input: 'openapi.yaml', schema: 'zod' } }),
+    }
+    plugin.configureServer(server)
+
+    await vi.waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '❌ watch error:',
+        expect.objectContaining({ message: 'watcher.add boom on initial' }),
+      )
+    })
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('deleteTypeScriptFiles excludes paths whose unlink rejects', async () => {
+    // Configure: handlers dir is non-.ts (split), so split-mode cleanup runs.
+    // readdir returns 2 files; unlink rejects for one. The cleanup log reports 1 deleted.
+    const handlersDir = path.resolve(process.cwd(), 'src/handlers')
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    vi.mocked(fsp.stat).mockImplementation(async (p) => {
+      if (String(p) === handlersDir) {
+        return { isDirectory: () => true, isFile: () => false } as any
+      }
+      throw new Error('ENOENT')
+    })
+    const mockDirEntry = (name: string) => ({
+      name,
+      isFile: () => true,
+      isDirectory: () => false,
+      isBlockDevice: () => false,
+      isCharacterDevice: () => false,
+      isFIFO: () => false,
+      isSocket: () => false,
+      isSymbolicLink: () => false,
+      parentPath: handlersDir,
+      path: handlersDir,
+    })
+    vi.mocked(fsp.readdir).mockImplementation(async (_p) => {
+      return [mockDirEntry('a.ts'), mockDirEntry('b.ts')] as any
+    })
+    vi.mocked(fsp.unlink).mockImplementation(async (p) => {
+      if (String(p).endsWith('a.ts')) throw new Error('EACCES')
+      return undefined
+    })
+
+    const plugin = takibiHonoVite()
+    const server: MockViteDevServer = {
+      watcher: { add: () => {}, on: () => {} },
+      ws: { send: () => {} },
+      pluginContainer: { resolveId: async () => null },
+      moduleGraph: {
+        getModuleById: () => null,
+        invalidateAll: () => {},
+        invalidateModule: () => {},
+      },
+      ssrLoadModule: async () => ({
+        default: {
+          input: 'openapi.yaml',
+          schema: 'zod',
+          'takibi-hono': { handlers: { output: 'src/handlers' } },
+        },
+      }),
+    }
+    plugin.configureServer(server)
+
+    await vi.waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('🧹 handlers: cleaned 1 files')
+    })
+    consoleSpy.mockRestore()
+  })
+})

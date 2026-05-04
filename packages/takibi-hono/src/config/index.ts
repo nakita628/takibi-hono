@@ -5,6 +5,35 @@ import { pathToFileURL } from 'node:url'
 import type { FormatConfig } from 'oxfmt'
 import * as v from 'valibot'
 
+const FORMAT_KEYS: ReadonlySet<string> = new Set([
+  'arrowParens',
+  'bracketSameLine',
+  'bracketSpacing',
+  'embeddedLanguageFormatting',
+  'endOfLine',
+  'htmlWhitespaceSensitivity',
+  'insertFinalNewline',
+  'jsdoc',
+  'jsxSingleQuote',
+  'objectWrap',
+  'printWidth',
+  'proseWrap',
+  'quoteProps',
+  'semi',
+  'singleAttributePerLine',
+  'singleQuote',
+  'sortImports',
+  'sortPackageJson',
+  'sortTailwindcss',
+  'tabWidth',
+  'trailingComma',
+  'useTabs',
+  'vueIndentScriptAndStyle',
+  'experimentalSortImports',
+  'experimentalSortPackageJson',
+  'experimentalTailwindcss',
+])
+
 const ConfigSchema = v.strictObject({
   input: v.custom<`${string}.yaml` | `${string}.json` | `${string}.tsp`>(
     (v) =>
@@ -17,7 +46,16 @@ const ConfigSchema = v.strictObject({
     'schema must be "zod" | "valibot" | "typebox" | "arktype" | "effect"',
   ),
   openapi: v.exactOptional(v.boolean()),
-  format: v.exactOptional(v.custom<FormatConfig>(() => true)),
+  format: v.exactOptional(
+    v.custom<FormatConfig>(
+      (value) =>
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.keys(value).every((k) => FORMAT_KEYS.has(k)),
+      'format contains unknown property',
+    ),
+  ),
   'takibi-hono': v.exactOptional(
     v.strictObject({
       readonly: v.exactOptional(v.boolean()),

@@ -216,7 +216,6 @@ export function takibiHonoVite(): any {
       const cleaned = await cleanupStaleOutputs(pluginState.current, nextConfig.value)
       for (const p of cleaned) console.log(`🧹 cleanup: ${p}`)
     }
-    l
     pluginState.previous = pluginState.current
     pluginState.current = nextConfig.value
     pluginState.inputDirectory = addInputGlobsToWatcher(

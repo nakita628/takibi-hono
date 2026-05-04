@@ -22,7 +22,9 @@ export function collectOperations(openapi: OpenAPI): ReadonlyMap<
         ? pathItem.parameters.filter(isParameter)
         : undefined
       const ops = Object.entries(pathItem)
-        .filter((entry) => isHttpMethod(entry[0]) && isOperation(entry[1]))
+        .filter(
+          (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
+        )
         .map(([method, operation]) => ({ method, path: pathStr, operation, pathItemParameters }))
 
       return ops.length > 0
