@@ -6,10 +6,6 @@ import { hono } from '../core/index.js'
 
 type Config = Extract<ReturnType<typeof parseConfig>, { ok: true }>['value']
 
-/**
- * Minimal Vite dev-server interface.
- * Defines only the surface area needed by this plugin.
- */
 type ViteDevServer = {
   watcher: {
     add: (paths: string | readonly string[]) => void
@@ -25,15 +21,20 @@ type ViteDevServer = {
   ssrLoadModule: (moduleId: string) => Promise<{ [k: string]: unknown }>
 }
 
-const toAbsolutePath = (relativePath: string) => path.resolve(process.cwd(), relativePath)
+function toAbsolutePath(relativePath: string) {
+  return path.resolve(process.cwd(), relativePath)
+}
 
-const isInputFile = (filePath: string, inputDirectory: string): boolean =>
-  filePath.startsWith(inputDirectory) &&
-  (filePath.endsWith('.yaml') || filePath.endsWith('.json') || filePath.endsWith('.tsp'))
+function isInputFile(filePath: string, inputDirectory: string) {
+  return (
+    filePath.startsWith(inputDirectory) &&
+    (filePath.endsWith('.yaml') || filePath.endsWith('.json') || filePath.endsWith('.tsp'))
+  )
+}
 
-const debounce = (delayMs: number, callback: () => void): (() => void) => {
+function debounce(delayMs: number, callback: () => void) {
   const timerStorage = new WeakMap<() => void, ReturnType<typeof setTimeout>>()
-  const wrapped = (): void => {
+  const wrapped = () => {
     const prev = timerStorage.get(wrapped)
     if (prev !== undefined) clearTimeout(prev)
     timerStorage.set(wrapped, setTimeout(callback, delayMs))
@@ -41,12 +42,8 @@ const debounce = (delayMs: number, callback: () => void): (() => void) => {
   return wrapped
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Split-mode file cleanup
- * ────────────────────────────────────────────────────────────── */
-
-const listTypeScriptFilesShallow = async (directoryPath: string): Promise<readonly string[]> =>
-  fsp
+async function listTypeScriptFilesShallow(directoryPath: string): Promise<string[]> {
+  return fsp
     .stat(directoryPath)
     .then((stats) =>
       stats.isDirectory()
@@ -59,48 +56,43 @@ const listTypeScriptFilesShallow = async (directoryPath: string): Promise<readon
             )
         : [],
     )
-    .catch((): string[] => [])
+    .catch(() => [])
+}
 
-const deleteTypeScriptFiles = async (filePaths: readonly string[]): Promise<readonly string[]> =>
-  Promise.all(
+async function deleteTypeScriptFiles(filePaths: readonly string[]) {
+  const results = await Promise.all(
     filePaths.map((fp) =>
       fsp
         .unlink(fp)
         .then(() => fp)
         .catch(() => null),
     ),
-  ).then((results) => results.filter((r) => r !== null))
+  )
+  return results.filter((r) => r !== null)
+}
 
-/* ──────────────────────────────────────────────────────────────
- * Output path extraction & stale cleanup
- * ────────────────────────────────────────────────────────────── */
+function isComponentConfig(v: unknown): v is { readonly output: string } {
+  return typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
+}
 
-const isComponentConfig = (v: unknown): v is { readonly output: string } =>
-  typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
-
-const extractOutputPaths = (config: Config): readonly string[] =>
-  [
-    config['takibi-hono']?.handlers?.output,
-    ...Object.entries(config['takibi-hono']?.components ?? {})
-      .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
-      .map(([, v]) => (isComponentConfig(v) ? v.output : undefined)),
-    ...(typeof config['takibi-hono']?.components?.output === 'string'
-      ? [config['takibi-hono'].components.output]
-      : []),
-  ]
-    .filter((p): p is string => p !== undefined)
+function extractOutputPaths(config: Config) {
+  const takibiHono = config['takibi-hono']
+  const componentOutputs = Object.entries(takibiHono?.components ?? {})
+    .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
+    .map(([, v]) => (isComponentConfig(v) ? v.output : undefined))
+  const baseOutput =
+    typeof takibiHono?.components?.output === 'string' ? [takibiHono.components.output] : []
+  return [takibiHono?.handlers?.output, ...componentOutputs, ...baseOutput]
+    .filter((p) => p !== undefined)
     .map(toAbsolutePath)
+}
 
-const cleanupStaleOutputs = async (
-  previousConfig: Config,
-  currentConfig: Config,
-): Promise<readonly string[]> => {
+async function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
   const previousPaths = new Set(extractOutputPaths(previousConfig))
   const currentPaths = new Set(extractOutputPaths(currentConfig))
   const stalePaths = [...previousPaths].filter((p) => !currentPaths.has(p))
-
-  return Promise.all(
-    stalePaths.map(async (stalePath): Promise<string | null> => {
+  const results = await Promise.all(
+    stalePaths.map(async (stalePath) => {
       const stats = await fsp.stat(stalePath).catch(() => null)
       if (!stats) return null
       if (stats.isDirectory()) {
@@ -113,18 +105,11 @@ const cleanupStaleOutputs = async (
       }
       return null
     }),
-  ).then((results) => results.filter((r) => r !== null))
+  )
+  return results.filter((r) => r !== null)
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Config hot-reload
- * ────────────────────────────────────────────────────────────── */
-
-const readConfigWithHotReload = async (
-  server: ViteDevServer,
-): Promise<
-  { readonly ok: true; readonly value: Config } | { readonly ok: false; readonly error: string }
-> => {
+async function readConfigWithHotReload(server: ViteDevServer) {
   const absoluteConfigPath = toAbsolutePath('takibi-hono.config.ts')
   try {
     const resolved = await server.pluginContainer.resolveId(absoluteConfigPath)
@@ -135,23 +120,18 @@ const readConfigWithHotReload = async (
     } else {
       server.moduleGraph.invalidateAll()
     }
-
     const loadedModule = await server.ssrLoadModule(`${absoluteConfigPath}?t=${Date.now()}`)
     const defaultExport = loadedModule?.default
     if (typeof defaultExport !== 'object' || defaultExport === null) {
-      return { ok: false, error: 'Config must export default object' }
+      return { ok: false, error: 'Config must export default object' } as const
     }
     return parseConfig(defaultExport)
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) } as const
   }
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Generation with split-aware cleanup
- * ────────────────────────────────────────────────────────────── */
-
-const runGeneration = async (config: Config): Promise<{ readonly logs: readonly string[] }> => {
+async function runGeneration(config: Config) {
   // Clean up split directories before regeneration
   const components = config['takibi-hono']?.components ?? {}
   const splitCleanups: Promise<string | null>[] = []
@@ -170,8 +150,6 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
       })(),
     )
   }
-
-  // Also clean handlers directory
   const handlersCfg = config['takibi-hono']?.handlers
   if (handlersCfg?.output && !handlersCfg.output.endsWith('.ts')) {
     splitCleanups.push(
@@ -183,9 +161,7 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
       })(),
     )
   }
-
   const cleanupLogs = (await Promise.all(splitCleanups)).filter((l) => l !== null)
-
   const result = await hono({
     input: config.input,
     schema: config.schema,
@@ -193,7 +169,6 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
     openapi: config.openapi,
     'takibi-hono': config['takibi-hono'],
   })
-
   return {
     logs: [
       ...cleanupLogs,
@@ -202,11 +177,7 @@ const runGeneration = async (config: Config): Promise<{ readonly logs: readonly 
   }
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Watch helpers
- * ────────────────────────────────────────────────────────────── */
-
-const addInputGlobsToWatcher = (server: ViteDevServer, absoluteInputPath: string): string => {
+function addInputGlobsToWatcher(server: ViteDevServer, absoluteInputPath: string) {
   const inputDirectory = path.dirname(absoluteInputPath)
   server.watcher.add([
     absoluteInputPath,
@@ -217,28 +188,6 @@ const addInputGlobsToWatcher = (server: ViteDevServer, absoluteInputPath: string
   return inputDirectory
 }
 
-/* ──────────────────────────────────────────────────────────────
- * Plugin
- * ────────────────────────────────────────────────────────────── */
-
-/**
- * Creates a Vite plugin for takibi-hono code generation.
- *
- * Watches OpenAPI spec and config files for changes and
- * automatically regenerates TypeScript code with hot reload.
- * Handles split-mode file cleanup and stale output removal.
- *
- * @example
- * ```ts
- * // vite.config.ts
- * import { takibiHonoVite } from 'takibi-hono/vite-plugin'
- *
- * export default defineConfig({
- *   plugins: [takibiHonoVite()]
- * })
- * ```
- */
-// biome-ignore lint: plugin returns any for Vite compatibility
 export function takibiHonoVite(): any {
   const pluginState: {
     current: Config | null
@@ -250,7 +199,6 @@ export function takibiHonoVite(): any {
     inputDirectory: null,
   }
   const absoluteConfigFilePath = toAbsolutePath('takibi-hono.config.ts')
-
   const runGenerationAndReload = async (server?: ViteDevServer) => {
     if (!pluginState.current) return
     console.log('🔥 takibi-hono')
@@ -258,19 +206,16 @@ export function takibiHonoVite(): any {
     for (const log of logs) console.log(log)
     if (server) server.ws.send({ type: 'full-reload' })
   }
-
   const handleConfigChange = async (server: ViteDevServer) => {
     const nextConfig = await readConfigWithHotReload(server)
     if (!nextConfig.ok) {
       console.error(`❌ config: ${nextConfig.error}`)
       return
     }
-
     if (pluginState.current) {
       const cleaned = await cleanupStaleOutputs(pluginState.current, nextConfig.value)
       for (const p of cleaned) console.log(`🧹 cleanup: ${p}`)
     }
-
     pluginState.previous = pluginState.current
     pluginState.current = nextConfig.value
     pluginState.inputDirectory = addInputGlobsToWatcher(
@@ -292,11 +237,9 @@ export function takibiHonoVite(): any {
       }
       return
     },
-
     async buildStart() {
       // Dev-only: handled by configureServer
     },
-
     configureServer(server: ViteDevServer) {
       ;(async () => {
         const initialConfig = await readConfigWithHotReload(server)
@@ -311,9 +254,7 @@ export function takibiHonoVite(): any {
           toAbsolutePath(pluginState.current.input),
         )
         server.watcher.add(absoluteConfigFilePath)
-
         const debouncedRegenerate = debounce(200, () => void runGenerationAndReload(server))
-
         server.watcher.on('all', async (_eventType, filePath) => {
           const absoluteChanged = path.resolve(filePath)
           if (absoluteChanged === absoluteConfigFilePath) {
@@ -327,7 +268,6 @@ export function takibiHonoVite(): any {
             debouncedRegenerate()
           }
         })
-
         await runGenerationAndReload(server)
       })().catch((err) => console.error('❌ watch error:', err))
     },

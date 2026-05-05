@@ -1,8 +1,5 @@
 import type { Header, Media, Operation, Parameter, Reference, Schema } from '../openapi/index.js'
 
-/**
- * Checks if a string is a valid HTTP method.
- */
 export function isHttpMethod(
   method: string,
 ): method is 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace' {
@@ -18,62 +15,35 @@ export function isHttpMethod(
   )
 }
 
-/**
- * Checks if a value is an OpenAPI Parameter object (has name, in, schema).
- */
-export function isParameter(value: unknown): value is Parameter {
+export function isParameter(v: unknown): v is Parameter {
+  return typeof v === 'object' && v !== null && 'name' in v && 'in' in v && 'schema' in v
+}
+
+export function isOperation(v: unknown): v is Operation {
+  return typeof v === 'object' && v !== null && 'responses' in v
+}
+
+export function isHeader(v: unknown): v is Header {
+  return typeof v === 'object' && v !== null && !('$ref' in v)
+}
+
+export function isMedia(v: unknown): v is Media {
+  return typeof v === 'object' && v !== null && 'schema' in v && !('$ref' in v)
+}
+
+export function isRefObject(v: unknown): v is Reference {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'name' in value &&
-    'in' in value &&
-    'schema' in value
+    typeof v === 'object' &&
+    v !== null &&
+    '$ref' in v &&
+    typeof (v as { $ref: unknown }).$ref === 'string'
   )
 }
 
-/**
- * Checks if a value is an OpenAPI Operation object (has responses).
- */
-export function isOperation(value: unknown): value is Operation {
-  return typeof value === 'object' && value !== null && 'responses' in value
-}
-
-/**
- * Checks if a value is an OpenAPI Header object (not a $ref).
- */
-export function isHeader(value: unknown): value is Header {
-  return typeof value === 'object' && value !== null && !('$ref' in value)
-}
-
-/**
- * Checks if a value is an OpenAPI Media object (has schema).
- */
-export function isMedia(value: unknown): value is Media {
-  return typeof value === 'object' && value !== null && 'schema' in value && !('$ref' in value)
-}
-
-/**
- * Checks if a value is a $ref object.
- */
-export function isRefObject(value: unknown): value is Reference {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '$ref' in value &&
-    typeof (value as { $ref: unknown }).$ref === 'string'
-  )
-}
-
-/**
- * Checks if items is an array of schemas (tuple form).
- */
 export function isSchemaArray(items: Schema | readonly Schema[]): items is readonly Schema[] {
   return Array.isArray(items)
 }
 
-/**
- * Checks if a schema is nullable (OpenAPI 3.0 nullable or type array with null).
- */
 export function isNullable(schema: Schema): boolean {
   if (schema.nullable === true) return true
   if (Array.isArray(schema.type) && schema.type.includes('null')) return true

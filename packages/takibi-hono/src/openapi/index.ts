@@ -1,70 +1,36 @@
 import path from 'node:path'
 
-/**
- * Uses `bundle()` to resolve external $refs while preserving internal ones.
- * This enables variable references (e.g., `UserSchema`) instead of duplicated inline schemas,
- * supports circular references via `z.lazy()`, and allows dependency-aware topological sorting.
- *
- * @see https://apitools.dev/swagger-parser/docs/
- */
 import SwaggerParser from '@apidevtools/swagger-parser'
 import { compile, NodeHost } from '@typespec/compiler'
 import { getOpenAPI3 } from '@typespec/openapi3'
 
-/**
- * Parses input into an OpenAPI document.
- *
- * Supports `.yaml`, `.json`, and `.tsp` (TypeSpec) inputs.
- *
- * @param input - Path to OpenAPI file (.yaml, .json) or TypeSpec file (.tsp)
- * @returns Result object with parsed OpenAPI or error message
- */
-export async function parseOpenAPI(input: string): Promise<
-  | {
-      readonly ok: true
-      readonly value: OpenAPI
-    }
-  | {
-      readonly ok: false
-      readonly error: string
-    }
-> {
+export async function parseOpenAPI(input: string) {
   try {
     if (typeof input === 'string' && input.endsWith('.tsp')) {
       const program = await compile(NodeHost, path.resolve(input), {
         noEmit: true,
       })
       if (program.diagnostics.length) {
-        // Extract error messages from diagnostics (avoid circular reference in JSON.stringify)
         const errors = program.diagnostics.map((d) => d.message).join('\n')
         return {
           ok: false,
           error: `TypeSpec compile failed:\n${errors}`,
-        }
+        } as const
       }
       const [record] = await getOpenAPI3(program)
       const tsp = 'document' in record ? record.document : record.versions[0].document
       const openAPI = (await SwaggerParser.bundle(JSON.parse(JSON.stringify(tsp)))) as OpenAPI
-      return { ok: true, value: openAPI }
+      return { ok: true, value: openAPI } as const
     }
-    // `Awaited<ReturnType<typeof SwaggerParser.parse>>` therefore cannot be narrowed to our `OpenAPI` type.
-    // The parser validates the spec at runtime but does not express this guarantee in its type definition,
-    // so we assert `OpenAPI` here to enable typed access in the generator.
     const openAPI = (await SwaggerParser.bundle(input)) as OpenAPI
-    return { ok: true, value: openAPI }
+    return { ok: true, value: openAPI } as const
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: e instanceof Error ? e.message : String(e) } as const
   }
 }
 
-/**
- * Base OpenAPI type derived from SwaggerParser
- */
 type BaseOpenAPI = Awaited<ReturnType<typeof SwaggerParser.bundle>>
 
-/**
- * Extended OpenAPI specification with required components and paths
- */
 export type OpenAPI = BaseOpenAPI & {
   readonly openapi?: string
   readonly $self?: string
@@ -184,7 +150,7 @@ type OAuthFlow = {
 /**
  * OpenAPI paths with PathItem definitions
  */
-export type OpenAPIPaths = {
+type OpenAPIPaths = {
   readonly [P in keyof NonNullable<BaseOpenAPI['paths']>]: PathItem
 }
 
@@ -198,13 +164,9 @@ export type Type =
   | 'object'
   | 'null'
 
-export type Format = FormatString | FormatNumber
+type Format = FormatString | FormatNumber
 
-export type FormatString =
-  // validations
-  // | 'max'
-  // | 'min'
-  // | 'length'
+type FormatString =
   | 'email'
   | 'uuid'
   | 'uuidv4'
@@ -224,19 +186,18 @@ export type FormatString =
   | 'ipv6'
   | 'cidrv4'
   | 'cidrv6'
-  | 'date' // ISO date format (YYYY-MM-DD)
-  | 'time' // ISO time format (HH:mm:ss[.SSSSSS])
-  | 'date-time' // ISO 8601; by default only `Z` timezone allowed
-  | 'duration' // ISO 8601 duration
+  | 'date'
+  | 'time'
+  | 'date-time'
+  | 'duration'
   | 'binary'
-  // transforms
-  | 'toLowerCase' // toLowerCase
-  | 'toUpperCase' // toUpperCase
-  | 'trim' // trim whitespace
+  | 'toLowerCase'
+  | 'toUpperCase'
+  | 'trim'
 
-export type FormatNumber = 'int32' | 'int64' | 'bigint' | 'float' | 'float32' | 'float64' | 'double'
+type FormatNumber = 'int32' | 'int64' | 'bigint' | 'float' | 'float32' | 'float64' | 'double'
 
-export type Ref =
+type Ref =
   | `#/components/schemas/${string}`
   | `#/components/parameters/${string}`
   | `#/components/securitySchemes/${string}`
@@ -303,7 +264,7 @@ export type Reference = {
   readonly description?: string
 }
 
-export type Encoding = {
+type Encoding = {
   readonly contentType?: string
   readonly headers?: {
     readonly [k: string]: Header | Reference
@@ -339,9 +300,6 @@ export type PathItem = {
   readonly parameters?: readonly Parameter[] | readonly Reference[]
 }
 
-/**
- * Operation definition
- */
 export type Operation = {
   readonly tags?: readonly string[]
   readonly summary?: string
@@ -380,7 +338,7 @@ export type Operation = {
   }[]
 }
 
-export type Responses = {
+type Responses = {
   readonly $ref?: Ref
   readonly summary?: string
   readonly description?: string
@@ -455,7 +413,6 @@ export type Schema = {
   }
   readonly required?: readonly string[]
   readonly items?: Schema | readonly Schema[]
-  /** JSON Schema 2020-12: Tuple validation */
   readonly prefixItems?: readonly Schema[]
   readonly enum?: readonly (
     | string
@@ -487,7 +444,6 @@ export type Schema = {
   }
   readonly contentEncoding?: string
   readonly contentMediaType?: string
-  // Vendor extensions for custom validation messages (OpenAPI Generator compatible)
   readonly 'x-error-message'?: string
   readonly 'x-size-message'?: string
   readonly 'x-pattern-message'?: string
@@ -561,6 +517,6 @@ export type Media = {
   readonly itemEncoding?: Encoding
 }
 
-export type Callbacks = {
+type Callbacks = {
   readonly [k: string]: PathItem
 }

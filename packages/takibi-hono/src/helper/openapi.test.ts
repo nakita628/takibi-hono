@@ -401,4 +401,143 @@ describe('makeResponse', () => {
       '200:{description:"OK",content:{\'application/json\':{schema:resolver(PetSchema)}},headers:{"X-Total":{schema:{"type":"integer"} as const}}}',
     )
   })
+
+  // --- inline schema with meta is registered with hono-openapi via .meta() ---
+  // For $ref schemas, meta lives on the referenced component (e.g.,
+  // `UserSchema.meta({...})`) and propagates through `resolver(UserSchema)`.
+  // For inline schemas, the meta is encoded directly into the resolver arg
+  // using each library's idiomatic form.
+
+  test('inline schema with description: zod emits .meta in resolver()', () => {
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'A user',
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      },
+      'zod',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(z.object({id:z.int()}).meta({description:"A user"}))}}}',
+    )
+  })
+
+  test('inline schema with description+example: zod emits meta with examples array', () => {
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'A user',
+              example: { id: 1 },
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      },
+      'zod',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(z.object({id:z.int()}).meta({description:"A user",examples:[{id:1}]}))}}}',
+    )
+  })
+
+  test('inline schema with meta: valibot wraps in v.pipe inside resolver()', () => {
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'A user',
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      },
+      'valibot',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(v.pipe(v.object({id:v.pipe(v.number(),v.integer())}),v.description("A user")))}}}',
+    )
+  })
+
+  test('inline schema with meta: typebox passes options as constructor arg inside Compile', () => {
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'A user',
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      },
+      'typebox',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(Compile(Type.Object({id:Type.Integer()},{description:"A user"})))}}}',
+    )
+  })
+
+  test('inline schema with meta: effect uses .annotations inside standardSchemaV1', () => {
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              description: 'A user',
+              properties: { id: { type: 'integer' } },
+              required: ['id'],
+            },
+          },
+        },
+      },
+      'effect',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(standardSchemaV1(Schema.Struct({id:Schema.Number.pipe(Schema.int())}).annotations({description:"A user"})))}}}',
+    )
+  })
+
+  test('$ref response: meta is NOT duplicated at the resolver call site', () => {
+    // The referenced component (PetSchema) carries its own meta; the response
+    // here only needs a bare resolver(PetSchema). This documents that we do
+    // not re-emit meta when the schema is a $ref.
+    const result = makeResponse(
+      '200',
+      {
+        description: 'OK',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+      },
+      'zod',
+    )
+    expect(result).toBe(
+      '200:{description:"OK",content:{\'application/json\':{schema:resolver(PetSchema)}}}',
+    )
+  })
 })

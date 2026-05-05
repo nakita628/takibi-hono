@@ -1,6 +1,9 @@
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 
-import { describe, expect, it } from 'vite-plus/test'
+import { afterEach, describe, expect, it } from 'vite-plus/test'
 
 import { defineConfig, parseConfig, readConfig } from './index.js'
 
@@ -415,7 +418,7 @@ describe('parseConfig', () => {
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.components.schemas: split mode requires directory, not .ts file',
+        'Invalid config: takibi-hono.components.schemas.output: split mode requires directory, not .ts file',
     })
   })
 
@@ -688,6 +691,75 @@ describe('readConfig', () => {
     } finally {
       process.cwd = originalCwd
     }
+  })
+
+  describe('with real config file on disk', () => {
+    const createdDirs: string[] = []
+    afterEach(async () => {
+      for (const d of createdDirs.splice(0)) {
+        await fsp.rm(d, { recursive: true, force: true }).catch(() => {})
+      }
+    })
+
+    function makeConfigDir(label: string, body: string): string {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), `takibi-hono-readconfig-${label}-`))
+      createdDirs.push(dir)
+      fs.writeFileSync(path.join(dir, 'takibi-hono.config.ts'), body)
+      return dir
+    }
+
+    async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+      const originalCwd = process.cwd.bind(process)
+      process.cwd = () => dir
+      try {
+        return await fn()
+      } finally {
+        process.cwd = originalCwd
+      }
+    }
+
+    it('returns parsed config on valid default export', async () => {
+      const dir = makeConfigDir('valid', `export default { input: 'api.yaml', schema: 'zod' }\n`)
+      const result = await withCwd(dir, () => readConfig())
+      expect(result).toStrictEqual({
+        ok: true,
+        value: { input: 'api.yaml', schema: 'zod' },
+      })
+    })
+
+    it('returns error when default export is missing', async () => {
+      const dir = makeConfigDir('no-default', `export const config = { input: 'a.yaml' }\n`)
+      const result = await withCwd(dir, () => readConfig())
+      expect(result).toStrictEqual({ ok: false, error: 'Config must export default object' })
+    })
+
+    it('returns error when default export is undefined', async () => {
+      const dir = makeConfigDir('undef-default', `export default undefined\n`)
+      const result = await withCwd(dir, () => readConfig())
+      expect(result).toStrictEqual({ ok: false, error: 'Config must export default object' })
+    })
+
+    it('returns error message from import-time exception', async () => {
+      const dir = makeConfigDir('throws', `throw new Error('boom from config')\n`)
+      const result = await withCwd(dir, () => readConfig())
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error).toBe('boom from config')
+      }
+    })
+
+    it('propagates parseConfig errors verbatim', async () => {
+      const dir = makeConfigDir(
+        'bad-schema',
+        `export default { input: 'a.yaml', schema: 'unknown' }\n`,
+      )
+      const result = await withCwd(dir, () => readConfig())
+      expect(result).toStrictEqual({
+        ok: false,
+        error:
+          'Invalid config: schema: schema must be "zod" | "valibot" | "typebox" | "arktype" | "effect"',
+      })
+    })
   })
 })
 

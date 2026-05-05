@@ -4,21 +4,27 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { register } from 'tsx/esm/api'
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from './config/index.js'
-import { hono } from './core/index.js'
+import {
+  makeApp,
+  makeComponents,
+  makeHandlers,
+  makeSchemas,
+  makeWebhooks,
+  resolveLayout,
+} from './core/index.js'
+import { setFormatOptions } from './format/index.js'
+import { parseOpenAPI } from './openapi/index.js'
 
 /**
  * Entry point integration test helper.
  *
  * Replicates the exact logic of src/index.ts + src/cli/index.ts:
  *   1. readConfig() → parseConfig(mod.default)
- *   2. hono(config)
+ *   2. orchestrate generators
  *   3. Return success message or error
- *
- * Uses import() directly instead of `new Function('specifier', 'return import(specifier)')`.
  */
 async function runEntryPoint(
   dir: string,
@@ -31,7 +37,6 @@ async function runEntryPoint(
     const configPath = path.resolve(dir, 'takibi-hono.config.ts')
     if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
 
-    register()
     const url = pathToFileURL(configPath).href
     const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
     if (!('default' in mod) || mod.default === undefined)
@@ -41,15 +46,32 @@ async function runEntryPoint(
     if (!configResult.ok) return configResult
 
     const config = configResult.value
-    const result = await hono({
-      input: config.input,
-      schema: config.schema,
-      basePath: config.basePath,
-      format: config.format,
-      openapi: config.openapi,
-      'takibi-hono': config['takibi-hono'],
-    })
-    if (!result.ok) return result
+    if (config.format) setFormatOptions(config.format)
+    const openAPIResult = await parseOpenAPI(config.input)
+    if (!openAPIResult.ok) return openAPIResult
+    const openapi = openAPIResult.value
+    const ohConfig = config['takibi-hono']
+    const useOpenAPI = config.openapi === true
+    const layout = resolveLayout(ohConfig)
+    const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
+    if (!schemasResult.ok) return schemasResult
+    if (useOpenAPI) {
+      const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
+      if (!componentsResult.ok) return componentsResult
+    }
+    const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
+    if (!handlersResult.ok) return handlersResult
+    if (useOpenAPI) {
+      const webhooksResult = await makeWebhooks(openapi, config.schema, ohConfig, layout)
+      if (!webhooksResult.ok) return webhooksResult
+    }
+    const appResult = await makeApp(
+      openapi,
+      handlersResult.value.handlerFileNames,
+      config.basePath,
+      layout,
+    )
+    if (!appResult.ok) return appResult
     return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
   } finally {
     process.chdir(originalCwd)
@@ -301,11 +323,11 @@ describe('src/index.ts entry point', () => {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
     })
 
@@ -336,13 +358,13 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -373,13 +395,13 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store' })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
     })
 
@@ -422,14 +444,14 @@ export const PetSchema = Schema.Struct({
   id: Schema.Number.pipe(Schema.int()),
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'A pet in the store' })
+}).annotations({ identifier: 'Pet', description: 'A pet in the store' })
 
 export type Pet = typeof PetSchema.Encoded
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'Data for creating a new pet' })
+}).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = typeof CreatePetSchema.Encoded
 `)

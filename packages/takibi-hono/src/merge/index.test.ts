@@ -1627,3 +1627,105 @@ describe('mergeAppFile: user-added middleware preserved', () => {
     )
   })
 })
+
+describe('mergeHandlerFile: human/generator boundary edge cases', () => {
+  it('drops user-added middleware between describeRoute and handler body', () => {
+    // Documented limitation: only the LAST argument is preserved from existing.
+    // Middlewares the user inserted between describeRoute and the handler stub
+    // are not carried over on regeneration.
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { describeRoute } from 'hono-openapi'",
+      '',
+      'const authMiddleware = (c: any, next: any) => next()',
+      '',
+      "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'old' }), authMiddleware, (c) => c.json({ users: [] }))",
+      '',
+    ].join('\n')
+
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { describeRoute } from 'hono-openapi'",
+      '',
+      "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'new' }), (c) => {})",
+      '',
+    ].join('\n')
+
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { describeRoute } from 'hono-openapi'",
+        '',
+        'const authMiddleware = (c: any, next: any) => next()',
+        '',
+        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'new' }), (c) => c.json({ users: [] }))",
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('keeps stub when existing body is a whitespace-padded empty stub', () => {
+    // STUBS detection ignores whitespace: `(c) => { }` (with space) is a stub.
+    const existing = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const usersHandler = new Hono().get('/users', (c) => { })",
+      '',
+    ].join('\n')
+
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { describeRoute } from 'hono-openapi'",
+      '',
+      "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'L' }), (c) => {})",
+      '',
+    ].join('\n')
+
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { describeRoute } from 'hono-openapi'",
+        '',
+        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'L' }), (c) => {})",
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('preserves JSDoc only on the route that originally had one in a chain', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { describeRoute } from 'hono-openapi'",
+      '',
+      'export const usersHandler = new Hono()',
+      "  .get('/users', describeRoute({ summary: 'old' }), (c) => c.json({ users: [] }))",
+      '  /** Custom: documented behavior. */',
+      "  .post('/users', describeRoute({ summary: 'old' }), (c) => c.json({ created: true }))",
+      '',
+    ].join('\n')
+
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { describeRoute } from 'hono-openapi'",
+      '',
+      'export const usersHandler = new Hono()',
+      "  .get('/users', describeRoute({ summary: 'new' }), (c) => {})",
+      "  .post('/users', describeRoute({ summary: 'new' }), (c) => {})",
+      '',
+    ].join('\n')
+
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { describeRoute } from 'hono-openapi'",
+        '',
+        'export const usersHandler = new Hono()',
+        "  .get('/users', describeRoute({ summary: 'new' }), (c) => c.json({ users: [] }))",
+        '  ',
+        '  /** Custom: documented behavior. */',
+        "  .post('/users', describeRoute({ summary: 'new' }), (c) => c.json({ created: true }))",
+        '',
+      ].join('\n'),
+    )
+  })
+})

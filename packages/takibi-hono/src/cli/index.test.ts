@@ -4,24 +4,25 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { register } from 'tsx/esm/api'
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from '../config/index.js'
-import { hono } from '../core/index.js'
+import {
+  makeApp,
+  makeComponents,
+  makeHandlers,
+  makeSchemas,
+  makeWebhooks,
+  resolveLayout,
+} from '../core/index.js'
+import { setFormatOptions } from '../format/index.js'
+import { parseOpenAPI } from '../openapi/index.js'
 
 /**
  * CLI integration test helper.
  *
- * Simulates the full CLI pipeline:
- * 1. Writes takibi-hono.config.ts to a temp directory
- * 2. Reads and dynamically imports the config file (just like readConfig)
- * 3. Parses with parseConfig (just like readConfig)
- * 4. Calls hono() (just like takibiHono)
- *
- * The only difference from the real CLI is using import() directly
- * instead of `new Function('specifier', 'return import(specifier)')`,
- * since the latter is not supported in the vite-plus test runner.
+ * Simulates the full CLI pipeline by orchestrating the same generator
+ * sequence as takibiHono in cli/index.ts.
  */
 async function runCli(
   dir: string,
@@ -34,7 +35,6 @@ async function runCli(
     const configPath = path.resolve(dir, 'takibi-hono.config.ts')
     if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
 
-    register()
     const url = pathToFileURL(configPath).href
     const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
     if (!('default' in mod) || mod.default === undefined)
@@ -44,15 +44,32 @@ async function runCli(
     if (!configResult.ok) return configResult
 
     const config = configResult.value
-    const result = await hono({
-      input: config.input,
-      schema: config.schema,
-      basePath: config.basePath,
-      format: config.format,
-      openapi: config.openapi,
-      'takibi-hono': config['takibi-hono'],
-    })
-    if (!result.ok) return result
+    if (config.format) setFormatOptions(config.format)
+    const openAPIResult = await parseOpenAPI(config.input)
+    if (!openAPIResult.ok) return openAPIResult
+    const openapi = openAPIResult.value
+    const ohConfig = config['takibi-hono']
+    const useOpenAPI = config.openapi === true
+    const layout = resolveLayout(ohConfig)
+    const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
+    if (!schemasResult.ok) return schemasResult
+    if (useOpenAPI) {
+      const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
+      if (!componentsResult.ok) return componentsResult
+    }
+    const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
+    if (!handlersResult.ok) return handlersResult
+    if (useOpenAPI) {
+      const webhooksResult = await makeWebhooks(openapi, config.schema, ohConfig, layout)
+      if (!webhooksResult.ok) return webhooksResult
+    }
+    const appResult = await makeApp(
+      openapi,
+      handlersResult.value.handlerFileNames,
+      config.basePath,
+      layout,
+    )
+    if (!appResult.ok) return appResult
     return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
   } finally {
     process.chdir(originalCwd)
@@ -311,11 +328,11 @@ describe('takibiHono CLI integration', () => {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
 
         const handlers = await fsp.readFile(path.join(d, 'src/handlers/pets.ts'), 'utf-8')
@@ -527,11 +544,11 @@ export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).descri
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
 
       const handlersDir = await fsp.readdir(path.join(d, 'src/handlers'))
@@ -579,16 +596,18 @@ export const petsHandler = new Hono()
         const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 `)
 
         const responses = await fsp.readFile(
@@ -723,13 +742,13 @@ export const usersHandler = new Hono()
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -762,11 +781,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
 
       expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(false)
@@ -799,13 +818,13 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store' })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
     })
 
@@ -834,11 +853,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
     })
 
@@ -867,13 +886,13 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store' })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
     })
 
@@ -902,15 +921,15 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store' })
   .readonly()
-  .describe('A pet in the store')
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)

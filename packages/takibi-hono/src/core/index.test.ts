@@ -355,13 +355,13 @@ describe('hono', () => {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -498,7 +498,7 @@ export default app
 export const PetSchema = v.pipe(
   v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
   v.description('A pet in the store'),
-  v.examples([{ id: 1, name: 'Buddy', tag: 'dog' }]),
+  v.metadata({ examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
 )
 
 export type Pet = v.InferOutput<typeof PetSchema>
@@ -785,13 +785,17 @@ export const petsHandler = new Hono()
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({
+    ref: 'Pet',
+    description: 'A pet in the store',
+    examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -965,7 +969,11 @@ export default app
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({
+    ref: 'Pet',
+    description: 'A pet in the store',
+    examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  })
 
 export type Pet = z.infer<typeof PetSchema>
 `)
@@ -991,7 +999,7 @@ export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -1342,26 +1350,30 @@ export const CreateUserBodyRequestBody = {
         const schemas = await fsp.readFile(path.join(d, 'schemas.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
 export type User = z.infer<typeof UserSchema>
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 
 export type Error = z.infer<typeof ErrorSchema>
 `)
@@ -1555,7 +1567,7 @@ export default app
 export const PetSchema = v.pipe(
   v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
   v.description('A pet in the store'),
-  v.examples([{ id: 1, name: 'Buddy', tag: 'dog' }]),
+  v.metadata({ ref: 'Pet', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
 )
 
 export type Pet = v.InferOutput<typeof PetSchema>
@@ -1587,6 +1599,7 @@ export type Pet = v.InferOutput<typeof PetSchema>
 export const CreatePetSchema = v.pipe(
   v.object({ name: v.string(), tag: v.optional(v.string()) }),
   v.description('Data for creating a new pet'),
+  v.metadata({ ref: 'CreatePet' }),
 )
 
 export type CreatePet = v.InferOutput<typeof CreatePetSchema>
@@ -1647,6 +1660,7 @@ export const PetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({
+  identifier: 'Pet',
   description: 'A pet in the store',
   examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
 })
@@ -1680,7 +1694,7 @@ export type Pet = typeof PetSchema.Encoded
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
-}).annotations({ description: 'Data for creating a new pet' })
+}).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = typeof CreatePetSchema.Encoded
 `)
@@ -1860,26 +1874,30 @@ export * from './userListResponseResponse'
         const schemas = await fsp.readFile(path.join(d, 'schemas.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
 export type User = z.infer<typeof UserSchema>
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
 export type CreateUser = z.infer<typeof CreateUserSchema>
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 
 export type Error = z.infer<typeof ErrorSchema>
 `)
@@ -2173,13 +2191,13 @@ export const webhooksHandler = new Hono().post(
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2206,11 +2224,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2236,11 +2254,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2309,11 +2327,11 @@ export type CreatePet = typeof CreatePetSchema.Encoded
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2341,11 +2359,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2371,22 +2389,26 @@ export const CreatePetSchema = z
         const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
         expect(schemas).toBe(`import * as z from 'zod'
 
-export const UserSchema = z.object({
-  id: z.int(),
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-  tags: z.array(z.string()).optional(),
-  address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
-})
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+    tags: z.array(z.string()).optional(),
+    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+  })
+  .meta({ ref: 'User' })
 
-export const CreateUserSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  role: z.enum(['admin', 'user', 'guest']).optional(),
-})
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).optional(),
+  })
+  .meta({ ref: 'CreateUser' })
 
-export const ErrorSchema = z.object({ code: z.int(), message: z.string() })
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
 `)
 
         const responses = await fsp.readFile(
@@ -2504,13 +2526,13 @@ export const CreateUserBodyRequestBody = {
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2656,13 +2678,13 @@ export * from './pet'
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
       },
     )
@@ -2688,11 +2710,11 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2717,13 +2739,13 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 `)
     })
 
@@ -2748,15 +2770,15 @@ export const CreatePetSchema = z
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
-  .describe('A pet in the store')
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
+  .meta({ description: 'Data for creating a new pet' })
   .readonly()
-  .describe('Data for creating a new pet')
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
@@ -2783,11 +2805,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
-  .describe('A pet in the store')
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().optional() })
-  .describe('Data for creating a new pet')
+  .meta({ description: 'Data for creating a new pet' })
 `)
       },
     )
@@ -2823,5 +2845,159 @@ export const CreatePetSchema = Schema.Struct({
 }).annotations({ description: 'Data for creating a new pet' })
 `)
     })
+  })
+
+  describe('uncovered branches', () => {
+    it.concurrent(
+      'generates components/pathItems/index.ts when pathItems component is present',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('path_items_branch')
+        const yamlPath = path.join(d, 'spec.yaml')
+        await fsp.mkdir(d, { recursive: true })
+        await fsp.writeFile(
+          yamlPath,
+          `openapi: 3.1.0
+info:
+  title: PathItems
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      summary: list
+      responses:
+        '200':
+          description: OK
+components:
+  pathItems:
+    PingPath:
+      get:
+        summary: ping
+        responses:
+          '200':
+            description: OK
+`,
+        )
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { output: path.join(d, 'openapi') },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+        const pathItems = await fsp.readFile(path.join(d, 'openapi/pathItems/index.ts'), 'utf-8')
+        expect(pathItems).toBe(`export const PingPathPathItem = {
+  get: { summary: 'ping', responses: { '200': { description: 'OK' } } },
+}
+`)
+      },
+    )
+
+    it.concurrent(
+      'tolerates a missing handlers directory (empty paths spec)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('handlers_empty')
+        const yamlPath = path.join(d, 'spec.yaml')
+        await fsp.mkdir(d, { recursive: true })
+        await fsp.writeFile(
+          yamlPath,
+          `openapi: 3.0.3
+info:
+  title: Empty
+  version: 1.0.0
+paths: {}
+`,
+        )
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+        expect(fs.existsSync(path.join(d, 'handlers'))).toBe(false)
+      },
+    )
+
+    it.concurrent(
+      'uses componentConfig.import override for handler import path',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('component_import_override')
+        const yamlPath = path.join(d, 'spec.yaml')
+        await fsp.mkdir(d, { recursive: true })
+        await fsp.writeFile(
+          yamlPath,
+          `openapi: 3.0.3
+info:
+  title: Override
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: List users
+      tags: [users]
+      operationId: listUsers
+      responses:
+        '200':
+          $ref: '#/components/responses/UserList'
+components:
+  schemas:
+    User:
+      type: object
+      required: [id]
+      properties:
+        id: { type: integer }
+  responses:
+    UserList:
+      description: list
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/User'
+`,
+        )
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: { output: path.join(d, 'schemas.ts'), import: '@app/schemas' },
+              responses: {
+                output: path.join(d, 'responses.ts'),
+                import: '@app/responses',
+              },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+        const handler = await fsp.readFile(path.join(d, 'handlers/users.ts'), 'utf-8')
+        expect(handler).toBe(`import { Hono } from 'hono'
+import { describeRoute } from 'hono-openapi'
+import { UserListResponse } from '@app/responses'
+
+export const usersHandler = new Hono().get(
+  '/users',
+  describeRoute({
+    summary: 'List users',
+    tags: ['users'],
+    operationId: 'listUsers',
+    responses: { 200: UserListResponse },
+  }),
+  (c) => {},
+)
+`)
+      },
+    )
   })
 })

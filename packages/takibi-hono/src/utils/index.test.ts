@@ -2,39 +2,12 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import {
   makeHandlerFileName,
-  methodPath,
   renderNamedImport,
   resolveRef,
   toCamelCase,
   toHonoPath,
   toPascalCase,
 } from './index.js'
-
-describe('methodPath', () => {
-  it.concurrent('should return method only for root path', () => {
-    expect(methodPath('get', '/')).toBe('get')
-  })
-
-  it.concurrent('should generate PascalCase path after method', () => {
-    expect(methodPath('get', '/users')).toBe('getUsers')
-  })
-
-  it.concurrent('should handle path parameters', () => {
-    expect(methodPath('get', '/users/{id}')).toBe('getUsersId')
-  })
-
-  it.concurrent('should handle nested paths', () => {
-    expect(methodPath('get', '/users/{id}/posts')).toBe('getUsersIdPosts')
-  })
-
-  it.concurrent('should handle trailing slash', () => {
-    expect(methodPath('get', '/users/')).toBe('getUsersIndex')
-  })
-
-  it.concurrent('should handle post method', () => {
-    expect(methodPath('post', '/users')).toBe('postUsers')
-  })
-})
 
 describe('makeHandlerFileName', () => {
   it.concurrent('should return __root for root path', () => {
