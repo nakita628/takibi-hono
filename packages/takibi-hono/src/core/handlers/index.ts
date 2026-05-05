@@ -2,7 +2,7 @@ import path from 'node:path'
 
 import { emit } from '../../emit/index.js'
 import { readdir, readFile, unlink } from '../../fsp/index.js'
-import { makeHandlerCode } from '../../generator/hono-openapi/routes/index.js'
+import { makeHandlerCode } from '../../generator/hono-openapi/handlers/index.js'
 import { makeBarrelCode } from '../../helper/barrel.js'
 import { collectOperations } from '../../helper/operations.js'
 import { mergeBarrelFile, mergeHandlerFile } from '../../merge/index.js'

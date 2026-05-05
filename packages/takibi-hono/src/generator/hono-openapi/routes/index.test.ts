@@ -1,455 +1,561 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { collectOperations } from '../../../helper/operations.js'
-import type { OpenAPI } from '../../../openapi/index.js'
-import { makeHandlerCode } from './index.js'
+import type { Media, Operation } from '../../../openapi/index.js'
+import { makeDescribeRoute } from './index.js'
 
-const minimalOpenAPI = {
-  openapi: '3.0.0',
-  info: { title: 'Test', version: '1.0.0' },
-  paths: {
-    '/': {
-      get: {
-        responses: { '200': { description: 'OK' } },
+describe('makeDescribeRoute', () => {
+  it.concurrent('should generate describeRoute with description', () => {
+    const operation: Operation = {
+      description: 'Get all users',
+      responses: {
+        '200': { description: 'Successful response' },
       },
-    },
-    '/users': {
-      get: {
-        responses: {
-          '200': {
-            description: 'List users',
-            content: {
-              'application/json': {
-                schema: { type: 'array', items: { $ref: '#/components/schemas/User' } },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        requestBody: {
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({description:"Get all users",responses:{200:{description:"Successful response"}}})',
+    )
+  })
+
+  it.concurrent('should generate describeRoute with response schema', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'Success',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/CreateUser' },
-            },
-          },
-        },
-        responses: { '201': { description: 'Created' } },
-      },
-    },
-    '/users/{id}': {
-      get: {
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: {
-          '200': {
-            description: 'Get user',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/User' },
-              },
+              schema: { $ref: '#/components/schemas/User' },
             },
           },
         },
       },
-    },
-  },
-} as unknown as OpenAPI
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"Success",content:{\'application/json\':{schema:resolver(UserSchema)}}}}})',
+    )
+  })
 
-/**
- * OpenAPI spec with path-level parameters shared across operations.
- * Covers the pathItemParameters branch (line 23).
- */
-const pathLevelParamsOpenAPI = {
-  openapi: '3.0.0',
-  info: { title: 'Test', version: '1.0.0' },
-  paths: {
-    '/items/{itemId}': {
-      parameters: [{ name: 'itemId', in: 'path', required: true, schema: { type: 'string' } }],
-      get: {
-        responses: { '200': { description: 'Get item' } },
+  it.concurrent('should handle multiple status codes', () => {
+    const operation: Operation = {
+      responses: {
+        '200': { description: 'Success' },
+        '404': { description: 'Not found' },
       },
-      delete: {
-        responses: { '204': { description: 'Deleted' } },
-      },
-    },
-  },
-} as unknown as OpenAPI
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"Success"},404:{description:"Not found"}}})',
+    )
+  })
 
-/**
- * Simple spec with only a root path for __root group name tests.
- */
-const rootOnlyOpenAPI = {
-  openapi: '3.0.0',
-  info: { title: 'Test', version: '1.0.0' },
-  paths: {
-    '/': {
-      get: {
-        responses: { '200': { description: 'Root OK' } },
+  it.concurrent('should include tags', () => {
+    const operation: Operation = {
+      tags: ['users', 'admin'],
+      responses: {
+        '200': { description: 'OK' },
       },
-      post: {
-        requestBody: {
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({tags:["users","admin"],responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include operationId', () => {
+    const operation: Operation = {
+      operationId: 'getUsers',
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({operationId:"getUsers",responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include deprecated', () => {
+    const operation: Operation = {
+      deprecated: true,
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({deprecated:true,responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('should not include deprecated when false', () => {
+    const operation: Operation = {
+      deprecated: false,
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('should include security', () => {
+    const operation: Operation = {
+      security: { name: ['bearerAuth'] },
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({security:{"name":["bearerAuth"]},responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include externalDocs', () => {
+    const operation: Operation = {
+      externalDocs: {
+        url: 'https://example.com/docs',
+        description: 'More info',
+      },
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({externalDocs:{url:"https://example.com/docs",description:"More info"},responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include externalDocs without description', () => {
+    const operation: Operation = {
+      externalDocs: {
+        url: 'https://example.com/docs',
+      },
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({externalDocs:{url:"https://example.com/docs"},responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include servers', () => {
+    const operation: Operation = {
+      servers: [{ url: 'https://api.example.com', description: 'Production' }],
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({servers:[{url:"https://api.example.com",description:"Production"}],responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include servers with variables', () => {
+    const operation: Operation = {
+      servers: [
+        {
+          url: 'https://{env}.example.com',
+          variables: {
+            env: { default: 'prod', enum: ['prod', 'staging'], description: 'Environment' },
+          },
+        },
+      ],
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({servers:[{url:"https://{env}.example.com",variables:{env:{enum:["prod","staging"],default:"prod",description:"Environment"}}}],responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should include response headers', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          headers: {
+            'X-Rate-Limit': {
+              description: 'Rate limit',
+              schema: { type: 'integer' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",headers:{"X-Rate-Limit":{description:"Rate limit",schema:{"type":"integer"} as const}}}}})',
+    )
+  })
+
+  it.concurrent('should include all fields together', () => {
+    const operation: Operation = {
+      description: 'Get users',
+      summary: 'List users',
+      tags: ['users'],
+      operationId: 'listUsers',
+      deprecated: true,
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({description:"Get users",summary:"List users",tags:["users"],operationId:"listUsers",deprecated:true,responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('should handle oneOf response schema', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
           content: {
             'application/json': {
               schema: {
-                type: 'object',
-                properties: { name: { type: 'string' } },
-                required: ['name'],
+                oneOf: [{ $ref: '#/components/schemas/Cat' }, { $ref: '#/components/schemas/Dog' }],
               },
             },
           },
         },
-        responses: { '201': { description: 'Created' } },
       },
-    },
-  },
-} as unknown as OpenAPI
-
-describe('collectOperations', () => {
-  it.concurrent('should group operations by first path segment', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    expect(groups.has('__root')).toBe(true)
-    expect(groups.has('users')).toBe(true)
-    expect(groups.get('__root')!.length).toBe(1)
-    expect(groups.get('users')!.length).toBe(3)
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(z.union([CatSchema,DogSchema]))}}}}})',
+    )
   })
-})
 
-describe('makeHandlerCode', () => {
-  it.concurrent('should generate sValidator for root by default', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('__root', groups.get('__root')!, 'zod')
-    expect(code).toBe(
-      ["import{Hono}from'hono'", '', "export const rootHandler=new Hono().get('/',(c)=>{})"].join(
-        '\n',
+  it.concurrent('should handle allOf response schema', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: {
+                allOf: [
+                  { $ref: '#/components/schemas/Base' },
+                  { $ref: '#/components/schemas/Extra' },
+                ],
+              },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(z.intersection(BaseSchema,ExtraSchema))}}}}})',
+    )
+  })
+
+  it.concurrent('should handle $ref response', () => {
+    const operation: Operation = {
+      responses: {
+        '200': { $ref: '#/components/responses/UserList' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{200:UserListResponse}})')
+  })
+
+  it.concurrent('should generate response with no responses field', () => {
+    const operation = {
+      description: 'No responses',
+    } as Operation
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({description:"No responses"})')
+  })
+
+  it.concurrent('should generate response with empty responses object', () => {
+    const operation: Operation = {
+      responses: {},
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({})')
+  })
+
+  it.concurrent('should generate response schema with valibot', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/User' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'valibot')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(UserSchema)}}}}})',
+    )
+  })
+
+  it.concurrent('should generate response schema with typebox', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Item' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'typebox')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(Compile(ItemSchema))}}}}})',
+    )
+  })
+
+  it.concurrent('should generate response schema with arktype', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Pet' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'arktype')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(PetSchema)}}}}})',
+    )
+  })
+
+  it.concurrent('should generate response schema with effect', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/Order' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'effect')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(standardSchemaV1(OrderSchema))}}}}})',
+    )
+  })
+
+  it.concurrent('should generate inline response schema with valibot', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { type: 'object', properties: { id: { type: 'integer' } }, required: ['id'] },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'valibot')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(v.object({id:v.number()}))}}}}})',
+    )
+  })
+
+  it.concurrent('should handle response content with no schema', () => {
+    const operation: Operation = {
+      responses: {
+        '204': {
+          description: 'No Content',
+          content: {
+            'application/json': {} as Media,
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{204:{description:"No Content"}}})')
+  })
+
+  it.concurrent('should handle multiple content types in response', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/User' },
+            },
+            'application/xml': {
+              schema: { $ref: '#/components/schemas/User' },
+            },
+          },
+        },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      "describeRoute({responses:{200:{description:\"OK\",content:{'application/json':{schema:resolver(UserSchema)},'application/xml':{schema:resolver(UserSchema)}}}}})",
+    )
+  })
+
+  it.concurrent('should handle summary without description', () => {
+    const operation: Operation = {
+      summary: 'List items',
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({summary:"List items",responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('should handle empty tags array', () => {
+    const operation: Operation = {
+      tags: [],
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('should handle empty servers array', () => {
+    const operation: Operation = {
+      servers: [],
+      responses: {
+        '200': { description: 'OK' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('should handle multiple status codes including errors', () => {
+    const operation: Operation = {
+      responses: {
+        '200': {
+          description: 'OK',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } },
+        },
+        '404': {
+          description: 'Not found',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+        },
+        '500': { description: 'Internal error' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe(
+      'describeRoute({responses:{200:{description:"OK",content:{\'application/json\':{schema:resolver(UserSchema)}}},404:{description:"Not found",content:{\'application/json\':{schema:resolver(ErrorSchema)}}},500:{description:"Internal error"}}})',
+    )
+  })
+
+  // --- field ordering and edge cases ---
+
+  it.concurrent('emits fields in fixed order: description, summary, tags, operationId, deprecated, security, externalDocs, servers, responses', () => {
+    // `security` is typed as a single object; we exercise the array form which
+    // the impl JSON-stringifies as-is. Cast at the test boundary.
+    const result = makeDescribeRoute(
+      {
+        security: [{ name: ['s1'] }],
+        responses: { 200: { description: 'OK' } },
+        summary: 's',
+        tags: ['t1', 't2'],
+        deprecated: true,
+        operationId: 'op',
+        description: 'd',
+      } as never,
+      'zod',
+    )
+    expect(result).toBe(
+      'describeRoute({description:"d",summary:"s",tags:["t1","t2"],operationId:"op",deprecated:true,security:[{"name":["s1"]}],responses:{200:{description:"OK"}}})',
+    )
+  })
+
+  it.concurrent('omits responses key when operation has no responses object', () => {
+    // Operation type marks `responses` as required; cast for this edge case.
+    expect(makeDescribeRoute({ summary: 'X' } as never, 'zod')).toBe('describeRoute({summary:"X"})')
+  })
+
+  it.concurrent('omits empty tags array entirely', () => {
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', tags: [], responses: { 200: { description: 'OK' } } },
+        'zod',
       ),
+    ).toBe('describeRoute({summary:"X",responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('omits empty servers array entirely', () => {
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', servers: [], responses: { 200: { description: 'OK' } } },
+        'zod',
+      ),
+    ).toBe('describeRoute({summary:"X",responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('emits empty security array (truthy check, not length-gated)', () => {
+    // Documented behavior: an empty `security: []` is emitted as-is, which is a
+    // valid OpenAPI signal meaning "no security required". The generator does
+    // not strip it the way it strips empty `tags` / `servers`.
+    expect(
+      makeDescribeRoute(
+        { summary: 'X', security: [], responses: { 200: { description: 'OK' } } } as never,
+        'zod',
+      ),
+    ).toBe('describeRoute({summary:"X",security:[],responses:{200:{description:"OK"}}})')
+  })
+
+  it.concurrent('escapes embedded newlines and quotes in description via JSON.stringify', () => {
+    expect(
+      makeDescribeRoute(
+        {
+          description: 'Line one\nLine "two"',
+          responses: { 200: { description: 'OK' } },
+        },
+        'zod',
+      ),
+    ).toBe(
+      'describeRoute({description:"Line one\\nLine \\"two\\"",responses:{200:{description:"OK"}}})',
     )
   })
 
-  it.concurrent('should generate sValidator for users group by default', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'zod')
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{sValidator}from'@hono/standard-validator'",
-        "import*as z from'zod'",
-        "import{CreateUserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',sValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate hono-openapi handler when openapi is true', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('__root', groups.get('__root')!, 'zod', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute}from'hono-openapi'",
-        '',
-        'export const rootHandler=new Hono().get(\'/\',describeRoute({responses:{200:{description:"OK"}}}),(c)=>{})',
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate hono-openapi for users group with openapi true', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'zod', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import*as z from'zod'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should use custom componentPaths with openapi true', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'zod', {
-      componentPaths: { schemas: '../../shared/schemas' },
-      openapi: true,
-    })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import*as z from'zod'",
-        "import{CreateUserSchema,UserSchema}from'../../shared/schemas'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should handle valibot with openapi true', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('__root', groups.get('__root')!, 'valibot', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute}from'hono-openapi'",
-        '',
-        'export const rootHandler=new Hono().get(\'/\',describeRoute({responses:{200:{description:"OK"}}}),(c)=>{})',
-      ].join('\n'),
-    )
-  })
-})
-
-describe('collectOperations — exact map entries', () => {
-  it.concurrent('should produce exact grouping with __root and users keys', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const keys = [...groups.keys()]
-    expect(keys).toStrictEqual(['__root', 'users'])
-  })
-
-  it.concurrent('should produce exact __root operations', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const rootOps = groups.get('__root')!
-    expect(rootOps.length).toBe(1)
-    expect(rootOps[0].method).toBe('get')
-    expect(rootOps[0].path).toBe('/')
-    expect(rootOps[0].pathItemParameters).toBe(undefined)
-  })
-
-  it.concurrent('should produce exact users operations in order', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const usersOps = groups.get('users')!
-    expect(usersOps.length).toBe(3)
-    expect(usersOps.map((o) => `${o.method} ${o.path}`)).toStrictEqual([
-      'get /users',
-      'post /users',
-      'get /users/{id}',
-    ])
-  })
-
-  it.concurrent('should set pathItemParameters from path-level parameters', () => {
-    const groups = collectOperations(pathLevelParamsOpenAPI)
-    const keys = [...groups.keys()]
-    expect(keys).toStrictEqual(['items'])
-    const ops = groups.get('items')!
-    expect(ops.length).toBe(2)
-    expect(ops[0].method).toBe('get')
-    expect(ops[0].path).toBe('/items/{itemId}')
-    expect(ops[0].pathItemParameters).toStrictEqual([
-      { name: 'itemId', in: 'path', required: true, schema: { type: 'string' } },
-    ])
-    expect(ops[1].method).toBe('delete')
-    expect(ops[1].pathItemParameters).toStrictEqual(ops[0].pathItemParameters)
-  })
-})
-
-describe('makeHandlerCode — __root group name', () => {
-  it.concurrent('should produce rootHandler name for __root with multiple operations', () => {
-    const groups = collectOperations(rootOnlyOpenAPI)
-    const code = makeHandlerCode('__root', groups.get('__root')!, 'zod')
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{sValidator}from'@hono/standard-validator'",
-        "import*as z from'zod'",
-        '',
-        "export const rootHandler=new Hono().get('/',(c)=>{}).post('/',sValidator('json',z.object({name:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should produce rootHandler name for __root with openapi true', () => {
-    const groups = collectOperations(rootOnlyOpenAPI)
-    const code = makeHandlerCode('__root', groups.get('__root')!, 'zod', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,validator}from'hono-openapi'",
-        "import*as z from'zod'",
-        '',
-        "export const rootHandler=new Hono().get('/',describeRoute({responses:{200:{description:\"Root OK\"}}}),(c)=>{}).post('/',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',z.object({name:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-})
-
-describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
-  it.concurrent('should generate zod openapi handler for users group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'zod', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import*as z from'zod'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate valibot openapi handler for users group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'valibot', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import*as v from'valibot'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate typebox openapi handler for users group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'typebox', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import Type from'typebox'",
-        "import{Compile}from'typebox/compile'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(Compile(Type.Array(UserSchema)))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',Compile(CreateUserSchema)),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(Compile(UserSchema))}}}}}),validator('param',Compile(Type.Object({id:Type.String()}))),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate arktype openapi handler for users group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'arktype', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import{type}from'arktype'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(UserSchema.array())}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',type({id:type('string')})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate effect openapi handler for users group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'effect', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import{Schema}from'effect'",
-        "import{standardSchemaV1}from'effect/Schema'",
-        "import{CreateUserSchema,UserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(standardSchemaV1(Schema.Array(UserSchema)))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',standardSchemaV1(CreateUserSchema)),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(standardSchemaV1(UserSchema))}}}}}),validator('param',standardSchemaV1(Schema.Struct({id:Schema.String}))),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-})
-
-describe('makeHandlerCode — path-level parameters', () => {
-  it.concurrent('should include pathItemParameters in standard validators for all operations', () => {
-    const groups = collectOperations(pathLevelParamsOpenAPI)
-    const code = makeHandlerCode('items', groups.get('items')!, 'zod')
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{sValidator}from'@hono/standard-validator'",
-        "import*as z from'zod'",
-        '',
-        "export const itemsHandler=new Hono().get('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{}).delete('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should include pathItemParameters in openapi validators for all operations', () => {
-    const groups = collectOperations(pathLevelParamsOpenAPI)
-    const code = makeHandlerCode('items', groups.get('items')!, 'zod', { openapi: true })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,validator}from'hono-openapi'",
-        "import*as z from'zod'",
-        '',
-        "export const itemsHandler=new Hono().get('/items/:itemId',describeRoute({responses:{200:{description:\"Get item\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{}).delete('/items/:itemId',describeRoute({responses:{204:{description:\"Deleted\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-})
-
-describe('makeHandlerCode — custom componentPaths', () => {
-  it.concurrent('should use custom componentPaths in standard mode', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'zod', {
-      componentPaths: { schemas: '@/schemas' },
-    })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{sValidator}from'@hono/standard-validator'",
-        "import*as z from'zod'",
-        "import{CreateUserSchema}from'@/schemas'",
-        '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',sValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should use custom componentPaths in openapi mode', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const code = makeHandlerCode('users', groups.get('users')!, 'valibot', {
-      componentPaths: { schemas: '../../shared/schemas' },
-      openapi: true,
-    })
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{describeRoute,resolver,validator}from'hono-openapi'",
-        "import*as v from'valibot'",
-        "import{CreateUserSchema,UserSchema}from'../../shared/schemas'",
-        '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-})
-
-describe('makeHandlerCode — single handler (no split) with multiple operations', () => {
-  it.concurrent('should generate a single handler with all operations from one group', () => {
-    const groups = collectOperations(rootOnlyOpenAPI)
-    const rootOps = groups.get('__root')!
-    expect(rootOps.length).toBe(2)
-    const code = makeHandlerCode('__root', rootOps, 'valibot')
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{sValidator}from'@hono/standard-validator'",
-        "import*as v from'valibot'",
-        '',
-        "export const rootHandler=new Hono().get('/',(c)=>{}).post('/',sValidator('json',v.object({name:v.string()})),(c)=>{})",
-      ].join('\n'),
-    )
-  })
-
-  it.concurrent('should generate a single handler with multiple operations for non-root group', () => {
-    const groups = collectOperations(minimalOpenAPI)
-    const usersOps = groups.get('users')!
-    expect(usersOps.length).toBe(3)
-    const code = makeHandlerCode('users', usersOps, 'typebox')
-    expect(code).toBe(
-      [
-        "import{Hono}from'hono'",
-        "import{tbValidator}from'@hono/typebox-validator'",
-        "import Type from'typebox'",
-        "import{CreateUserSchema}from'../components'",
-        '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',tbValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',tbValidator('param',Type.Object({id:Type.String()})),(c)=>{})",
-      ].join('\n'),
+  it.concurrent('preserves status-code key order from input object iteration', () => {
+    // Object.entries follows insertion order for string keys: numeric-like
+    // keys are sorted ascending, so 200,400,404,500 always serialize in that order.
+    expect(
+      makeDescribeRoute(
+        {
+          summary: 'X',
+          responses: {
+            500: { description: 'Err' },
+            200: { description: 'OK' },
+            404: { description: 'NF' },
+            400: { description: 'Bad' },
+          },
+        },
+        'zod',
+      ),
+    ).toBe(
+      'describeRoute({summary:"X",responses:{200:{description:"OK"},400:{description:"Bad"},404:{description:"NF"},500:{description:"Err"}}})',
     )
   })
 })

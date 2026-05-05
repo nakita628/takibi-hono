@@ -28,3 +28,24 @@ export function collectOperations(
       : groups
   }, new Map<string, RouteOperation[]>())
 }
+
+export type WebhookOperation = {
+  readonly webhookName: string
+  readonly method: string
+  readonly operation: Operation
+  readonly pathItemParameters?: readonly Parameter[] | undefined
+}
+
+export function collectWebhookOperations(openapi: OpenAPI): readonly WebhookOperation[] {
+  if (!openapi.webhooks) return []
+  return Object.entries(openapi.webhooks).flatMap(([webhookName, pathItem]) => {
+    const pathItemParameters = Array.isArray(pathItem.parameters)
+      ? pathItem.parameters.filter(isParameter)
+      : undefined
+    return Object.entries(pathItem)
+      .filter(
+        (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
+      )
+      .map(([method, operation]) => ({ webhookName, method, operation, pathItemParameters }))
+  })
+}
