@@ -8,11 +8,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
 import { parseConfig } from './config/index.js'
 import {
-  generateApp,
-  generateComponents,
-  generateHandlers,
-  generateSchemas,
-  generateWebhooks,
+  makeApp,
+  makeComponents,
+  makeHandlers,
+  makeSchemas,
+  makeWebhooks,
   resolveLayout,
 } from './core/index.js'
 import { setFormatOptions } from './format/index.js'
@@ -53,25 +53,19 @@ async function runEntryPoint(
     const ohConfig = config['takibi-hono']
     const useOpenAPI = config.openapi === true
     const layout = resolveLayout(ohConfig)
-    const schemasResult = await generateSchemas(
-      openapi,
-      config.schema,
-      useOpenAPI,
-      ohConfig,
-      layout,
-    )
+    const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
     if (!schemasResult.ok) return schemasResult
     if (useOpenAPI) {
-      const componentsResult = await generateComponents(openapi, config.schema, ohConfig, layout)
+      const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
       if (!componentsResult.ok) return componentsResult
     }
-    const handlersResult = await generateHandlers(openapi, config.schema, useOpenAPI, layout)
+    const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
     if (!handlersResult.ok) return handlersResult
     if (useOpenAPI) {
-      const webhooksResult = await generateWebhooks(openapi, config.schema, ohConfig, layout)
+      const webhooksResult = await makeWebhooks(openapi, config.schema, ohConfig, layout)
       if (!webhooksResult.ok) return webhooksResult
     }
-    const appResult = await generateApp(
+    const appResult = await makeApp(
       openapi,
       handlersResult.value.handlerFileNames,
       config.basePath,

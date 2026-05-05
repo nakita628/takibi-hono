@@ -150,7 +150,7 @@ type OAuthFlow = {
 /**
  * OpenAPI paths with PathItem definitions
  */
-export type OpenAPIPaths = {
+type OpenAPIPaths = {
   readonly [P in keyof NonNullable<BaseOpenAPI['paths']>]: PathItem
 }
 
@@ -164,9 +164,9 @@ export type Type =
   | 'object'
   | 'null'
 
-export type Format = FormatString | FormatNumber
+type Format = FormatString | FormatNumber
 
-export type FormatString =
+type FormatString =
   | 'email'
   | 'uuid'
   | 'uuidv4'
@@ -195,9 +195,9 @@ export type FormatString =
   | 'toUpperCase'
   | 'trim'
 
-export type FormatNumber = 'int32' | 'int64' | 'bigint' | 'float' | 'float32' | 'float64' | 'double'
+type FormatNumber = 'int32' | 'int64' | 'bigint' | 'float' | 'float32' | 'float64' | 'double'
 
-export type Ref =
+type Ref =
   | `#/components/schemas/${string}`
   | `#/components/parameters/${string}`
   | `#/components/securitySchemes/${string}`
@@ -264,7 +264,7 @@ export type Reference = {
   readonly description?: string
 }
 
-export type Encoding = {
+type Encoding = {
   readonly contentType?: string
   readonly headers?: {
     readonly [k: string]: Header | Reference
@@ -338,7 +338,7 @@ export type Operation = {
   }[]
 }
 
-export type Responses = {
+type Responses = {
   readonly $ref?: Ref
   readonly summary?: string
   readonly description?: string
@@ -517,6 +517,6 @@ export type Media = {
   readonly itemEncoding?: Encoding
 }
 
-export type Callbacks = {
+type Callbacks = {
   readonly [k: string]: PathItem
 }

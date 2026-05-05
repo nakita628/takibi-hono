@@ -1,4 +1,3 @@
-import { schemaToInlineExpression } from '../generator/inline-schema.js'
 import { isHeader, isMedia, isParameter, isRefObject } from '../guard/index.js'
 import type {
   Content,
@@ -10,6 +9,7 @@ import type {
   Schema,
 } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
+import { schemaToInlineExpression } from './inline-schema.js'
 
 export function makeOptional(
   expr: string,

@@ -1,15 +1,3 @@
-export function methodPath(method: string, path: string) {
-  const hasTrailingSlash = path !== '/' && path.endsWith('/')
-  const apiPath = path
-    .replace(/[^A-Za-z0-9]/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map((str) => `${str.charAt(0).toUpperCase()}${str.slice(1)}`)
-    .join('')
-  const suffix = hasTrailingSlash ? 'Index' : ''
-  return apiPath ? `${method}${apiPath}${suffix}` : `${method}`
-}
-
 export function makeHandlerFileName(path: string) {
   const segments = path.split('/').filter(Boolean)
   if (segments.length === 0) return '__root'

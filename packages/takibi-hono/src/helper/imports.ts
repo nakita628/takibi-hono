@@ -1,7 +1,7 @@
 import path from 'node:path'
 
-import { getLibraryConfig, getStandardValidatorConfig } from '../generator/imports.js'
 import { renderNamedImport } from '../utils/index.js'
+import { getLibraryConfig, getStandardValidatorConfig } from './library.js'
 
 const JS_IDENT = '[A-Za-z_$][A-Za-z0-9_$]*'
 const EXPORT_CONST_PATTERN = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)/g

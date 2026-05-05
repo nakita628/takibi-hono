@@ -24,6 +24,10 @@ export function zodType(
   return `type ${typeName}Type=${makeTypeString(schema, typeName, cyclicGroup, readonly)}`
 }
 
+/**
+ * @internal Exported only for unit tests; consumers should use `zodType`.
+ * Recursively maps an OpenAPI Schema to a TypeScript type literal string.
+ */
 export function makeTypeString(
   schema: Schema,
   selfTypeName: string,
