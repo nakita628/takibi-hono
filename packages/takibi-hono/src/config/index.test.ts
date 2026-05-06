@@ -445,13 +445,19 @@ describe('parseConfig', () => {
     })
   })
 
-  it.concurrent('fails: unknown format property', () => {
+  it.concurrent('accepts arbitrary keys in format (oxfmt FormatConfig is open-shaped)', () => {
+    // `format` is typed as `FormatConfig` from oxfmt and validated permissively
+    // via `v.custom<FormatConfig>(() => true)`. We don't enumerate every oxfmt
+    // option in this package — unknown keys pass through to oxfmt at runtime,
+    // which is responsible for rejecting them. This test pins the documented
+    // permissive behavior so a future stricter schema doesn't silently break
+    // configs that pass through experimental oxfmt options.
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
       format: { unknownProp: true },
     })
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
   })
 
   it.concurrent('all optional takibi-hono fields populated', () => {
