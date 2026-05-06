@@ -29,7 +29,7 @@ export function collectOperations(
   }, new Map<string, RouteOperation[]>())
 }
 
-export type WebhookOperation = {
+type WebhookOperation = {
   readonly webhookName: string
   readonly method: string
   readonly operation: Operation
