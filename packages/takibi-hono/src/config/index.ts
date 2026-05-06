@@ -248,6 +248,28 @@ const ConfigSchema = v.strictObject({
               }),
             ]),
           ),
+          mediaTypes: v.exactOptional(
+            v.variant('split', [
+              v.strictObject({
+                split: v.literal(true),
+                output: v.pipe(
+                  v.string(),
+                  v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
+                ),
+                import: v.exactOptional(v.string()),
+                exportTypes: v.exactOptional(v.boolean()),
+              }),
+              v.strictObject({
+                split: v.exactOptional(v.literal(false)),
+                output: v.pipe(
+                  v.string(),
+                  v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
+                ),
+                import: v.exactOptional(v.string()),
+                exportTypes: v.exactOptional(v.boolean()),
+              }),
+            ]),
+          ),
           webhooks: v.exactOptional(
             v.variant('split', [
               v.strictObject({

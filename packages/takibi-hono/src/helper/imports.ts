@@ -130,9 +130,7 @@ export function makeStandardImports(
     ...(schemaLib === 'typebox' && usesInlineValidator
       ? ["import{validator}from'hono/validator'"]
       : []),
-    ...(schemaLib === 'typebox' && usesValueModule
-      ? ["import{Value}from'typebox/value'"]
-      : []),
+    ...(schemaLib === 'typebox' && usesValueModule ? ["import{Value}from'typebox/value'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const

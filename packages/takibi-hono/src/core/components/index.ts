@@ -5,6 +5,7 @@ import { makeCallbacksCode } from '../../generator/hono-openapi/components/callb
 import { makeExamplesCode } from '../../generator/hono-openapi/components/examples.js'
 import { makeHeadersCode } from '../../generator/hono-openapi/components/headers.js'
 import { makeLinksCode } from '../../generator/hono-openapi/components/links.js'
+import { makeMediaTypesCode } from '../../generator/hono-openapi/components/media-types.js'
 import { makeParametersCode } from '../../generator/hono-openapi/components/parameters.js'
 import { makePathItemsCode } from '../../generator/hono-openapi/components/path-items.js'
 import { makeRequestBodiesCode } from '../../generator/hono-openapi/components/request-bodies.js'
@@ -77,6 +78,11 @@ export async function makeComponents(
       configKey: 'pathItems' as const,
       make: () => makePathItemsCode(components.pathItems!, isReadonly),
     },
+    {
+      data: components.mediaTypes,
+      configKey: 'mediaTypes' as const,
+      make: () => makeMediaTypesCode(components.mediaTypes!, schemaLib),
+    },
   ] as const
   const componentFiles = makeComponentFileMap(components, ohConfig, layout)
   for (const gen of generators) {
@@ -120,6 +126,7 @@ const COMPONENT_KEYS = [
   'links',
   'callbacks',
   'pathItems',
+  'mediaTypes',
 ] as const
 
 function makeComponentFileMap(
@@ -139,6 +146,7 @@ function makeComponentFileMap(
     links: ohConfig?.components?.links,
     callbacks: ohConfig?.components?.callbacks,
     pathItems: ohConfig?.components?.pathItems,
+    mediaTypes: ohConfig?.components?.mediaTypes,
   }
   for (const [k, config] of Object.entries(configsByKey)) {
     if (config) {

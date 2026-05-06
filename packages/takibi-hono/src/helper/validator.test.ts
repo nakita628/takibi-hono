@@ -268,9 +268,7 @@ describe('makeStandardValidators', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'arktype')
-    expect(result).toStrictEqual([
-      "sValidator('param',type({id:type('string.integer.parse')}))",
-    ])
+    expect(result).toStrictEqual(["sValidator('param',type({id:type('string.integer.parse')}))"])
   })
 
   it.concurrent('effect: path integer is coerced', () => {

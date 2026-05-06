@@ -140,9 +140,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Number())',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Number())')
     })
 
     it.concurrent('arktype', () => {
@@ -168,9 +166,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Boolean())',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Boolean())')
     })
 
     it.concurrent('arktype', () => {
@@ -276,9 +272,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Number())',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Number())')
     })
 
     it.concurrent('arktype', () => {
