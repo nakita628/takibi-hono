@@ -27,6 +27,7 @@ export type TakibiHonoOptions = {
           | 'links'
           | 'callbacks'
           | 'pathItems'
+          | 'mediaTypes'
           | 'webhooks',
           {
             readonly output: string
@@ -92,6 +93,7 @@ const COMPONENT_KEYS = [
   'links',
   'callbacks',
   'pathItems',
+  'mediaTypes',
 ] as const
 
 function makeComponentPaths(

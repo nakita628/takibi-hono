@@ -1,3 +1,4 @@
+import { serializeWithRefs } from '../../../helper/inline-refs.js'
 import type { Components } from '../../../openapi/index.js'
 import { toPascalCase } from '../../../utils/index.js'
 
@@ -13,7 +14,7 @@ export function makePathItemsCode(
     .map(([name, pathItem]) => {
       const varName = `${toPascalCase(name)}PathItem`
       const suffix = readonly ? ' as const' : ''
-      return `export const ${varName} = ${JSON.stringify(pathItem)}${suffix}`
+      return `export const ${varName} = ${serializeWithRefs(pathItem)}${suffix}`
     })
     .join('\n\n')
 }

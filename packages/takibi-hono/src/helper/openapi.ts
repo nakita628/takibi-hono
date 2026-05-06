@@ -132,21 +132,18 @@ export function resolveSchema(
 export function makeContent(
   content: Content | { [k: string]: unknown },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-  options?: { readonly wrapWithResolver?: boolean },
 ): readonly string[] {
-  const wrap = options?.wrapWithResolver ?? false
   return Object.entries(content)
     .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
-    .map(([mediaType, media]) => {
-      const { schema } = media
-      if (wrap) {
-        return `'${mediaType}':{schema:${resolveSchema(schema, schemaLib)}}`
-      }
-      const schemaExpr = schema.$ref
-        ? resolveRef(schema.$ref)
-        : schemaToInlineExpression(schema, schemaLib)
-      return `'${mediaType}':{schema:resolver(${schemaExpr})}`
-    })
+    .map(
+      ([mediaType, media]) =>
+        // `resolveSchema` applies `wrapSchemaForValidator` so effect schemas
+        // get `standardSchemaV1(...)` and typebox gets `Compile(...)` before
+        // the outer `resolver(...)` — without this, `resolver(UserListSchema)`
+        // fails StandardSchemaV1's `~standard` requirement (TS2345) for
+        // effect schemas.
+        `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib)}}`,
+    )
 }
 
 export function makeHeader(headerName: string, header: Header | Reference) {

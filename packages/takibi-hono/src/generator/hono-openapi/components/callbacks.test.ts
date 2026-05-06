@@ -70,4 +70,26 @@ describe('makeCallbacksCode', () => {
   it.concurrent('should return empty string for empty callbacks', () => {
     expect(makeCallbacksCode({})).toBe('')
   })
+
+  it.concurrent('should inline schema $ref to component identifier', () => {
+    const callbacks: NonNullable<Components['callbacks']> = {
+      UserCreated: {
+        '{$request.body#/callbackUrl}': {
+          post: {
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/User' },
+                },
+              },
+            },
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    }
+    expect(makeCallbacksCode(callbacks)).toBe(
+      'export const UserCreatedCallback = {"{$request.body#/callbackUrl}":{"post":{"requestBody":{"content":{"application/json":{"schema":UserSchema}}},"responses":{"200":{"description":"OK"}}}}}',
+    )
+  })
 })

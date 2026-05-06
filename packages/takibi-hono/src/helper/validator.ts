@@ -66,14 +66,22 @@ export function makeStandardValidators(
   const grouped = groupParametersByLocation(allParameters)
   const paramValidators = Object.entries(grouped).map(([location, parameters]) => {
     const validatorTarget = location === 'path' ? 'param' : location
-    const isQuery = location === 'query'
+    // Path and query both arrive as strings on the wire — coerce both.
+    const isStringWire = location === 'query' || location === 'path'
     const fields = parameters.map((parameter) => {
-      const coerced = isQuery ? coerceQueryExpression(parameter.schema, schemaLib) : undefined
+      const coerced = isStringWire ? coerceQueryExpression(parameter.schema, schemaLib) : undefined
       const expr = coerced ?? schemaToInlineExpression(parameter.schema, schemaLib)
       const isOptional = !parameter.required && location !== 'path'
       return `${parameter.name}:${isOptional ? makeOptional(expr, schemaLib) : expr}` as const
     })
-    return `${validatorFn}('${validatorTarget}',${makeObjectExpression(fields, schemaLib)})` as const
+    const objExpr = makeObjectExpression(fields, schemaLib)
+    // tbValidator only runs `Compile().Check()` and ignores any Type.Decode
+    // transform, so for typebox path/query we replace it with an inline
+    // validator that runs `Value.Convert(...)` (string→typed) before checking.
+    if (schemaLib === 'typebox' && isStringWire) {
+      return `validator('${validatorTarget}',(_v,_c)=>{const _s=${objExpr};const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)})` as const
+    }
+    return `${validatorFn}('${validatorTarget}',${objExpr})` as const
   })
   const bodyValidators =
     operation.requestBody && 'content' in operation.requestBody && operation.requestBody.content

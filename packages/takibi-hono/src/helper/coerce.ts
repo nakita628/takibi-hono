@@ -3,9 +3,9 @@ import type { Schema } from '../openapi/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 
 /**
- * Returns a coerced expression for query parameters that need type conversion.
- * HTTP query parameters are always strings, so non-string types
- * need coercion to convert from string representation.
+ * Returns a coerced expression for query/path parameters that need type
+ * conversion. HTTP path and query parameters are always strings on the
+ * wire, so non-string types need coercion to convert from string.
  *
  * Uses each library's built-in coercion where available:
  * - zod: z.coerce.number(), z.stringbool()
@@ -45,7 +45,9 @@ function coerceNumber(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'ef
     case 'valibot':
       return 'v.pipe(v.string(),v.toNumber())'
     case 'typebox':
-      return 'Type.Decode(Type.String(),(v)=>Number(v))'
+      // typebox does the conversion in the validator wrapper via Value.Convert,
+      // so the schema itself is the target type.
+      return 'Type.Number()'
     case 'arktype':
       return "type('string.numeric.parse')"
     case 'effect':
@@ -60,7 +62,7 @@ function coerceInteger(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'e
     case 'valibot':
       return 'v.pipe(v.string(),v.toNumber(),v.integer())'
     case 'typebox':
-      return 'Type.Decode(Type.String(),(v)=>parseInt(v,10))'
+      return 'Type.Integer()'
     case 'arktype':
       return "type('string.integer.parse')"
     case 'effect':
@@ -75,7 +77,7 @@ function coerceBoolean(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'e
     case 'valibot':
       return "v.pipe(v.string(),v.transform(v=>v==='true'))"
     case 'typebox':
-      return "Type.Decode(Type.String(),(v)=>v==='true')"
+      return 'Type.Boolean()'
     case 'arktype':
       return "type(\"'true'|'false'\").pipe(s=>s==='true')"
     case 'effect':

@@ -345,9 +345,13 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
 
         const barrel = await fsp.readFile(path.join(d, 'src/handlers/index.ts'), 'utf-8')
@@ -564,9 +568,13 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
     })
 
@@ -696,7 +704,9 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .post(
     '/users',
@@ -711,7 +721,9 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -1016,7 +1028,9 @@ export const petsHandler = new Hono()
       },
     }),
     validator('query', z.object({ limit: z.int().optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .post(
     '/pets',
@@ -1030,7 +1044,9 @@ export const petsHandler = new Hono()
       },
     }),
     validator('json', CreatePetSchema),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
     })

@@ -18,9 +18,9 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Decode(Type.String(),(v)=>Number(v))',
-      )
+      // typebox emits the target type; Value.Convert in the validator wrapper
+      // does the string→number conversion at request time.
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Number()')
     })
 
     it.concurrent('arktype', () => {
@@ -46,9 +46,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Decode(Type.String(),(v)=>parseInt(v,10))',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Integer()')
     })
 
     it.concurrent('arktype', () => {
@@ -76,9 +74,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        "Type.Decode(Type.String(),(v)=>v==='true')",
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Boolean()')
     })
 
     it.concurrent('arktype', () => {
@@ -116,9 +112,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Decode(Type.String(),(v)=>parseInt(v,10)))',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Integer())')
     })
 
     it.concurrent('arktype', () => {
@@ -146,9 +140,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Decode(Type.String(),(v)=>Number(v)))',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Number())')
     })
 
     it.concurrent('arktype', () => {
@@ -174,9 +166,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        "Type.Array(Type.Decode(Type.String(),(v)=>v==='true'))",
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Boolean())')
     })
 
     it.concurrent('arktype', () => {
@@ -282,9 +272,7 @@ describe('coerceQueryExpression', () => {
     })
 
     it.concurrent('typebox', () => {
-      expect(coerceQueryExpression(schema, 'typebox')).toBe(
-        'Type.Array(Type.Decode(Type.String(),(v)=>Number(v)))',
-      )
+      expect(coerceQueryExpression(schema, 'typebox')).toBe('Type.Array(Type.Number())')
     })
 
     it.concurrent('arktype', () => {

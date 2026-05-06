@@ -980,4 +980,89 @@ export const CombinedSchema = z.object({ b: BetaSchema, a: AlphaSchema })
 `,
     )
   })
+
+  // ============================================================
+  // Regression: non-circular cross-component refs MUST unwrap the lazy
+  // wrapper. Otherwise:
+  //   - effect: `Schema.Array(Schema.suspend(() => UserSchema))` doesn't
+  //     expose `~standard` → `resolver(...)` rejects it (TS2345)
+  //   - valibot: `v.array(v.lazy(() => UserSchema))` keeps a wasteful
+  //     thunk for no reason
+  // Both should resolve to `Schema.Array(UserSchema)` / `v.array(UserSchema)`.
+  // ============================================================
+  it.concurrent('unwraps non-circular Schema.suspend refs (effect)', async () => {
+    const result = await makeSchemasCode(
+      {
+        User: {
+          type: 'object',
+          properties: { id: { type: 'integer' }, name: { type: 'string' } },
+          required: ['id', 'name'],
+        },
+        UserList: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+      },
+      'effect',
+    )
+    // Direct identifier reference, no Schema.suspend wrapper
+    expect(result.includes('Schema.Array(UserSchema)')).toBe(true)
+    expect(result.includes('Schema.suspend(() => UserSchema)')).toBe(false)
+  })
+
+  it.concurrent('unwraps non-circular v.lazy refs (valibot)', async () => {
+    const result = await makeSchemasCode(
+      {
+        User: {
+          type: 'object',
+          properties: { id: { type: 'integer' }, name: { type: 'string' } },
+          required: ['id', 'name'],
+        },
+        UserList: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+      },
+      'valibot',
+    )
+    expect(result.includes('v.array(UserSchema)')).toBe(true)
+    expect(result.includes('v.lazy(() => UserSchema)')).toBe(false)
+  })
+
+  it.concurrent('keeps Schema.suspend wrapper for circular refs (effect)', async () => {
+    // Self-referential schema — the lazy wrapper IS necessary to break
+    // the cycle, so it must NOT be stripped.
+    const result = await makeSchemasCode(
+      {
+        Node: {
+          type: 'object',
+          properties: {
+            value: { type: 'string' },
+            children: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Node' },
+            },
+          },
+          required: ['value'],
+        },
+      },
+      'effect',
+    )
+    // Self-cycle: must retain Schema.suspend
+    expect(result.includes('Schema.suspend(() => NodeSchema)')).toBe(true)
+  })
+
+  it.concurrent('keeps v.lazy wrapper for circular refs (valibot)', async () => {
+    const result = await makeSchemasCode(
+      {
+        Node: {
+          type: 'object',
+          properties: {
+            value: { type: 'string' },
+            children: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Node' },
+            },
+          },
+          required: ['value'],
+        },
+      },
+      'valibot',
+    )
+    expect(result.includes('v.lazy(() => NodeSchema)')).toBe(true)
+  })
 })

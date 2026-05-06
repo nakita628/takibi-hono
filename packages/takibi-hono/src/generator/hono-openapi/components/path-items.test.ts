@@ -61,4 +61,26 @@ describe('makePathItemsCode', () => {
   it.concurrent('should return empty string for empty pathItems', () => {
     expect(makePathItemsCode({})).toBe('')
   })
+
+  it.concurrent('should inline schema $ref to component identifier', () => {
+    const pathItems: NonNullable<Components['pathItems']> = {
+      Products: {
+        get: {
+          responses: {
+            '200': {
+              description: 'OK',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/Product' },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    expect(makePathItemsCode(pathItems)).toBe(
+      'export const ProductsPathItem = {"get":{"responses":{"200":{"description":"OK","content":{"application/json":{"schema":ProductSchema}}}}}}',
+    )
+  })
 })

@@ -110,7 +110,7 @@ describe('makeWebhooksCode', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import{OrderEventSchema,UserEventSchema}from'../components'",
         '',
-        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
+        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{throw new Error(\'Not implemented\')}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{throw new Error(\'Not implemented\')})',
       ].join('\n'),
     )
   })
@@ -127,7 +127,7 @@ describe('makeWebhooksCode', () => {
         "import{Hono}from'hono'",
         "import{describeRoute}from'hono-openapi'",
         '',
-        'export const webhooksHandler=new Hono().get(\'/healthCheck\',describeRoute({summary:"Health check webhook",operationId:"onHealthCheck",responses:{200:{description:"OK"}}}),(c)=>{})',
+        'export const webhooksHandler=new Hono().get(\'/healthCheck\',describeRoute({summary:"Health check webhook",operationId:"onHealthCheck",responses:{200:{description:"OK"}}}),(c)=>{throw new Error(\'Not implemented\')})',
       ].join('\n'),
     )
   })
@@ -140,7 +140,7 @@ describe('makeWebhooksCode', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import{ResourceSchema}from'../components'",
         '',
-        'export const webhooksHandler=new Hono().get(\'/resource\',describeRoute({summary:"Get resource",operationId:"getResource",responses:{200:{description:"OK"}}}),(c)=>{}).post(\'/resource\',describeRoute({summary:"Create resource",operationId:"createResource",responses:{201:{description:"Created"}}}),validator(\'json\',ResourceSchema),(c)=>{})',
+        'export const webhooksHandler=new Hono().get(\'/resource\',describeRoute({summary:"Get resource",operationId:"getResource",responses:{200:{description:"OK"}}}),(c)=>{throw new Error(\'Not implemented\')}).post(\'/resource\',describeRoute({summary:"Create resource",operationId:"createResource",responses:{201:{description:"Created"}}}),validator(\'json\',ResourceSchema),(c)=>{throw new Error(\'Not implemented\')})',
       ].join('\n'),
     )
   })
@@ -155,7 +155,7 @@ describe('makeWebhooksCode', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import{OrderEventSchema,UserEventSchema}from'../custom/schemas'",
         '',
-        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
+        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{throw new Error(\'Not implemented\')}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{throw new Error(\'Not implemented\')})',
       ].join('\n'),
     )
   })

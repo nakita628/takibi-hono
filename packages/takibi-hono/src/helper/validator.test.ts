@@ -114,13 +114,31 @@ describe('makeStandardValidators', () => {
     expect(result).toStrictEqual(["sValidator('param',v.object({id:v.string()}))"])
   })
 
-  it.concurrent('typebox: uses tbValidator', () => {
+  it.concurrent('typebox: path string uses inline validator + Value.Convert', () => {
+    // String values still go through Value.Convert (no-op for strings) so the
+    // path passes through unchanged. The reason we wrap even string params in
+    // path/query is to keep the typebox validation strategy uniform.
     const operation: Operation = {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'typebox')
-    expect(result).toStrictEqual(["tbValidator('param',Type.Object({id:Type.String()}))"])
+    expect(result).toStrictEqual([
+      "validator('param',(_v,_c)=>{const _s=Type.Object({id:Type.String()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)})",
+    ])
+  })
+
+  it.concurrent('typebox: json body still uses tbValidator (no Convert needed)', () => {
+    const operation: Operation = {
+      requestBody: {
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/CreateUser' } },
+        },
+      },
+      responses: { '201': { description: 'Created' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'typebox')
+    expect(result).toStrictEqual(["tbValidator('json',CreateUserSchema)"])
   })
 
   it.concurrent('arktype: uses sValidator', () => {
@@ -179,13 +197,89 @@ describe('makeStandardValidators', () => {
     expect(result).toStrictEqual(["sValidator('query',z.object({name:z.string()}))"])
   })
 
-  it.concurrent('zod: no coercion for path integer', () => {
+  it.concurrent('zod: path integer is coerced (string-on-wire)', () => {
     const operation: Operation = {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["sValidator('param',z.object({id:z.int()}))"])
+    expect(result).toStrictEqual([
+      "sValidator('param',z.object({id:z.coerce.number().pipe(z.int())}))",
+    ])
+  })
+
+  it.concurrent('zod: path number is coerced', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'value', in: 'path', required: true, schema: { type: 'number' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual(["sValidator('param',z.object({value:z.coerce.number()}))"])
+  })
+
+  it.concurrent('zod: path boolean uses stringbool', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'flag', in: 'path', required: true, schema: { type: 'boolean' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual(["sValidator('param',z.object({flag:z.stringbool()}))"])
+  })
+
+  it.concurrent('valibot: path integer is coerced', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'valibot')
+    expect(result).toStrictEqual([
+      "sValidator('param',v.object({id:v.pipe(v.string(),v.toNumber(),v.integer())}))",
+    ])
+  })
+
+  it.concurrent('typebox: path integer uses inline validator + Value.Convert', () => {
+    // tbValidator only runs Compile().Check() and ignores Type.Decode transforms,
+    // so for typebox path/query we emit an inline validator wrapping
+    // Value.Convert + Value.Check. The schema becomes plain Type.Integer().
+    const operation: Operation = {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'typebox')
+    expect(result).toStrictEqual([
+      "validator('param',(_v,_c)=>{const _s=Type.Object({id:Type.Integer()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)})",
+    ])
+  })
+
+  it.concurrent('typebox: query boolean uses inline validator + Type.Boolean', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'flag', in: 'query', required: true, schema: { type: 'boolean' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'typebox')
+    expect(result).toStrictEqual([
+      "validator('query',(_v,_c)=>{const _s=Type.Object({flag:Type.Boolean()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)})",
+    ])
+  })
+
+  it.concurrent('arktype: path integer is coerced', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'arktype')
+    expect(result).toStrictEqual(["sValidator('param',type({id:type('string.integer.parse')}))"])
+  })
+
+  it.concurrent('effect: path integer is coerced', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'effect')
+    expect(result).toStrictEqual([
+      "effectValidator('param',Schema.Struct({id:Schema.compose(Schema.NumberFromString,Schema.Int)}))",
+    ])
   })
 
   it.concurrent('valibot: query coercion for number', () => {

@@ -51,11 +51,11 @@ export function makeTypeString(
     return schema.enum.map((v) => (typeof v === 'string' ? `'${v}'` : String(v))).join('|')
   }
   if (schema.const !== undefined) {
-    return typeof schema.const === 'string'
-      ? `'${schema.const}'`
-      : typeof schema.const === 'object' && schema.const !== null
-        ? JSON.stringify(schema.const)
-        : String(schema.const)
+    // `JSON.stringify` round-trips numbers / booleans / null / objects safely
+    // (string is special-cased above to use single quotes for TS literal type
+    // syntax). Avoids `String(schema.const)` which would emit
+    // `[object Object]` for object-shaped consts.
+    return typeof schema.const === 'string' ? `'${schema.const}'` : JSON.stringify(schema.const)
   }
   const types = normalizeType(schema)
   const isNullable = schema.nullable === true || types.includes('null')

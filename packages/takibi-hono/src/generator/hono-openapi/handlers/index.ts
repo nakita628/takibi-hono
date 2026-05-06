@@ -21,14 +21,14 @@ export function makeHandlerCode(
         const middlewares = [
           makeDescribeRoute(operation, schemaLib),
           ...makeValidators(operation, pathItemParameters, schemaLib),
-          '(c)=>{}',
+          "(c)=>{throw new Error('Not implemented')}",
         ]
         return `.${method}(${[`'${honoPath}'`, ...middlewares].join(',')})`
       })
     : operations.map(({ method, path, operation, pathItemParameters }) => {
         const honoPath = toHonoPath(path)
         const validators = makeStandardValidators(operation, pathItemParameters, schemaLib)
-        const args = [`'${honoPath}'`, ...validators, '(c)=>{}']
+        const args = [`'${honoPath}'`, ...validators, "(c)=>{throw new Error('Not implemented')}"]
         return `.${method}(${args.join(',')})`
       })
   const handlerCode = `export const ${handlerName}=new Hono()${routeLines.join('')}`

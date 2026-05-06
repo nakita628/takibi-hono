@@ -269,12 +269,25 @@ describe('makeContent', () => {
     expect(result).toStrictEqual(["'application/json':{schema:resolver(z.string())}"])
   })
 
-  test('wrapWithResolver option uses resolveSchema', () => {
+  test('typebox wraps inline schema with Compile(...) inside resolver', () => {
+    // `makeContent` always routes through `resolveSchema`, which calls
+    // `wrapSchemaForValidator` — for typebox that means `Compile(...)`,
+    // which is required so `resolver()` receives a StandardSchemaV1 value.
     const content = {
       'application/json': { schema: { type: 'string' as const } },
     }
-    const result = makeContent(content, 'typebox', { wrapWithResolver: true })
+    const result = makeContent(content, 'typebox')
     expect(result).toStrictEqual(["'application/json':{schema:resolver(Compile(Type.String()))}"])
+  })
+
+  test('effect wraps inline schema with standardSchemaV1(...) inside resolver', () => {
+    const content = {
+      'application/json': { schema: { type: 'string' as const } },
+    }
+    const result = makeContent(content, 'effect')
+    expect(result).toStrictEqual([
+      "'application/json':{schema:resolver(standardSchemaV1(Schema.String))}",
+    ])
   })
 
   test('empty content', () => {
