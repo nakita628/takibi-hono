@@ -99,13 +99,19 @@ export async function makeComponents(
     const file = output.endsWith('.ts') ? output : path.join(output, 'index.ts')
     const bodyCode = await gen.make()
     if (isSplit && !output.endsWith('.ts')) {
-      const splitResult = await splitComponentCode(bodyCode, dir, schemaLib, componentFiles)
+      const splitResult = await splitComponentCode(
+        bodyCode,
+        dir,
+        schemaLib,
+        componentFiles,
+        ohConfig,
+      )
       if (!splitResult.ok) return splitResult
     } else {
       const paths = Object.fromEntries(
         Object.entries(componentFiles)
           .filter(([, f]) => f !== file)
-          .map(([k, f]) => [k, makeModuleSpec(file, f)]),
+          .map(([k, f]) => [k, resolveComponentImportSpec(file, k, f, ohConfig)]),
       )
       const importLines = makeComponentImports(bodyCode, schemaLib, paths)
       const fullCode = importLines.length > 0 ? [...importLines, '', bodyCode].join('\n') : bodyCode
@@ -114,6 +120,26 @@ export async function makeComponents(
     }
   }
   return { ok: true, value: undefined } as const
+}
+
+/**
+ * Resolves the module specifier used to import component `componentKey` from
+ * the file at `fromFile`. Honors the user's `components.<key>.import` alias
+ * when set; otherwise falls back to a relative path computed via
+ * `makeModuleSpec`. Used by every cross-component / component-to-handler
+ * import site so alias config flows uniformly.
+ */
+function resolveComponentImportSpec(
+  fromFile: string,
+  componentKey: string,
+  targetFile: string,
+  ohConfig: TakibiHonoOptions | undefined,
+): string {
+  const alias = ohConfig?.components?.[componentKey as never] as
+    | { readonly import?: string }
+    | undefined
+  if (alias?.import) return alias.import
+  return makeModuleSpec(fromFile, targetFile)
 }
 
 const COMPONENT_KEYS = [
@@ -170,6 +196,7 @@ async function splitComponentCode(
   outputDir: string,
   schemaLib: SchemaLib,
   componentFiles: Record<string, string>,
+  ohConfig: TakibiHonoOptions | undefined,
 ) {
   const declPattern = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/g
   const matches = Array.from(bodyCode.matchAll(declPattern), (m) => ({
@@ -187,7 +214,10 @@ async function splitComponentCode(
     fileNames.push(fileName)
     const filePath = path.join(outputDir, `${fileName}.ts`)
     const paths = Object.fromEntries(
-      Object.entries(componentFiles).map(([k, f]) => [k, makeModuleSpec(filePath, f)]),
+      Object.entries(componentFiles).map(([k, f]) => [
+        k,
+        resolveComponentImportSpec(filePath, k, f, ohConfig),
+      ]),
     )
     const importLines = makeComponentImports(entry.code, schemaLib, paths)
     const fullCode =

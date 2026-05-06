@@ -125,6 +125,9 @@ describe('makeImports', () => {
   it.concurrent('multiple component types', () => {
     const code = 'resolver(UserSchema)\nUnauthorizedResponseResponse\nXRequestIdHeaderSchema'
 
+    // Output order follows COMPONENT_SUFFIXES declaration order (same as
+    // the OpenAPI components / config field order): schemas → parameters →
+    // headers → securitySchemes → requestBodies → responses → ...
     expect(
       makeImports(code, 'zod', {
         schemas: '../schemas',
@@ -135,8 +138,8 @@ describe('makeImports', () => {
       "import{Hono}from'hono'",
       "import{resolver}from'hono-openapi'",
       "import{UserSchema}from'../schemas'",
-      "import{UnauthorizedResponseResponse}from'../responses'",
       "import{XRequestIdHeaderSchema}from'../headers'",
+      "import{UnauthorizedResponseResponse}from'../responses'",
     ])
   })
 
@@ -668,6 +671,8 @@ describe('makeComponentImports', () => {
       '}',
     ].join('')
 
+    // Output order follows COMPONENT_SUFFIXES: schemas → parameters →
+    // headers → ... regardless of source-code encounter order.
     expect(
       makeComponentImports(code, 'zod', {
         schemas: './schemas',
@@ -702,5 +707,289 @@ describe('makeComponentImports', () => {
 
   it.concurrent('empty code produces no imports', () => {
     expect(makeComponentImports('', 'zod', {})).toStrictEqual([])
+  })
+
+  // -----------------------------------------------------------------
+  // Regression tests for string-literal false positives.
+  //
+  // The auto-import detector matches patterns like `\bXxxCallback\b` to find
+  // referenced component identifiers. Without stripping string contents
+  // before scanning, identifier-shaped tokens that happen to live inside a
+  // quoted value (e.g. `operationId: 'userCreatedCallback'`,
+  // `description: 'See UserSchema for details'`) get falsely detected as
+  // imports — which in split mode produced bogus self-imports like
+  // `import { userCreatedCallback } from './index'`.
+  // -----------------------------------------------------------------
+  it.concurrent('ignores Callback identifier inside single-quoted string', () => {
+    const code = "export const UserCreatedCallback={post:{operationId:'userCreatedCallback'}}"
+    expect(makeComponentImports(code, 'zod', { callbacks: './callbacks' })).toStrictEqual([])
+  })
+
+  it.concurrent('ignores Schema identifier inside double-quoted JSON-style key', () => {
+    // `pathItems` / `callbacks` generators emit JSON.stringify output where
+    // object keys land in double quotes. A token like `"UserSchema"` (a key
+    // or quoted value) must not trigger a schema import.
+    const code = 'export const X={"description":"see UserSchema for shape"}'
+    expect(makeComponentImports(code, 'zod', { schemas: './schemas' })).toStrictEqual([])
+  })
+
+  it.concurrent('ignores Response identifier inside template literal', () => {
+    const code = 'export const X={description:`returns UserResponse on success`}'
+    expect(makeComponentImports(code, 'zod', { responses: './responses' })).toStrictEqual([])
+  })
+
+  it.concurrent('ignores RequestBody / Example / Link / Header / SecurityScheme / MediaTypeSchema / ParamsSchema in strings', () => {
+    const code = `export const X={
+        a:'see CreateUserRequestBody',
+        b:'inspect UserExample',
+        c:'GetUserLink',
+        d:'X-IdHeaderSchema',
+        e:'BearerAuthSecurityScheme',
+        f:'JsonMediaTypeSchema',
+        g:'UserParamsSchema',
+      }`
+    expect(
+      makeComponentImports(code, 'zod', {
+        requestBodies: './requestBodies',
+        examples: './examples',
+        links: './links',
+        headers: './headers',
+        securitySchemes: './securitySchemes',
+        mediaTypes: './mediaTypes',
+        parameters: './parameters',
+      }),
+    ).toStrictEqual([])
+  })
+
+  it.concurrent('handles escaped quotes inside string literals', () => {
+    // `\'` inside a single-quoted string previously could throw a naive
+    // parser off and re-enter scanning mode mid-string. The strip must skip
+    // past the escape and stay inside the literal until the unescaped closer.
+    const code = "export const X={msg:'don\\'t use UserSchema directly'}"
+    expect(makeComponentImports(code, 'zod', { schemas: './schemas' })).toStrictEqual([])
+  })
+
+  it.concurrent('still imports identifiers that appear in real code positions', () => {
+    const code = 'export const Wrapper={inner:UserCreatedCallback}'
+    expect(makeComponentImports(code, 'zod', { callbacks: './callbacks' })).toStrictEqual([
+      "import{UserCreatedCallback}from'./callbacks'",
+    ])
+  })
+
+  it.concurrent('detects identifier when one occurrence is in code and another is in a string', () => {
+    // Mixed scenario: same identifier appears in BOTH a string AND a real
+    // reference. Detector should emit one import (because there is a real
+    // reference) without double-counting.
+    const code = "export const X={description:'creates UserSchema instance',schema:UserSchema}"
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    const userSchemaImports = result.filter((l) => l.includes('UserSchema'))
+    expect(userSchemaImports.length).toBe(1)
+  })
+
+  it.concurrent('does not self-import when an identifier shape matches the file own export', () => {
+    // The defined-set filter must continue to work after the strip pass so
+    // a file that exports `UserCreatedCallback` does not import its own name
+    // even when the name appears multiple times in the body.
+    const code = 'export const UserCreatedCallback={inner:UserCreatedCallback}'
+    expect(makeComponentImports(code, 'zod', { callbacks: './callbacks' })).toStrictEqual([])
+  })
+
+  it.concurrent('ignores identifier-shape tokens inside line comments', () => {
+    const code = `// see UserSchema for the runtime check
+export const X={v:1}`
+    expect(makeComponentImports(code, 'zod', { schemas: './schemas' })).toStrictEqual([])
+  })
+
+  it.concurrent('ignores identifier-shape tokens inside block / JSDoc comments', () => {
+    const code = `/**
+ * @returns the UserSchema instance
+ * Other refs: BearerAuthSecurityScheme, GetUserLink, JsonMediaTypeSchema
+ */
+export const X={v:1}`
+    expect(
+      makeComponentImports(code, 'zod', {
+        schemas: './schemas',
+        securitySchemes: './securitySchemes',
+        links: './links',
+        mediaTypes: './mediaTypes',
+      }),
+    ).toStrictEqual([])
+  })
+
+  it.concurrent('still imports identifier when comment mentions it AND code references it', () => {
+    const code = `// validates UserSchema input
+export const X={schema:UserSchema}`
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    const userSchemaImports = result.filter((l) => l.includes('UserSchema'))
+    expect(userSchemaImports.length).toBe(1)
+  })
+
+  // ============================================================
+  // Suffix disambiguation: longest match wins regardless of source order.
+  // Regression: `UserParamsSchema` ended up classified as `schemas` when
+  // `Schema` came first in `COMPONENT_SUFFIXES`. `classifyRef` now picks
+  // the longest matching suffix, so source order is purely cosmetic.
+  // ============================================================
+  it.concurrent('classifies *ParamsSchema as parameters not schemas', () => {
+    expect(
+      makeComponentImports('UserParamsSchema', 'zod', {
+        schemas: './schemas',
+        parameters: './parameters',
+      }),
+    ).toStrictEqual(["import{UserParamsSchema}from'./parameters'"])
+  })
+
+  it.concurrent('classifies *HeaderSchema as headers not schemas', () => {
+    expect(
+      makeComponentImports('XRequestIdHeaderSchema', 'zod', {
+        schemas: './schemas',
+        headers: './headers',
+      }),
+    ).toStrictEqual(["import{XRequestIdHeaderSchema}from'./headers'"])
+  })
+
+  it.concurrent('classifies *MediaTypeSchema as mediaTypes not schemas', () => {
+    expect(
+      makeComponentImports('JsonUserMediaTypeSchema', 'zod', {
+        schemas: './schemas',
+        mediaTypes: './mediaTypes',
+      }),
+    ).toStrictEqual(["import{JsonUserMediaTypeSchema}from'./mediaTypes'"])
+  })
+
+  it.concurrent('handles all 11 OpenAPI 3.x component types in one body', () => {
+    // OpenAPI 3.0 / 3.1 / 3.2 share these 11 components — verify each
+    // identifier suffix routes to the correct kind in a single pass.
+    const code = [
+      'UserSchema',
+      'IdParamsSchema',
+      'XHeaderSchema',
+      'BearerAuthSecurityScheme',
+      'CreateUserRequestBody',
+      'OkResponse',
+      'GoodExample',
+      'NextLink',
+      'WebhookCallback',
+      'PetsItemPathItem',
+      'JsonMediaTypeSchema',
+    ].join(',')
+    const result = makeComponentImports(code, 'zod', {
+      schemas: './schemas',
+      parameters: './parameters',
+      headers: './headers',
+      securitySchemes: './securitySchemes',
+      requestBodies: './requestBodies',
+      responses: './responses',
+      examples: './examples',
+      links: './links',
+      callbacks: './callbacks',
+      pathItems: './pathItems',
+      mediaTypes: './mediaTypes',
+    })
+    expect(result.some((l) => l.includes('schemas') && l.includes('UserSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('parameters') && l.includes('IdParamsSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('headers') && l.includes('XHeaderSchema'))).toBe(true)
+    expect(
+      result.some((l) => l.includes('securitySchemes') && l.includes('BearerAuthSecurityScheme')),
+    ).toBe(true)
+    expect(
+      result.some((l) => l.includes('requestBodies') && l.includes('CreateUserRequestBody')),
+    ).toBe(true)
+    expect(result.some((l) => l.includes('responses') && l.includes('OkResponse'))).toBe(true)
+    expect(result.some((l) => l.includes('examples') && l.includes('GoodExample'))).toBe(true)
+    expect(result.some((l) => l.includes('links') && l.includes('NextLink'))).toBe(true)
+    expect(result.some((l) => l.includes('callbacks') && l.includes('WebhookCallback'))).toBe(true)
+    expect(result.some((l) => l.includes('pathItems') && l.includes('PetsItemPathItem'))).toBe(true)
+    expect(result.some((l) => l.includes('mediaTypes') && l.includes('JsonMediaTypeSchema'))).toBe(
+      true,
+    )
+  })
+
+  it.concurrent('emits imports in COMPONENT_SUFFIXES order regardless of scan-encounter order', () => {
+    // Reverse encounter order in the body. Output must still follow
+    // COMPONENT_SUFFIXES (schemas → parameters → headers).
+    const code = 'XHeaderSchema,UserSchema,IdParamsSchema'
+    const result = makeComponentImports(code, 'zod', {
+      schemas: './schemas',
+      parameters: './parameters',
+      headers: './headers',
+    })
+    const findIdx = (token: string) => result.findIndex((l) => l.includes(token))
+    expect(findIdx('UserSchema')).toBeLessThan(findIdx('IdParamsSchema'))
+    expect(findIdx('IdParamsSchema')).toBeLessThan(findIdx('XHeaderSchema'))
+  })
+
+  it.concurrent('detects identifier preceded by various JS punctuation', () => {
+    const code = `[
+  UserSchema,
+  ((PetSchema)),
+  { x: TodoSchema },
+  =CommentSchema=
+]`
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    expect(result.some((l) => l.includes('UserSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('PetSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('TodoSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('CommentSchema'))).toBe(true)
+  })
+
+  it.concurrent('emits no component imports when body is only strings and comments', () => {
+    const code = `// just a comment with UserSchema mentioned
+'string with UserSchema',
+"another string with PetSchema",
+/* block comment with CommentSchema */`
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    expect(result.some((l) => l.includes("from './schemas'"))).toBe(false)
+  })
+
+  it.concurrent('does not match the bare suffix name (e.g. just "Schema")', () => {
+    const code = 'Schema, Response, Callback, PathItem'
+    const result = makeComponentImports(code, 'zod', {
+      schemas: './schemas',
+      responses: './responses',
+      callbacks: './callbacks',
+      pathItems: './pathItems',
+    })
+    expect(result).toStrictEqual([])
+  })
+
+  it.concurrent('classifies *ParamsSchemaSchema by longest known suffix (schemas)', () => {
+    // 'XParamsSchemaSchema' endsWith('Schema') ✓; endsWith('ParamsSchema') ✗
+    // (last 12 chars are 'SchemaSchema', not 'ParamsSchema').
+    const code = 'XParamsSchemaSchema'
+    const result = makeComponentImports(code, 'zod', {
+      schemas: './schemas',
+      parameters: './parameters',
+    })
+    expect(result.some((l) => l.includes('XParamsSchemaSchema') && l.includes('schemas'))).toBe(
+      true,
+    )
+    expect(result.some((l) => l.includes('XParamsSchemaSchema') && l.includes('parameters'))).toBe(
+      false,
+    )
+  })
+
+  it.concurrent('does not import identifiers starting with non-ASCII letters', () => {
+    const code = '日本Schema, UserSchema'
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    expect(result.some((l) => l.includes('UserSchema'))).toBe(true)
+    expect(result.some((l) => l.includes('日本'))).toBe(false)
+  })
+
+  it.concurrent('collapses duplicate identifier references into a single import', () => {
+    const code = 'UserSchema; UserSchema; UserSchema'
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    const userSchemaImports = result.filter((l) => l.includes('UserSchema'))
+    expect(userSchemaImports.length).toBe(1)
+  })
+
+  it.concurrent('merges multiple identifiers of the same kind into one sorted import line', () => {
+    const code = 'UserSchema, PetSchema, CommentSchema'
+    const result = makeComponentImports(code, 'zod', { schemas: './schemas' })
+    expect(result).toStrictEqual(["import{CommentSchema,PetSchema,UserSchema}from'./schemas'"])
+  })
+
+  it.concurrent('emits no imports for empty body', () => {
+    expect(makeComponentImports('', 'zod', { schemas: './schemas' })).toStrictEqual([])
   })
 })

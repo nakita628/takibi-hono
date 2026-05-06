@@ -18,7 +18,7 @@ export function makeWebhooksCode(
       const middlewares = [
         makeDescribeRoute(operation, schemaLib),
         ...makeValidators(operation, pathItemParameters, schemaLib),
-        '(c)=>{}',
+        "(c)=>{throw new Error('Not implemented')}",
       ]
       const args = [`'/${webhookName}'`, ...middlewares].join(',')
       return `.${method}(${args})`

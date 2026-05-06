@@ -6,21 +6,63 @@ import { getLibraryConfig, getStandardValidatorConfig } from './library.js'
 const JS_IDENT = '[A-Za-z_$][A-Za-z0-9_$]*'
 const EXPORT_CONST_PATTERN = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
 
-const IMPORT_PATTERNS: ReadonlyArray<{ readonly pattern: RegExp; readonly key: string }> = [
-  {
-    pattern: new RegExp(`\\b(${JS_IDENT}(?<!Params)(?<!Header)(?<!MediaType)Schema)\\b`, 'g'),
-    key: 'schemas',
-  },
-  { pattern: new RegExp(`\\b(${JS_IDENT}ParamsSchema)\\b`, 'g'), key: 'parameters' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}SecurityScheme)\\b`, 'g'), key: 'securitySchemes' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}RequestBody)\\b`, 'g'), key: 'requestBodies' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}Response)\\b`, 'g'), key: 'responses' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}HeaderSchema)\\b`, 'g'), key: 'headers' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}Example)\\b`, 'g'), key: 'examples' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}Link)\\b`, 'g'), key: 'links' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}Callback)\\b`, 'g'), key: 'callbacks' },
-  { pattern: new RegExp(`\\b(${JS_IDENT}MediaTypeSchema)\\b`, 'g'), key: 'mediaTypes' },
-]
+/**
+ * OpenAPI Components Object fields and the identifier suffix each one uses.
+ * Covers OpenAPI 3.0 / 3.1 / 3.2 — all three share the same 11 Fixed Fields
+ * under `components`. Top-level `webhooks` (3.1+) is intentionally omitted:
+ * it lives outside `components` and reuses schemas/responses refs rather
+ * than introducing a `*Webhook` identifier suffix of its own.
+ *
+ * Listed in OpenAPI 3.0 spec order — purely cosmetic. `classifyRef` selects
+ * the longest matching suffix so `Schema` (substring of `ParamsSchema` /
+ * `HeaderSchema` / `MediaTypeSchema`) doesn't shadow the longer ones.
+ */
+const COMPONENT_SUFFIXES = [
+  ['schemas', 'Schema'],
+  ['parameters', 'ParamsSchema'],
+  ['headers', 'HeaderSchema'],
+  ['securitySchemes', 'SecurityScheme'],
+  ['requestBodies', 'RequestBody'],
+  ['responses', 'Response'],
+  ['examples', 'Example'],
+  ['links', 'Link'],
+  ['callbacks', 'Callback'],
+  ['pathItems', 'PathItem'],
+  ['mediaTypes', 'MediaTypeSchema'],
+] as const
+
+/**
+ * Single regex that simultaneously SKIPS strings/comments and CAPTURES
+ * component-type identifiers. The string / comment alternatives come first
+ * so the engine consumes them whole — identifier-shape tokens hiding inside
+ * (e.g. `operationId: 'userCreatedCallback'`) are unreachable because the
+ * preceding alternative has already consumed the surrounding quotes and
+ * everything between them.
+ */
+const SCAN = new RegExp(
+  [
+    String.raw`"(?:\\.|[^"\\])*"`,
+    String.raw`'(?:\\.|[^'\\])*'`,
+    String.raw`\`(?:\\.|[^\`\\])*\``,
+    String.raw`//[^\n]*`,
+    String.raw`/\*[\s\S]*?\*/`,
+    `\\b(${JS_IDENT}(?:${COMPONENT_SUFFIXES.map(([, suf]) => suf).join('|')}))\\b`,
+  ].join('|'),
+  'g',
+)
+
+/**
+ * Maps a captured identifier back to its component-type key by suffix.
+ * Picks the LONGEST matching suffix so `UserParamsSchema` is classified as
+ * `parameters` (12 chars) rather than `schemas` (6 chars) regardless of
+ * `COMPONENT_SUFFIXES` source order.
+ */
+const classifyRef = (name: string): string | undefined =>
+  COMPONENT_SUFFIXES.reduce<readonly [string, string] | undefined>(
+    (best, entry) =>
+      name.endsWith(entry[1]) && (!best || entry[1].length > best[1].length) ? entry : best,
+    undefined,
+  )?.[0]
 
 const SCHEMA_LIB_PATTERNS: Record<'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect', string> = {
   zod: 'z.',
@@ -47,13 +89,21 @@ function collectComponentImportLines(
   },
   defined: ReadonlySet<string>,
 ): readonly string[] {
-  return IMPORT_PATTERNS.flatMap(({ pattern, key }) => {
-    const importPath = componentPaths[key]
-    if (!importPath) return []
-    const tokens = [...new Set(Array.from(code.matchAll(pattern), (m) => m[1]))]
-      .filter((t) => Boolean(t) && !defined.has(t))
-      .toSorted()
-    return tokens.length > 0 ? [renderNamedImport(tokens, importPath)] : []
+  const grouped = Array.from(code.matchAll(SCAN), (m) => m[1])
+    .filter((name): name is string => Boolean(name) && !defined.has(name))
+    .reduce<ReadonlyMap<string, ReadonlySet<string>>>((acc, name) => {
+      const kind = classifyRef(name)
+      if (!kind) return acc
+      return new Map(acc).set(kind, new Set([...(acc.get(kind) ?? []), name]))
+    }, new Map())
+  // Emit import lines in `COMPONENT_SUFFIXES` declaration order — same as
+  // the OpenAPI 3.x components / takibi-hono config field order — instead of
+  // scan-encounter order which varies with source layout.
+  return COMPONENT_SUFFIXES.flatMap(([kind]) => {
+    const names = grouped.get(kind)
+    const importPath = componentPaths[kind]
+    if (!names || !importPath) return []
+    return [renderNamedImport([...names].toSorted(), importPath)]
   })
 }
 

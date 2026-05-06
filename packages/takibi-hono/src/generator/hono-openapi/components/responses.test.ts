@@ -85,4 +85,70 @@ describe('makeResponsesCode', () => {
     const result = await makeResponsesCode(responses, 'zod')
     expect(result).toBe('export const NoContentResponse = {description:"Deleted"}')
   })
+
+  // ============================================================
+  // Regression: `resolver(...)` requires a StandardSchemaV1-compatible
+  // value. effect schemas need `standardSchemaV1(...)` wrap; typebox
+  // schemas need `Compile(...)` wrap. Both must be applied at the
+  // response component output too — not only inside route handlers.
+  // ============================================================
+  it.concurrent('wraps effect schema $ref with standardSchemaV1 inside resolver', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      UserListResponse: {
+        description: 'List',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/UserList' } },
+        },
+      },
+    }
+    const result = await makeResponsesCode(responses, 'effect')
+    expect(result.includes('resolver(standardSchemaV1(UserListSchema))')).toBe(true)
+    expect(result.includes('resolver(UserListSchema)')).toBe(false)
+  })
+
+  it.concurrent('wraps effect inline schema with standardSchemaV1 inside resolver', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      InlineResponse: {
+        description: 'Inline',
+        content: {
+          'application/json': {
+            schema: { type: 'object', properties: { id: { type: 'integer' } } },
+          },
+        },
+      },
+    }
+    const result = await makeResponsesCode(responses, 'effect')
+    // `resolver(standardSchemaV1(Schema.Struct({...})))`
+    expect(result.includes('resolver(standardSchemaV1(Schema.Struct')).toBe(true)
+  })
+
+  it.concurrent('wraps typebox schema $ref with Compile inside resolver', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      UserResponse: {
+        description: 'User',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/User' } },
+        },
+      },
+    }
+    const result = await makeResponsesCode(responses, 'typebox')
+    expect(result.includes('resolver(Compile(UserSchema))')).toBe(true)
+  })
+
+  it.concurrent('does NOT wrap zod / valibot / arktype schemas (already StandardSchemaV1)', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      UserResponse: {
+        description: 'User',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/User' } },
+        },
+      },
+    }
+    for (const lib of ['zod', 'valibot', 'arktype'] as const) {
+      const result = await makeResponsesCode(responses, lib)
+      expect(result.includes('resolver(UserSchema)')).toBe(true)
+      expect(result.includes('standardSchemaV1')).toBe(false)
+      expect(result.includes('Compile(')).toBe(false)
+    }
+  })
 })

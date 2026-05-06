@@ -392,11 +392,19 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
-  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
       },
     )
@@ -416,7 +424,9 @@ export const petsHandler = new Hono()
       const root = await fsp.readFile(path.join(d, 'handlers/__root.ts'), 'utf-8')
       expect(root).toBe(`import { Hono } from 'hono'
 
-export const rootHandler = new Hono().get('/', (c) => {})
+export const rootHandler = new Hono().get('/', (c) => {
+  throw new Error('Not implemented')
+})
 `)
     })
 
@@ -540,11 +550,19 @@ export const petsHandler = new Hono()
       'query',
       v.object({ limit: v.optional(v.pipe(v.string(), v.toNumber(), v.integer())) }),
     ),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {})
-  .delete('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
+  .get('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
+  .delete('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
       },
     )
@@ -616,9 +634,13 @@ export const petsHandler = new Hono()
         ? _x
         : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', tbValidator('json', CreatePetSchema), (c) => {})
+  .post('/pets', tbValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
   .get(
     '/pets/:petId',
     validator('param', (_v, _c) => {
@@ -628,7 +650,9 @@ export const petsHandler = new Hono()
         ? _x
         : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .delete(
     '/pets/:petId',
@@ -639,7 +663,9 @@ export const petsHandler = new Hono()
         ? _x
         : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -701,11 +727,19 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', type({ limit: type('string.integer.parse').optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {})
-  .delete('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
+  .get('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {
+    throw new Error('Not implemented')
+  })
+  .delete('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
       },
     )
@@ -777,14 +811,22 @@ export const petsHandler = new Hono()
         limit: Schema.optional(Schema.compose(Schema.NumberFromString, Schema.Int)),
       }),
     ),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', effectValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', effectValidator('param', Schema.Struct({ petId: Schema.String })), (c) => {})
+  .post('/pets', effectValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
+  .get('/pets/:petId', effectValidator('param', Schema.Struct({ petId: Schema.String })), (c) => {
+    throw new Error('Not implemented')
+  })
   .delete(
     '/pets/:petId',
     effectValidator('param', Schema.Struct({ petId: Schema.String })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -861,7 +903,9 @@ export const petsHandler = new Hono()
       },
     }),
     validator('query', z.object({ limit: z.int().optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .post(
     '/pets',
@@ -875,7 +919,9 @@ export const petsHandler = new Hono()
       },
     }),
     validator('json', CreatePetSchema),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .get(
     '/pets/:petId',
@@ -889,13 +935,17 @@ export const petsHandler = new Hono()
       },
     }),
     validator('param', z.object({ petId: z.string() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .delete(
     '/pets/:petId',
     describeRoute({ summary: 'Delete a pet', responses: { 204: { description: 'Deleted' } } }),
     validator('param', z.object({ petId: z.string() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -1430,8 +1480,8 @@ export type Error = z.infer<typeof ErrorSchema>
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import * as z from 'zod'
 import { UserSchema } from '../schemas'
-import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
 import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
+import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
 
 export const usersHandler = new Hono()
   .get(
@@ -1442,7 +1492,9 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .post(
     '/users',
@@ -1458,7 +1510,9 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .get(
     '/users/:userId',
@@ -1479,7 +1533,9 @@ export const usersHandler = new Hono()
       },
     }),
     validator('param', z.object({ userId: z.string() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -1493,7 +1549,9 @@ export const usersHandler = new Hono()
       async () => {
         const expected = `import { Hono } from 'hono'
 
-export const rootHandler = new Hono().get('/', (c) => {})
+export const rootHandler = new Hono().get('/', (c) => {
+  throw new Error('Not implemented')
+})
 `
         for (const schema of ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const) {
           const d = tmpDir(`shared_root_${schema}`)
@@ -1971,8 +2029,8 @@ export const XRateLimitHeaderSchema = z.int().optional()
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import * as z from 'zod'
 import { UserSchema } from '../schemas'
-import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
 import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
+import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
 
 export const usersHandler = new Hono()
   .get(
@@ -1983,7 +2041,9 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .post(
     '/users',
@@ -1999,7 +2059,9 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
   .get(
     '/users/:userId',
@@ -2020,7 +2082,9 @@ export const usersHandler = new Hono()
       },
     }),
     validator('param', z.object({ userId: z.string() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
 `)
       },
@@ -2125,7 +2189,9 @@ export const webhooksHandler = new Hono().post(
     },
   }),
   validator('json', z.object({ orderId: z.string() })),
-  (c) => {},
+  (c) => {
+    throw new Error('Not implemented')
+  },
 )
 `)
       },
@@ -2590,11 +2656,19 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {},
+    (c) => {
+      throw new Error('Not implemented')
+    },
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
-  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new Error('Not implemented')
+  })
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
+    throw new Error('Not implemented')
+  })
 `)
       },
     )
@@ -3019,9 +3093,261 @@ export const usersHandler = new Hono().get(
     operationId: 'listUsers',
     responses: { 200: UserListResponse },
   }),
-  (c) => {},
+  (c) => {
+    throw new Error('Not implemented')
+  },
 )
 `)
+      },
+    )
+  })
+
+  // -------------------------------------------------------------------
+  // Regression: split mode + path aliases + cross-component references.
+  //
+  // These tests pin down the exact failure modes we hit during the
+  // vite-split-alias work:
+  //   1. callbacks split — operationId in a string must NOT trigger a
+  //      bogus self-import like `import { userCreatedCallback }`.
+  //   2. callbacks/pathItems split — `$ref` to a schema MUST emit a real
+  //      `import { UserSchema } from <alias>` line.
+  //   3. mediaTypes split — same: `$ref` to schema → import via alias.
+  //   4. Path-alias `import` field MUST be honored verbatim (no fallback
+  //      to relative paths).
+  // -------------------------------------------------------------------
+  describe('zod: split mode + path aliases (regression)', () => {
+    const REGRESSION_YAML = `openapi: 3.1.0
+info:
+  title: Regression
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+    Product:
+      type: object
+      required:
+        - sku
+      properties:
+        sku:
+          type: string
+  callbacks:
+    UserCreated:
+      '{$request.body#/callbackUrl}':
+        post:
+          operationId: userCreatedCallback
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/User'
+          responses:
+            '200':
+              description: OK
+  pathItems:
+    Products:
+      get:
+        operationId: listProducts
+        responses:
+          '200':
+            description: OK
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Product'
+  mediaTypes:
+    JsonUser:
+      schema:
+        $ref: '#/components/schemas/User'
+`
+
+    it.concurrent(
+      'callbacks split: operationId in string does not produce bogus self-import',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('regression_callbacks_split')
+        const yamlPath = path.join(d, 'spec.yaml')
+        fs.mkdirSync(d, { recursive: true })
+        await fsp.writeFile(yamlPath, REGRESSION_YAML)
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: {
+                output: path.join(d, 'components/schemas'),
+                split: true,
+                import: '~/components/schemas',
+              },
+              callbacks: {
+                output: path.join(d, 'components/callbacks'),
+                split: true,
+                import: '~/components/callbacks',
+              },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const cb = await fsp.readFile(
+          path.join(d, 'components/callbacks/userCreatedCallback.ts'),
+          'utf-8',
+        )
+        // Real cross-component import via alias.
+        expect(cb.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
+        // No bogus `userCreatedCallback` import line.
+        const importLines = cb.split('\n').filter((l) => l.startsWith('import'))
+        expect(importLines.some((l) => l.includes('userCreatedCallback'))).toBe(false)
+        // operationId still present in the body as a string.
+        expect(cb.includes("operationId: 'userCreatedCallback'")).toBe(true)
+      },
+    )
+
+    it.concurrent(
+      'pathItems split: $ref schemas resolved with alias-based import',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('regression_path_items_split')
+        const yamlPath = path.join(d, 'spec.yaml')
+        fs.mkdirSync(d, { recursive: true })
+        await fsp.writeFile(yamlPath, REGRESSION_YAML)
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: {
+                output: path.join(d, 'components/schemas'),
+                split: true,
+                import: '@/components/schemas',
+              },
+              pathItems: {
+                output: path.join(d, 'components/pathItems'),
+                split: true,
+                import: '@/components/pathItems',
+              },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const pi = await fsp.readFile(
+          path.join(d, 'components/pathItems/productsPathItem.ts'),
+          'utf-8',
+        )
+        expect(pi.includes("import { ProductSchema } from '@/components/schemas'")).toBe(true)
+        expect(pi.includes('items: ProductSchema')).toBe(true)
+      },
+    )
+
+    it.concurrent(
+      'mediaTypes split: $ref schema emits cross-component import via alias',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('regression_media_types_split')
+        const yamlPath = path.join(d, 'spec.yaml')
+        fs.mkdirSync(d, { recursive: true })
+        await fsp.writeFile(yamlPath, REGRESSION_YAML)
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: {
+                output: path.join(d, 'components/schemas'),
+                split: true,
+                import: '~/components/schemas',
+              },
+              mediaTypes: {
+                output: path.join(d, 'components/mediaTypes'),
+                split: true,
+                import: '~/components/mediaTypes',
+              },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const mt = await fsp.readFile(
+          path.join(d, 'components/mediaTypes/jsonUserMediaTypeSchema.ts'),
+          'utf-8',
+        )
+        expect(mt.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
+        expect(mt.includes('export const JsonUserMediaTypeSchema = UserSchema')).toBe(true)
+      },
+    )
+
+    it.concurrent(
+      'mixed aliases (~ and @) flow through to handlers',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('regression_mixed_aliases')
+        const yamlPath = path.join(d, 'spec.yaml')
+        fs.mkdirSync(d, { recursive: true })
+        await fsp.writeFile(yamlPath, REGRESSION_YAML)
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: {
+                output: path.join(d, 'components/schemas'),
+                split: true,
+                import: '~/components/schemas',
+              },
+              callbacks: {
+                output: path.join(d, 'components/callbacks'),
+                split: true,
+                import: '@/components/callbacks',
+              },
+              mediaTypes: {
+                output: path.join(d, 'components/mediaTypes'),
+                split: true,
+                import: '~/components/mediaTypes',
+              },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        // The callback file uses `~` alias for schemas (defined under `~`).
+        const cb = await fsp.readFile(
+          path.join(d, 'components/callbacks/userCreatedCallback.ts'),
+          'utf-8',
+        )
+        expect(cb.includes("from '~/components/schemas'")).toBe(true)
+        // The mediaType file also uses `~` alias for schemas.
+        const mt = await fsp.readFile(
+          path.join(d, 'components/mediaTypes/jsonUserMediaTypeSchema.ts'),
+          'utf-8',
+        )
+        expect(mt.includes("from '~/components/schemas'")).toBe(true)
       },
     )
   })

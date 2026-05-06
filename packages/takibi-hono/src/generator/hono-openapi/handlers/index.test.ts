@@ -119,9 +119,11 @@ describe('makeHandlerCode', () => {
     const groups = collectOperations(minimalOpenAPI)
     const code = makeHandlerCode('__root', groups.get('__root')!, 'zod')
     expect(code).toBe(
-      ["import{Hono}from'hono'", '', "export const rootHandler=new Hono().get('/',(c)=>{})"].join(
-        '\n',
-      ),
+      [
+        "import{Hono}from'hono'",
+        '',
+        "export const rootHandler=new Hono().get('/',(c)=>{throw new Error('Not implemented')})",
+      ].join('\n'),
     )
   })
 
@@ -135,7 +137,7 @@ describe('makeHandlerCode', () => {
         "import*as z from'zod'",
         "import{CreateUserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',sValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',(c)=>{throw new Error('Not implemented')}).post('/users',sValidator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -148,7 +150,7 @@ describe('makeHandlerCode', () => {
         "import{Hono}from'hono'",
         "import{describeRoute}from'hono-openapi'",
         '',
-        'export const rootHandler=new Hono().get(\'/\',describeRoute({responses:{200:{description:"OK"}}}),(c)=>{})',
+        "export const rootHandler=new Hono().get('/',describeRoute({responses:{200:{description:\"OK\"}}}),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -163,7 +165,7 @@ describe('makeHandlerCode', () => {
         "import*as z from'zod'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -181,7 +183,7 @@ describe('makeHandlerCode', () => {
         "import*as z from'zod'",
         "import{CreateUserSchema,UserSchema}from'../../shared/schemas'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -194,7 +196,7 @@ describe('makeHandlerCode', () => {
         "import{Hono}from'hono'",
         "import{describeRoute}from'hono-openapi'",
         '',
-        'export const rootHandler=new Hono().get(\'/\',describeRoute({responses:{200:{description:"OK"}}}),(c)=>{})',
+        "export const rootHandler=new Hono().get('/',describeRoute({responses:{200:{description:\"OK\"}}}),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -253,7 +255,7 @@ describe('makeHandlerCode — __root group name', () => {
         "import{sValidator}from'@hono/standard-validator'",
         "import*as z from'zod'",
         '',
-        "export const rootHandler=new Hono().get('/',(c)=>{}).post('/',sValidator('json',z.object({name:z.string()})),(c)=>{})",
+        "export const rootHandler=new Hono().get('/',(c)=>{throw new Error('Not implemented')}).post('/',sValidator('json',z.object({name:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -267,7 +269,7 @@ describe('makeHandlerCode — __root group name', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import*as z from'zod'",
         '',
-        "export const rootHandler=new Hono().get('/',describeRoute({responses:{200:{description:\"Root OK\"}}}),(c)=>{}).post('/',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',z.object({name:z.string()})),(c)=>{})",
+        "export const rootHandler=new Hono().get('/',describeRoute({responses:{200:{description:\"Root OK\"}}}),(c)=>{throw new Error('Not implemented')}).post('/',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',z.object({name:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -284,7 +286,7 @@ describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
         "import*as z from'zod'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(z.array(UserSchema))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',z.object({id:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -299,7 +301,7 @@ describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
         "import*as v from'valibot'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -315,7 +317,7 @@ describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
         "import{Compile}from'typebox/compile'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(Compile(Type.Array(UserSchema)))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',Compile(CreateUserSchema)),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(Compile(UserSchema))}}}}}),validator('param',Compile(Type.Object({id:Type.String()}))),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(Compile(Type.Array(UserSchema)))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',Compile(CreateUserSchema)),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(Compile(UserSchema))}}}}}),validator('param',Compile(Type.Object({id:Type.String()}))),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -330,7 +332,7 @@ describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
         "import{type}from'arktype'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(UserSchema.array())}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',type({id:type('string')})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(UserSchema.array())}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',type({id:type('string')})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -346,7 +348,7 @@ describe('makeHandlerCode — openapi true for all 5 schema libraries', () => {
         "import{standardSchemaV1}from'effect/Schema'",
         "import{CreateUserSchema,UserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(standardSchemaV1(Schema.Array(UserSchema)))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',standardSchemaV1(CreateUserSchema)),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(standardSchemaV1(UserSchema))}}}}}),validator('param',standardSchemaV1(Schema.Struct({id:Schema.String}))),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(standardSchemaV1(Schema.Array(UserSchema)))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',standardSchemaV1(CreateUserSchema)),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(standardSchemaV1(UserSchema))}}}}}),validator('param',standardSchemaV1(Schema.Struct({id:Schema.String}))),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -362,7 +364,7 @@ describe('makeHandlerCode — path-level parameters', () => {
         "import{sValidator}from'@hono/standard-validator'",
         "import*as z from'zod'",
         '',
-        "export const itemsHandler=new Hono().get('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{}).delete('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{})",
+        "export const itemsHandler=new Hono().get('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{throw new Error('Not implemented')}).delete('/items/:itemId',sValidator('param',z.object({itemId:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -376,7 +378,7 @@ describe('makeHandlerCode — path-level parameters', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import*as z from'zod'",
         '',
-        "export const itemsHandler=new Hono().get('/items/:itemId',describeRoute({responses:{200:{description:\"Get item\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{}).delete('/items/:itemId',describeRoute({responses:{204:{description:\"Deleted\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{})",
+        "export const itemsHandler=new Hono().get('/items/:itemId',describeRoute({responses:{200:{description:\"Get item\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{throw new Error('Not implemented')}).delete('/items/:itemId',describeRoute({responses:{204:{description:\"Deleted\"}}}),validator('param',z.object({itemId:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -395,7 +397,7 @@ describe('makeHandlerCode — custom componentPaths', () => {
         "import*as z from'zod'",
         "import{CreateUserSchema}from'@/schemas'",
         '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',sValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',(c)=>{throw new Error('Not implemented')}).post('/users',sValidator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',sValidator('param',z.object({id:z.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -413,7 +415,7 @@ describe('makeHandlerCode — custom componentPaths', () => {
         "import*as v from'valibot'",
         "import{CreateUserSchema,UserSchema}from'../../shared/schemas'",
         '',
-        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',describeRoute({responses:{200:{description:\"List users\",content:{'application/json':{schema:resolver(v.array(UserSchema))}}}}}),(c)=>{throw new Error('Not implemented')}).post('/users',describeRoute({responses:{201:{description:\"Created\"}}}),validator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',describeRoute({responses:{200:{description:\"Get user\",content:{'application/json':{schema:resolver(UserSchema)}}}}}),validator('param',v.object({id:v.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -431,7 +433,7 @@ describe('makeHandlerCode — single handler (no split) with multiple operations
         "import{sValidator}from'@hono/standard-validator'",
         "import*as v from'valibot'",
         '',
-        "export const rootHandler=new Hono().get('/',(c)=>{}).post('/',sValidator('json',v.object({name:v.string()})),(c)=>{})",
+        "export const rootHandler=new Hono().get('/',(c)=>{throw new Error('Not implemented')}).post('/',sValidator('json',v.object({name:v.string()})),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
   })
@@ -450,8 +452,40 @@ describe('makeHandlerCode — single handler (no split) with multiple operations
         "import Type from'typebox'",
         "import{CreateUserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',tbValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',validator('param',(_v,_c)=>{const _s=Type.Object({id:Type.String()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)}),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',(c)=>{throw new Error('Not implemented')}).post('/users',tbValidator('json',CreateUserSchema),(c)=>{throw new Error('Not implemented')}).get('/users/:id',validator('param',(_v,_c)=>{const _s=Type.Object({id:Type.String()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)}),(c)=>{throw new Error('Not implemented')})",
       ].join('\n'),
     )
+  })
+
+  // ============================================================
+  // Regression: handler stub MUST be type-compatible with Hono's
+  // `Handler<...>` (which requires `Response | Promise<Response>`).
+  // The previous `(c)=>{}` stub returned `void`, breaking TS2769 at
+  // user typecheck time. Throwing returns `never`, which IS assignable
+  // to `Response`.
+  // ============================================================
+  it.concurrent('handler stub returns never (throws) so it satisfies Hono Handler<...>', () => {
+    const op = {
+      method: 'get' as const,
+      path: '/x',
+      operation: { responses: { 200: { description: 'OK' } } },
+      pathItemParameters: [],
+    }
+    const code = makeHandlerCode('x', [op], 'zod', { openapi: false })
+    expect(code.includes("(c)=>{throw new Error('Not implemented')}")).toBe(true)
+    // The naked empty `(c)=>{}` stub MUST not appear — it returns void.
+    expect(code.includes('(c)=>{}')).toBe(false)
+  })
+
+  it.concurrent('handler stub uses throw in openapi mode too', () => {
+    const op = {
+      method: 'get' as const,
+      path: '/x',
+      operation: { responses: { 200: { description: 'OK' } } },
+      pathItemParameters: [],
+    }
+    const code = makeHandlerCode('x', [op], 'zod', { openapi: true })
+    expect(code.includes("(c)=>{throw new Error('Not implemented')}")).toBe(true)
+    expect(code.includes('(c)=>{}')).toBe(false)
   })
 })

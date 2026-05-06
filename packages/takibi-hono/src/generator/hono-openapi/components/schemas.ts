@@ -216,6 +216,20 @@ function unwrapNonCircularLazy(
           return varName
         },
       )
+    case 'valibot':
+      return decl.replace(
+        /v\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
+        (match, varName) => (needsLazy.has(varName) ? match : varName),
+      )
+    case 'effect':
+      // `Schema.suspend(() => X)` defers evaluation; for non-circular refs
+      // it's unnecessary AND breaks the StandardSchemaV1 inference chain
+      // (e.g. `Schema.Array(Schema.suspend(() => UserSchema))` doesn't
+      // expose `~standard` so `resolver(...)` rejects it).
+      return decl.replace(
+        /Schema\.suspend\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
+        (match, varName) => (needsLazy.has(varName) ? match : varName),
+      )
     case 'typebox':
       if (circularNames.has(selfName)) {
         decl = decl.replace(
