@@ -14,7 +14,7 @@ describe('makeMediaTypesCode', () => {
         },
       },
     }
-    const result = await makeMediaTypesCode(mediaTypes, 'zod')
+    const result = makeMediaTypesCode(mediaTypes, 'zod')
     expect(result).toBe('export const JsonMediaMediaTypeSchema=z.object({id:z.int()})')
   })
 
@@ -24,7 +24,7 @@ describe('makeMediaTypesCode', () => {
         schema: { $ref: '#/components/schemas/User' },
       },
     }
-    const result = await makeMediaTypesCode(mediaTypes, 'zod')
+    const result = makeMediaTypesCode(mediaTypes, 'zod')
     expect(result).toBe('export const UserMediaMediaTypeSchema=UserSchema')
   })
 
@@ -34,7 +34,7 @@ describe('makeMediaTypesCode', () => {
         $ref: '#/components/mediaTypes/Other',
       },
     }
-    const result = await makeMediaTypesCode(mediaTypes, 'zod')
+    const result = makeMediaTypesCode(mediaTypes, 'zod')
     expect(result).toBe('export const JsonMediaMediaTypeSchema=OtherMediaTypeSchema')
   })
 
@@ -44,7 +44,7 @@ describe('makeMediaTypesCode', () => {
         schema: { type: 'string' },
       },
     }
-    const result = await makeMediaTypesCode(mediaTypes, 'valibot')
+    const result = makeMediaTypesCode(mediaTypes, 'valibot')
     expect(result).toBe('export const JsonMediaMediaTypeSchema=v.string()')
   })
 
@@ -54,7 +54,7 @@ describe('makeMediaTypesCode', () => {
         schema: { type: 'string' },
       },
     }
-    const result = await makeMediaTypesCode(mediaTypes, 'typebox')
+    const result = makeMediaTypesCode(mediaTypes, 'typebox')
     expect(result).toBe('export const JsonMediaMediaTypeSchema=Type.String()')
   })
 })
