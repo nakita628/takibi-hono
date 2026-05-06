@@ -445,10 +445,12 @@ describe('makeHandlerCode — single handler (no split) with multiple operations
       [
         "import{Hono}from'hono'",
         "import{tbValidator}from'@hono/typebox-validator'",
+        "import{validator}from'hono/validator'",
+        "import{Value}from'typebox/value'",
         "import Type from'typebox'",
         "import{CreateUserSchema}from'../components'",
         '',
-        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',tbValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',tbValidator('param',Type.Object({id:Type.String()})),(c)=>{})",
+        "export const usersHandler=new Hono().get('/users',(c)=>{}).post('/users',tbValidator('json',CreateUserSchema),(c)=>{}).get('/users/:id',validator('param',(_v,_c)=>{const _s=Type.Object({id:Type.String()});const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)}),(c)=>{})",
       ].join('\n'),
     )
   })

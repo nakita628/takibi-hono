@@ -584,7 +584,7 @@ export type CreatePet = Static<typeof CreatePetSchema>
     })
 
     it.concurrent(
-      'handlers/pets.ts: tbValidator, query coerce with Decode',
+      'handlers/pets.ts: typebox path/query uses inline validator + Value.Convert',
       { timeout: 30000 },
       async () => {
         const d = tmpDir('typebox_standard_pets')
@@ -601,21 +601,46 @@ export type CreatePet = Static<typeof CreatePetSchema>
         const pets = await fsp.readFile(path.join(d, 'handlers/pets.ts'), 'utf-8')
         expect(pets).toBe(`import { Hono } from 'hono'
 import { tbValidator } from '@hono/typebox-validator'
+import { validator } from 'hono/validator'
+import { Value } from 'typebox/value'
 import Type from 'typebox'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
   .get(
     '/pets',
-    tbValidator(
-      'query',
-      Type.Object({ limit: Type.Optional(Type.Decode(Type.String(), (v) => parseInt(v, 10))) }),
-    ),
+    validator('query', (_v, _c) => {
+      const _s = Type.Object({ limit: Type.Optional(Type.Integer()) })
+      const _x = Value.Convert(_s, _v)
+      return Value.Check(_s, _x)
+        ? _x
+        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
+    }),
     (c) => {},
   )
   .post('/pets', tbValidator('json', CreatePetSchema), (c) => {})
-  .get('/pets/:petId', tbValidator('param', Type.Object({ petId: Type.String() })), (c) => {})
-  .delete('/pets/:petId', tbValidator('param', Type.Object({ petId: Type.String() })), (c) => {})
+  .get(
+    '/pets/:petId',
+    validator('param', (_v, _c) => {
+      const _s = Type.Object({ petId: Type.String() })
+      const _x = Value.Convert(_s, _v)
+      return Value.Check(_s, _x)
+        ? _x
+        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
+    }),
+    (c) => {},
+  )
+  .delete(
+    '/pets/:petId',
+    validator('param', (_v, _c) => {
+      const _s = Type.Object({ petId: Type.String() })
+      const _x = Value.Convert(_s, _v)
+      return Value.Check(_s, _x)
+        ? _x
+        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
+    }),
+    (c) => {},
+  )
 `)
       },
     )
