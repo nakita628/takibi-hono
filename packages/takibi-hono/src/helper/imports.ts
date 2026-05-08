@@ -19,12 +19,12 @@ const EXPORT_CONST_PATTERN = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
  */
 const COMPONENT_SUFFIXES = [
   ['schemas', 'Schema'],
+  ['responses', 'Response'],
   ['parameters', 'ParamsSchema'],
+  ['examples', 'Example'],
+  ['requestBodies', 'RequestBody'],
   ['headers', 'HeaderSchema'],
   ['securitySchemes', 'SecurityScheme'],
-  ['requestBodies', 'RequestBody'],
-  ['responses', 'Response'],
-  ['examples', 'Example'],
   ['links', 'Link'],
   ['callbacks', 'Callback'],
   ['pathItems', 'PathItem'],
