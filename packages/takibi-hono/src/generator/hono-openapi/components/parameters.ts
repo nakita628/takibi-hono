@@ -25,7 +25,9 @@ export async function makeParametersCode(
       const optionalExpr =
         param.required !== true ? makeOptional(schemaExpr, schemaLib) : schemaExpr
       const constDecl = `export const ${varName}=${optionalExpr}`
-      return exportTypes ? `${constDecl}\n${makeTypeExport(varName, typeName, schemaLib)}` : constDecl
+      return exportTypes
+        ? `${constDecl}\n${makeTypeExport(varName, typeName, schemaLib)}`
+        : constDecl
     })
     .join('\n\n')
 }
