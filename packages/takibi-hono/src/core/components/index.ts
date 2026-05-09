@@ -32,6 +32,12 @@ export async function makeComponents(
   const components = openapi.components
   if (!components) return { ok: true, value: undefined } as const
   const isReadonly = ohConfig?.readonly ?? false
+  const parametersExportTypes =
+    ohConfig?.components?.parameters?.exportTypes ?? ohConfig?.exportParametersTypes ?? false
+  const headersExportTypes =
+    ohConfig?.components?.headers?.exportTypes ?? ohConfig?.exportHeadersTypes ?? false
+  const mediaTypesExportTypes =
+    ohConfig?.components?.mediaTypes?.exportTypes ?? ohConfig?.exportMediaTypesTypes ?? false
   const generators = [
     {
       data: components.responses,
@@ -41,7 +47,7 @@ export async function makeComponents(
     {
       data: components.parameters,
       configKey: 'parameters' as const,
-      make: () => makeParametersCode(components.parameters!, schemaLib),
+      make: () => makeParametersCode(components.parameters!, schemaLib, parametersExportTypes),
     },
     {
       data: components.requestBodies,
@@ -51,7 +57,7 @@ export async function makeComponents(
     {
       data: components.headers,
       configKey: 'headers' as const,
-      make: () => makeHeadersCode(components.headers!, schemaLib),
+      make: () => makeHeadersCode(components.headers!, schemaLib, headersExportTypes),
     },
     {
       data: components.examples,
@@ -81,7 +87,7 @@ export async function makeComponents(
     {
       data: components.mediaTypes,
       configKey: 'mediaTypes' as const,
-      make: () => makeMediaTypesCode(components.mediaTypes!, schemaLib),
+      make: () => makeMediaTypesCode(components.mediaTypes!, schemaLib, mediaTypesExportTypes),
     },
   ] as const
   const componentFiles = makeComponentFileMap(components, ohConfig, layout)

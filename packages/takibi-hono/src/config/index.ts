@@ -26,6 +26,7 @@ const ConfigSchema = v.pipe(
           exportSchemasTypes: v.exactOptional(v.boolean()),
           exportParametersTypes: v.exactOptional(v.boolean()),
           exportHeadersTypes: v.exactOptional(v.boolean()),
+          exportMediaTypesTypes: v.exactOptional(v.boolean()),
           handlers: v.exactOptional(v.pipe(v.strictObject({ output: v.string() }), v.readonly())),
           components: v.exactOptional(
             v.pipe(

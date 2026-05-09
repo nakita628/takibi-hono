@@ -121,6 +121,9 @@ export function makeComponentImports(
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
+    ...(schemaLib === 'typebox' && code.includes('Static<typeof ')
+      ? ["import type{Static}from'typebox'"]
+      : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const
 }
