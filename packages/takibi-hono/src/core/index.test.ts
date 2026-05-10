@@ -1480,8 +1480,8 @@ export type Error = z.infer<typeof ErrorSchema>
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import * as z from 'zod'
 import { UserSchema } from '../schemas'
-import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
 import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
+import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
 
 export const usersHandler = new Hono()
   .get(
@@ -2029,8 +2029,8 @@ export const XRateLimitHeaderSchema = z.int().optional()
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import * as z from 'zod'
 import { UserSchema } from '../schemas'
-import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
 import { UnauthorizedResponseResponse, UserListResponseResponse } from '../responses'
+import { XRateLimitHeaderSchema, XRequestIdHeaderSchema } from '../headers'
 
 export const usersHandler = new Hono()
   .get(

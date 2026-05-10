@@ -28,8 +28,7 @@ export type TakibiHonoOptions = {
           | 'links'
           | 'callbacks'
           | 'pathItems'
-          | 'mediaTypes'
-          | 'webhooks',
+          | 'mediaTypes',
           {
             readonly output: string
             readonly exportTypes?: boolean | undefined

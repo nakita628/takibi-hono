@@ -40,7 +40,7 @@ export async function hono(config: {
   const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
   if (!handlersResult.ok) return handlersResult
   if (useOpenAPI) {
-    const webhooksResult = await makeWebhooks(openapi, config.schema, ohConfig, layout)
+    const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
     if (!webhooksResult.ok) return webhooksResult
   }
   return makeApp(openapi, handlersResult.value.handlerFileNames, config.basePath, layout)

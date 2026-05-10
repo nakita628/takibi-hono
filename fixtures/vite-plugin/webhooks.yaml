@@ -1,0 +1,60 @@
+openapi: '3.1.0'
+info:
+  title: Webhook Demo API
+  version: '1.0.0'
+paths:
+  /ping:
+    get:
+      summary: Ping
+      operationId: ping
+      responses:
+        '200':
+          description: OK
+webhooks:
+  newOrder:
+    post:
+      operationId: onNewOrder
+      summary: New order webhook
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+              properties:
+                orderId:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Acknowledged
+  userCreated:
+    post:
+      operationId: onUserCreated
+      summary: User created webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Acknowledged
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string

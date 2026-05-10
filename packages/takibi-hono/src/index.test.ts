@@ -62,7 +62,7 @@ async function runEntryPoint(
     const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
     if (!handlersResult.ok) return handlersResult
     if (useOpenAPI) {
-      const webhooksResult = await makeWebhooks(openapi, config.schema, ohConfig, layout)
+      const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
       if (!webhooksResult.ok) return webhooksResult
     }
     const appResult = await makeApp(
