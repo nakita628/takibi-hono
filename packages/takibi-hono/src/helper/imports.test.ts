@@ -126,8 +126,8 @@ describe('makeImports', () => {
     const code = 'resolver(UserSchema)\nUnauthorizedResponseResponse\nXRequestIdHeaderSchema'
 
     // Output order follows COMPONENT_SUFFIXES declaration order (same as
-    // the OpenAPI components / config field order): schemas → parameters →
-    // headers → securitySchemes → requestBodies → responses → ...
+    // the OpenAPI 3.0 components / config field order): schemas → responses →
+    // parameters → examples → requestBodies → headers → securitySchemes → ...
     expect(
       makeImports(code, 'zod', {
         schemas: '../schemas',
@@ -138,8 +138,8 @@ describe('makeImports', () => {
       "import{Hono}from'hono'",
       "import{resolver}from'hono-openapi'",
       "import{UserSchema}from'../schemas'",
-      "import{XRequestIdHeaderSchema}from'../headers'",
       "import{UnauthorizedResponseResponse}from'../responses'",
+      "import{XRequestIdHeaderSchema}from'../headers'",
     ])
   })
 

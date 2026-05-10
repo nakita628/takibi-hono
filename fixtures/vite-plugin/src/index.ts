@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
-import { honoHandler } from './handlers'
+import { pingHandler } from './handlers'
 
 const app = new Hono()
 
-export const api = app.route('/', honoHandler)
+export const api = app.route('/', pingHandler)
 
 export default app

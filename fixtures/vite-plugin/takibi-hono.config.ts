@@ -1,10 +1,13 @@
 import { defineConfig } from 'takibi-hono/config'
 
 export default defineConfig({
-  input: 'main.tsp',
-  schema: 'effect',
+  input: 'webhooks.yaml',
+  schema: 'zod',
   openapi: true,
   'takibi-hono': {
-    exportSchemasTypes: true,
-  },  
+    handlers: { output: 'src/handlers' },
+    components: {
+      schemas: { output: 'src/schemas.ts', exportTypes: true },
+    },
+  },
 })

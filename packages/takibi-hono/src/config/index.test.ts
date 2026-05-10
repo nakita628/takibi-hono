@@ -107,7 +107,7 @@ describe('parseConfig', () => {
     })
   })
 
-  it.concurrent('all 11 component types', () => {
+  it.concurrent('all 10 component types', () => {
     const components = {
       schemas: { output: 'src/schemas.ts' },
       parameters: { output: 'src/parameters.ts' },
@@ -119,7 +119,6 @@ describe('parseConfig', () => {
       links: { output: 'src/links.ts' },
       callbacks: { output: 'src/callbacks.ts' },
       pathItems: { output: 'src/pathItems.ts' },
-      webhooks: { output: 'src/webhooks.ts' },
     }
     expect(
       parseConfig({
@@ -131,6 +130,35 @@ describe('parseConfig', () => {
     ).toStrictEqual({
       ok: true,
       value: { input: 'a.yaml', schema: 'zod', format: {}, 'takibi-hono': { components } },
+    })
+  })
+
+  it.concurrent('webhooks rejected at top level (no longer configurable)', () => {
+    expect(
+      parseConfig({
+        input: 'a.yaml',
+        schema: 'zod',
+        format: {},
+        webhooks: { output: 'src/webhooks.ts' },
+      }),
+    ).toStrictEqual({
+      ok: false,
+      error: 'Invalid config: webhooks: Invalid key: Expected never but received "webhooks"',
+    })
+  })
+
+  it.concurrent('webhooks rejected inside components', () => {
+    expect(
+      parseConfig({
+        input: 'a.yaml',
+        schema: 'zod',
+        format: {},
+        'takibi-hono': { components: { webhooks: { output: 'src/webhooks.ts' } } },
+      }),
+    ).toStrictEqual({
+      ok: false,
+      error:
+        'Invalid config: takibi-hono.components.webhooks: Invalid key: Expected never but received "webhooks"',
     })
   })
 
@@ -652,7 +680,6 @@ describe('parseConfig', () => {
       'links',
       'callbacks',
       'pathItems',
-      'webhooks',
     ] as const
     for (const componentType of componentTypes) {
       const result = parseConfig({
@@ -885,7 +912,6 @@ describe('parseConfig - component import field', () => {
       'links',
       'callbacks',
       'pathItems',
-      'webhooks',
     ] as const
     for (const componentType of componentTypes) {
       const result = parseConfig({

@@ -19,12 +19,12 @@ const EXPORT_CONST_PATTERN = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
  */
 const COMPONENT_SUFFIXES = [
   ['schemas', 'Schema'],
+  ['responses', 'Response'],
   ['parameters', 'ParamsSchema'],
+  ['examples', 'Example'],
+  ['requestBodies', 'RequestBody'],
   ['headers', 'HeaderSchema'],
   ['securitySchemes', 'SecurityScheme'],
-  ['requestBodies', 'RequestBody'],
-  ['responses', 'Response'],
-  ['examples', 'Example'],
   ['links', 'Link'],
   ['callbacks', 'Callback'],
   ['pathItems', 'PathItem'],
@@ -121,6 +121,9 @@ export function makeComponentImports(
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
+    ...(schemaLib === 'typebox' && code.includes('Static<typeof ')
+      ? ["import type{Static}from'typebox'"]
+      : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const
 }

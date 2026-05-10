@@ -13,6 +13,7 @@ export type TakibiHonoOptions = {
   readonly exportSchemasTypes?: boolean | undefined
   readonly exportParametersTypes?: boolean | undefined
   readonly exportHeadersTypes?: boolean | undefined
+  readonly exportMediaTypesTypes?: boolean | undefined
   readonly handlers?: { readonly output: string } | undefined
   readonly components?:
     | ({ readonly output?: string | undefined } & Partial<
@@ -27,8 +28,7 @@ export type TakibiHonoOptions = {
           | 'links'
           | 'callbacks'
           | 'pathItems'
-          | 'mediaTypes'
-          | 'webhooks',
+          | 'mediaTypes',
           {
             readonly output: string
             readonly exportTypes?: boolean | undefined
