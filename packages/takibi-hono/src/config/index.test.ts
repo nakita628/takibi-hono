@@ -692,7 +692,6 @@ describe('parseConfig', () => {
       expect(result.ok).toBe(false)
     }
   })
-
 })
 
 describe('readConfig', () => {
@@ -932,7 +931,6 @@ describe('parseConfig - component import field', () => {
       }
     }
   })
-
 
   it.concurrent('multiple components with different import paths', () => {
     expect(
