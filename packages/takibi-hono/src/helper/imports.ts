@@ -103,7 +103,7 @@ export function makeComponentImports(
   const config = getLibraryConfig(schemaLib)
   const defined = collectDefinedExports(code)
   return [
-    ...(code.includes('resolver(') ? [`import{resolver}from'${config.modulePath}'`] : []),
+    ...(code.includes('resolver(') ? ["import{resolver}from'hono-openapi'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),

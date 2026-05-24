@@ -1,5 +1,5 @@
 import type { OpenAPI } from '../../../openapi/index.js'
-import { toCamelCase } from '../../../utils/index.js'
+import { toHandlerVarName } from '../../../utils/index.js'
 
 export function makeAppCode(
   openapi: OpenAPI,
@@ -9,19 +9,10 @@ export function makeAppCode(
     readonly handlersImportPath?: string | undefined
   },
 ) {
-  const sorted = handlerFileNames.toSorted()
+  const handlerNames = handlerFileNames.toSorted().map(toHandlerVarName)
   const handlersImport = config?.handlersImportPath ?? './handlers'
-
-  const handlerImports = sorted.map(
-    (name) => `${toCamelCase(name === '__root' ? 'root' : name)}Handler`,
-  )
-  const routeChain = sorted
-    .map((name) => {
-      const handlerName = `${toCamelCase(name === '__root' ? 'root' : name)}Handler`
-      return `.route('/',${handlerName})`
-    })
-    .join('')
+  const routeChain = handlerNames.map((name) => `.route('/',${name})`).join('')
   const basePath = config?.basePath
   const appDecl = basePath ? `const app=new Hono().basePath('${basePath}')` : 'const app=new Hono()'
-  return `import{Hono}from'hono'\nimport{${handlerImports.join(',')}}from'${handlersImport}'\n\n${appDecl}\n\nexport const api=app${routeChain}\n\nexport default app`
+  return `import{Hono}from'hono'\nimport{${handlerNames.join(',')}}from'${handlersImport}'\n\n${appDecl}\n\nexport const api=app${routeChain}\n\nexport default app`
 }

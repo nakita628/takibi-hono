@@ -8,11 +8,17 @@ import type {
   Parameter,
   PathItem,
   Reference,
-  RequestBody,
   Schema,
 } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
+
+/** Returns the local component name when `value` is `{ $ref: '${prefix}<name>' }`. */
+function localRefName(value: unknown, prefix: string) {
+  if (!isRefObject(value)) return undefined
+  const ref = value.$ref
+  return typeof ref === 'string' && ref.startsWith(prefix) ? ref.slice(prefix.length) : undefined
+}
 
 /** Resolves `{ $ref: '#/components/pathItems/X' }` → `components.pathItems[X]`. */
 export function resolvePathItemRef(
@@ -20,43 +26,28 @@ export function resolvePathItemRef(
   components: Components | undefined,
 ): PathItem | undefined {
   if (!pathItem || typeof pathItem !== 'object') return undefined
-  if (!isRefObject(pathItem)) return pathItem as PathItem
-  if (!components?.pathItems) return undefined
-  const ref = pathItem.$ref
-  if (typeof ref !== 'string' || !ref.startsWith('#/components/pathItems/')) return undefined
-  const name = ref.slice('#/components/pathItems/'.length)
-  return components.pathItems[name]
+  if (!isRefObject(pathItem)) return pathItem
+  const name = localRefName(pathItem, '#/components/pathItems/')
+  return name === undefined ? undefined : components?.pathItems?.[name]
 }
 
 /** Resolves `{ $ref: '#/components/parameters/X' }` → `components.parameters[X]`. */
-export function resolveParameterRef(
-  param: unknown,
-  components: Components | undefined,
-): Parameter | undefined {
+export function resolveParameterRef(param: unknown, components: Components | undefined) {
   if (isParameter(param)) return param
-  if (!isRefObject(param) || !components?.parameters) return undefined
-  const ref = param.$ref
-  if (typeof ref !== 'string' || !ref.startsWith('#/components/parameters/')) return undefined
-  const name = ref.slice('#/components/parameters/'.length)
-  const resolved = components.parameters[name]
-  return resolved && isParameter(resolved) ? resolved : undefined
+  const name = localRefName(param, '#/components/parameters/')
+  const resolved = name === undefined ? undefined : components?.parameters?.[name]
+  return isParameter(resolved) ? resolved : undefined
 }
 
 /** Resolves `{ $ref: '#/components/requestBodies/X' }` → `components.requestBodies[X]`. */
 export function resolveRequestBodyRef(
   body: Operation['requestBody'] | Reference | undefined,
   components: Components | undefined,
-): RequestBody | undefined {
+) {
   if (!body) return undefined
-  if (isRefObject(body)) {
-    if (!components?.requestBodies) return undefined
-    const ref = body.$ref
-    if (typeof ref !== 'string' || !ref.startsWith('#/components/requestBodies/')) return undefined
-    const name = ref.slice('#/components/requestBodies/'.length)
-    return components.requestBodies[name]
-  }
-  if ('content' in body) return body
-  return undefined
+  if (!isRefObject(body)) return 'content' in body ? body : undefined
+  const name = localRefName(body, '#/components/requestBodies/')
+  return name === undefined ? undefined : components?.requestBodies?.[name]
 }
 
 export function makeOptional(

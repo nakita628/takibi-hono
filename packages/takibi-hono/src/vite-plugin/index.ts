@@ -4,8 +4,6 @@ import path from 'node:path'
 import { parseConfig } from '../config/index.js'
 import { hono } from '../core/index.js'
 
-type Config = Extract<ReturnType<typeof parseConfig>, { ok: true }>['value']
-
 type ViteDevServer = {
   watcher: {
     add: (paths: string | readonly string[]) => void
@@ -75,7 +73,9 @@ function isComponentConfig(v: unknown): v is { readonly output: string } {
   return typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
 }
 
-function extractOutputPaths(config: Config) {
+function extractOutputPaths(
+  config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
+) {
   const takibiHono = config['takibi-hono']
   const componentOutputs = Object.entries(takibiHono?.components ?? {})
     .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
@@ -87,7 +87,10 @@ function extractOutputPaths(config: Config) {
     .map(toAbsolutePath)
 }
 
-async function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
+async function cleanupStaleOutputs(
+  previousConfig: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
+  currentConfig: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
+) {
   const previousPaths = new Set(extractOutputPaths(previousConfig))
   const currentPaths = new Set(extractOutputPaths(currentConfig))
   const stalePaths = [...previousPaths].filter((p) => !currentPaths.has(p))
@@ -131,7 +134,9 @@ async function readConfigWithHotReload(server: ViteDevServer) {
   }
 }
 
-async function runGeneration(config: Config) {
+async function runGeneration(
+  config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
+) {
   // Clean up split directories before regeneration
   const components = config['takibi-hono']?.components ?? {}
   const splitCleanups: Promise<string | null>[] = []
@@ -189,9 +194,13 @@ function addInputGlobsToWatcher(server: ViteDevServer, absoluteInputPath: string
 }
 
 export function takibiHonoVite(): any {
+  // Intentional `const` + mutable property pattern for state spanning Vite
+  // lifecycle hooks (configureServer / handleHotUpdate / watcher callbacks).
+  // Matches hono-takibi's vite-plugin; see AGENTS.md "コード品質" — long-lived
+  // state containers are the canonical exception to the no-`let` rule.
   const pluginState: {
-    current: Config | null
-    previous: Config | null
+    current: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'] | null
+    previous: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'] | null
     inputDirectory: string | null
   } = {
     current: null,

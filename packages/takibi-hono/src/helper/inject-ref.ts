@@ -1,5 +1,19 @@
-import type { SchemaLib } from '../core/layout.js'
 import type { Schema } from '../openapi/index.js'
+
+/**
+ * @internal Contract with schema-to-library — the merge strategies below assume
+ * schema-to-library emits exactly these shapes per library. If schema-to-library
+ * changes its emit format, these regex anchors must be updated in sync.
+ *
+ * - zod:     `... .meta({ ... })`              — `.meta({` appears once at outer
+ * - valibot: `v.pipe(..., v.metadata({ ... }))` — `v.metadata({` at outer pipe
+ * - typebox: `Type.X(body[, { ... }])`         — `{...}` is the 2nd arg when meta exists
+ * - arktype: `... .describe('...')`             — no meta call to merge into, we append `.configure({ ... })`
+ * - effect:  `... .annotations({ ... })`       — `.annotations({` appears once at outer
+ *
+ * `injectAtLast` always targets the last (outermost) meta call; property-level
+ * meta appears earlier in the source and must not be rewritten.
+ */
 
 /** Used by typebox to decide whether the generated declaration has a 2nd-arg `opts` object to merge `ref` into. */
 export function hasOuterMeta(schema: Schema): boolean {
@@ -26,7 +40,7 @@ export function hasOuterMeta(schema: Schema): boolean {
 export function injectRef(
   decl: string,
   name: string,
-  schemaLib: SchemaLib,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   hasMeta: boolean,
 ): string {
   const splitIdx = decl.search(/\n\nexport\s+type\b/)

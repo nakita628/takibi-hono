@@ -182,9 +182,8 @@ function isArktypeStringForm(expr: string) {
 
 function zodInlineExpr(schema: Schema): string {
   if (schema.enum) {
-    return schema.enum.map((v) => JSON.stringify(v)).join(',')
-      ? `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
-      : 'z.unknown()'
+    if (schema.enum.length === 0) return 'z.unknown()'
+    return `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])

@@ -2,7 +2,7 @@ import { isMedia } from '../guard/index.js'
 import type { Components, Media, Operation, Parameter } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
-import { getLibraryConfig, getStandardValidatorConfig } from './library.js'
+import { getStandardValidatorConfig } from './library.js'
 import {
   groupParametersByLocation,
   makeObjectExpression,
@@ -11,9 +11,7 @@ import {
   wrapSchemaForValidator,
 } from './openapi.js'
 
-type ParamLocation = 'query' | 'path' | 'header' | 'cookie'
-
-function locationParamIn(location: string): ParamLocation | undefined {
+function locationParamIn(location: string) {
   return location === 'query' ||
     location === 'path' ||
     location === 'header' ||
@@ -28,8 +26,7 @@ export function makeValidators(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   components?: Components,
 ) {
-  const config = getLibraryConfig(schemaLib)
-  const alias = config.validatorAlias
+  const alias = 'validator'
   const allParameters = [...(pathItemParameters ?? []), ...(operation.parameters ?? [])]
   const grouped = groupParametersByLocation(allParameters, components)
   const paramValidators = Object.entries(grouped).map(([location, parameters]) => {

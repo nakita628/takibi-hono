@@ -46,3 +46,8 @@ export function renderNamedImport(names: readonly string[], spec: string) {
 export function toHonoPath(path: string) {
   return path.replace(/\{([^}]+)\}/g, ':$1')
 }
+
+/** Maps a handler file name to its variable name (`__root` → `rootHandler`, otherwise `<camelCase>Handler`). */
+export function toHandlerVarName(handlerFileName: string) {
+  return `${toCamelCase(handlerFileName === '__root' ? 'root' : handlerFileName)}Handler`
+}

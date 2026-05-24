@@ -3,59 +3,41 @@ import { describe, expect, it } from 'vite-plus/test'
 import { getLibraryConfig, getStandardValidatorConfig } from './library.js'
 
 describe('getLibraryConfig', () => {
-  const libraries: ('zod' | 'valibot' | 'typebox' | 'arktype' | 'effect')[] = [
-    'zod',
-    'valibot',
-    'typebox',
-    'arktype',
-    'effect',
-  ]
+  const libraries = ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const
 
   for (const lib of libraries) {
     it.concurrent(`should return config for ${lib}`, () => {
       const config = getLibraryConfig(lib)
-      expect(typeof config.modulePath).toBe('string')
-      expect(typeof config.validatorAlias).toBe('string')
       expect(typeof config.schemaImport).toBe('string')
     })
   }
 
   it.concurrent('zod config should have correct values', () => {
     expect(getLibraryConfig('zod')).toStrictEqual({
-      modulePath: 'hono-openapi',
-      validatorAlias: 'validator',
       schemaImport: "import*as z from'zod'",
     })
   })
 
   it.concurrent('valibot config should have correct values', () => {
     expect(getLibraryConfig('valibot')).toStrictEqual({
-      modulePath: 'hono-openapi',
-      validatorAlias: 'validator',
       schemaImport: "import*as v from'valibot'",
     })
   })
 
   it.concurrent('typebox config should have correct values', () => {
     expect(getLibraryConfig('typebox')).toStrictEqual({
-      modulePath: 'hono-openapi',
-      validatorAlias: 'validator',
       schemaImport: "import Type from'typebox'",
     })
   })
 
   it.concurrent('arktype config should have correct values', () => {
     expect(getLibraryConfig('arktype')).toStrictEqual({
-      modulePath: 'hono-openapi',
-      validatorAlias: 'validator',
       schemaImport: "import{type}from'arktype'",
     })
   })
 
   it.concurrent('effect config should have correct values', () => {
     expect(getLibraryConfig('effect')).toStrictEqual({
-      modulePath: 'hono-openapi',
-      validatorAlias: 'validator',
       schemaImport: "import{Schema}from'effect'",
     })
   })

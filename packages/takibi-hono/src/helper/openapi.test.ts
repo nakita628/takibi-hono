@@ -19,13 +19,7 @@ import {
 // ─── makeOptional ───
 
 describe('makeOptional', () => {
-  const ALL_LIBS: ('zod' | 'valibot' | 'typebox' | 'arktype' | 'effect')[] = [
-    'zod',
-    'valibot',
-    'typebox',
-    'arktype',
-    'effect',
-  ]
+  const ALL_LIBS = ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const
 
   test('zod', () => {
     expect(makeOptional('z.string()', 'zod')).toBe('z.string().optional()')

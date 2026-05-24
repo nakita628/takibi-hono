@@ -1020,7 +1020,7 @@ export default app
       const result = await runCli(d)
       expect(result).toStrictEqual({
         ok: false,
-        error: `Config not found: ${path.resolve(d, 'takibi-hono.config.ts')}`,
+        error: `Config not found: ${path.resolve(d, 'takibi-hono.config.ts')}\nCreate takibi-hono.config.ts in the current directory. See https://github.com/nakita628/takibi-hono#configuration for an example.`,
       })
     })
 

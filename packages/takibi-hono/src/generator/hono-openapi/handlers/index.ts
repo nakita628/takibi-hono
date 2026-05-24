@@ -1,13 +1,17 @@
 import { makeImports, makeStandardImports } from '../../../helper/imports.js'
-import type { RouteOperation } from '../../../helper/operations.js'
 import { makeStandardValidators, makeValidators } from '../../../helper/validator.js'
-import type { Components } from '../../../openapi/index.js'
-import { toCamelCase, toHonoPath } from '../../../utils/index.js'
+import type { Components, Operation, Parameter } from '../../../openapi/index.js'
+import { toHandlerVarName, toHonoPath } from '../../../utils/index.js'
 import { makeDescribeRoute } from '../routes/index.js'
 
 export function makeHandlerCode(
   groupName: string,
-  operations: readonly RouteOperation[],
+  operations: readonly {
+    readonly method: string
+    readonly path: string
+    readonly operation: Operation
+    readonly pathItemParameters?: readonly Parameter[] | undefined
+  }[],
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   options?: {
     readonly componentPaths?: { readonly [key: string]: string | undefined } | undefined
@@ -15,7 +19,7 @@ export function makeHandlerCode(
     readonly components?: Components | undefined
   },
 ) {
-  const handlerName = `${toCamelCase(groupName === '__root' ? 'root' : groupName)}Handler`
+  const handlerName = toHandlerVarName(groupName)
   const useOpenAPI = options?.openapi === true
   const components = options?.components
   const routeLines = useOpenAPI
@@ -40,12 +44,9 @@ export function makeHandlerCode(
         return `.${method}(${args.join(',')})`
       })
   const handlerCode = `export const ${handlerName}=new Hono()${routeLines.join('')}`
-  if (!useOpenAPI) {
-    const componentPaths = options?.componentPaths ?? { schemas: '../components' }
-    const imports = makeStandardImports(handlerCode, schemaLib, componentPaths)
-    return [...imports, '', handlerCode].join('\n')
-  }
   const componentPaths = options?.componentPaths ?? { schemas: '../components' }
-  const imports = makeImports(handlerCode, schemaLib, componentPaths)
+  const imports = useOpenAPI
+    ? makeImports(handlerCode, schemaLib, componentPaths)
+    : makeStandardImports(handlerCode, schemaLib, componentPaths)
   return [...imports, '', handlerCode].join('\n')
 }

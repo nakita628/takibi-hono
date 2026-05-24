@@ -28,28 +28,22 @@ function postProcess(
 ) {
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
-  const transforms: readonly ((s: string) => string)[] = [
+  // effect emits Encoded only and reuses `{varName}Schema` as the value-side type alias name;
+  // skip the bare `{varName}Schema` rename for effect so we don't touch the value-side alias.
+  const base =
     schemaLib === 'effect'
-      ? (s) => s
-      : (s) =>
-          s.replace(new RegExp(`export\\s+type\\s+${varName}\\s*=`), `export type ${pascalName} =`),
-    // valibot emits both Input and Output; we keep only Output.
-    (s) => s.replace(new RegExp(`\\n*export\\s+type\\s+${varName}Input\\s*=\\s*[^\\n]+\\n?`), ''),
-    (s) =>
-      s.replace(
-        new RegExp(`export\\s+type\\s+${varName}Output\\s*=`),
-        `export type ${pascalName} =`,
-      ),
-    (s) =>
-      s.replace(
-        new RegExp(`export\\s+type\\s+${varName}Encoded\\s*=`),
-        `export type ${pascalName} =`,
-      ),
-    schemaLib === 'zod' ? (s) => fixMultiArgCall(s, 'z.intersection') : (s) => s,
-    schemaLib === 'effect' ? (s) => fixMultiArgCall(s, 'Schema.extend') : (s) => s,
-  ]
-
-  return transforms.reduce((result, fn) => fn(result), code)
+      ? code
+      : code.replace(new RegExp(`export\\s+type\\s+${varName}\\s*=`), `export type ${pascalName} =`)
+  // valibot emits both Input and Output; drop Input and rename Output / Encoded to the bare type name.
+  const renamed = base
+    .replace(new RegExp(`\\n*export\\s+type\\s+${varName}Input\\s*=\\s*[^\\n]+\\n?`), '')
+    .replace(new RegExp(`export\\s+type\\s+${varName}Output\\s*=`), `export type ${pascalName} =`)
+    .replace(new RegExp(`export\\s+type\\s+${varName}Encoded\\s*=`), `export type ${pascalName} =`)
+  return schemaLib === 'zod'
+    ? fixMultiArgCall(renamed, 'z.intersection')
+    : schemaLib === 'effect'
+      ? fixMultiArgCall(renamed, 'Schema.extend')
+      : renamed
 }
 
 /** fn(A,B,C) → fn(fn(A,B),C) — `z.intersection` and `Schema.extend` only accept 2 args. */

@@ -1,7 +1,5 @@
 import path from 'node:path'
 
-export type SchemaLib = 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
-
 /** User-facing `takibi-hono` config block accepted by `defineConfig`. */
 export type TakibiHonoOptions = {
   readonly readonly?: boolean | undefined

@@ -3,7 +3,7 @@ import { parseOpenAPI } from '../openapi/index.js'
 import { makeApp } from './app/index.js'
 import { makeComponents } from './components/index.js'
 import { makeHandlers } from './handlers/index.js'
-import type { SchemaLib, TakibiHonoOptions } from './layout.js'
+import type { TakibiHonoOptions } from './layout.js'
 import { resolveLayout } from './layout.js'
 import { makeSchemas } from './schemas/index.js'
 import { makeWebhooks } from './webhooks/index.js'
@@ -14,7 +14,7 @@ import { makeWebhooks } from './webhooks/index.js'
  */
 export async function hono(config: {
   readonly input: string
-  readonly schema: SchemaLib
+  readonly schema: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
   readonly basePath?: string | undefined
   readonly format?: Record<string, unknown> | undefined
   readonly openapi?: boolean | undefined

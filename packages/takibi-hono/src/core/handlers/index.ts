@@ -7,19 +7,18 @@ import { makeBarrelCode } from '../../helper/barrel.js'
 import { collectOperations } from '../../helper/operations.js'
 import { mergeBarrelFile, mergeHandlerFile } from '../../merge/index.js'
 import type { OpenAPI } from '../../openapi/index.js'
-import type { Layout, SchemaLib } from '../layout.js'
+import type { Layout } from '../layout.js'
 
 /** Existing handler bodies/JSDoc are preserved via `mergeHandlerFile`; route metadata is overwritten. Orphan handler files (no longer in spec) are deleted. */
 export async function makeHandlers(
   openapi: OpenAPI,
-  schemaLib: SchemaLib,
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   useOpenAPI: boolean,
   layout: Layout,
 ) {
   const groups = collectOperations(openapi)
-  const handlerFileNames: string[] = []
+  const handlerFileNames = Array.from(groups.keys())
   for (const [groupName, operations] of groups) {
-    handlerFileNames.push(groupName)
     const generatedCode = makeHandlerCode(groupName, operations, schemaLib, {
       componentPaths: layout.componentPaths,
       openapi: useOpenAPI,
@@ -56,5 +55,5 @@ export async function makeHandlers(
   } else if (!dirResult.notFound) {
     return { ok: false, error: dirResult.error } as const
   }
-  return { ok: true, value: { handlerFileNames: handlerFileNames as readonly string[] } } as const
+  return { ok: true, value: { handlerFileNames } } as const
 }
