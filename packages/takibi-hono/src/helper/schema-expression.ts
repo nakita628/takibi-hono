@@ -1,3 +1,4 @@
+import type { ParamIn } from 'schema-to-library'
 import { schemaToArktype } from 'schema-to-library/arktype'
 import { schemaToEffect } from 'schema-to-library/effect'
 import { schemaToTypebox } from 'schema-to-library/typebox'
@@ -119,9 +120,10 @@ export function extractSchemaExports(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   exportType = true,
   readonly = false,
+  paramIn?: ParamIn,
 ) {
   const jsonSchema = toJSONSchema(name, schema)
-  const code = makeSchemaCode(jsonSchema, schemaLib, exportType, readonly)
+  const code = makeSchemaCode(jsonSchema, schemaLib, exportType, readonly, paramIn)
   return postProcess(stripImportLines(code), name, schemaLib)
 }
 
@@ -130,17 +132,19 @@ function makeSchemaCode(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   exportType: boolean,
   readonly: boolean,
+  paramIn: ParamIn | undefined,
 ) {
+  const opts = { exportType, openapi: true, readonly, ...(paramIn !== undefined && { paramIn }) }
   switch (schemaLib) {
     case 'zod':
-      return schemaToZod(jsonSchema, { exportType, openapi: true, readonly })
+      return schemaToZod(jsonSchema, opts)
     case 'valibot':
-      return schemaToValibot(jsonSchema, { exportType, openapi: true, readonly })
+      return schemaToValibot(jsonSchema, opts)
     case 'typebox':
-      return schemaToTypebox(jsonSchema, { exportType, openapi: true, readonly })
+      return schemaToTypebox(jsonSchema, opts)
     case 'arktype':
-      return schemaToArktype(jsonSchema, { exportType, openapi: true, readonly })
+      return schemaToArktype(jsonSchema, opts)
     case 'effect':
-      return schemaToEffect(jsonSchema, { exportType, openapi: true, readonly })
+      return schemaToEffect(jsonSchema, opts)
   }
 }

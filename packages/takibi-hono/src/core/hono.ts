@@ -29,10 +29,14 @@ export async function hono(config: {
   const layout = resolveLayout(ohConfig)
   const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
   if (!schemasResult.ok) return schemasResult
-  if (useOpenAPI) {
-    const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
-    if (!componentsResult.ok) return componentsResult
-  }
+  const componentsResult = await makeComponents(
+    openapi,
+    config.schema,
+    useOpenAPI,
+    ohConfig,
+    layout,
+  )
+  if (!componentsResult.ok) return componentsResult
   const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
   if (!handlersResult.ok) return handlersResult
   if (useOpenAPI) {

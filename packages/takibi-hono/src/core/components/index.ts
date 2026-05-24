@@ -20,6 +20,7 @@ import type { Layout, SchemaLib, TakibiHonoOptions } from '../layout.js'
 export async function makeComponents(
   openapi: OpenAPI,
   schemaLib: SchemaLib,
+  useOpenAPI: boolean,
   ohConfig: TakibiHonoOptions | undefined,
   layout: Layout,
 ) {
@@ -36,7 +37,7 @@ export async function makeComponents(
     {
       data: components.responses,
       configKey: 'responses' as const,
-      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly),
+      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly, useOpenAPI),
     },
     {
       data: components.parameters,

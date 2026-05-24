@@ -1,15 +1,63 @@
 import { isHeader, isMedia, isParameter, isRefObject } from '../guard/index.js'
 import type {
+  Components,
   Content,
   Header,
   Media,
   Operation,
   Parameter,
+  PathItem,
   Reference,
+  RequestBody,
   Schema,
 } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
+
+/** Resolves `{ $ref: '#/components/pathItems/X' }` → `components.pathItems[X]`. */
+export function resolvePathItemRef(
+  pathItem: unknown,
+  components: Components | undefined,
+): PathItem | undefined {
+  if (!pathItem || typeof pathItem !== 'object') return undefined
+  if (!isRefObject(pathItem)) return pathItem as PathItem
+  if (!components?.pathItems) return undefined
+  const ref = pathItem.$ref
+  if (typeof ref !== 'string' || !ref.startsWith('#/components/pathItems/')) return undefined
+  const name = ref.slice('#/components/pathItems/'.length)
+  return components.pathItems[name]
+}
+
+/** Resolves `{ $ref: '#/components/parameters/X' }` → `components.parameters[X]`. */
+export function resolveParameterRef(
+  param: unknown,
+  components: Components | undefined,
+): Parameter | undefined {
+  if (isParameter(param)) return param
+  if (!isRefObject(param) || !components?.parameters) return undefined
+  const ref = param.$ref
+  if (typeof ref !== 'string' || !ref.startsWith('#/components/parameters/')) return undefined
+  const name = ref.slice('#/components/parameters/'.length)
+  const resolved = components.parameters[name]
+  return resolved && isParameter(resolved) ? resolved : undefined
+}
+
+/** Resolves `{ $ref: '#/components/requestBodies/X' }` → `components.requestBodies[X]`. */
+export function resolveRequestBodyRef(
+  body: Operation['requestBody'] | Reference | undefined,
+  components: Components | undefined,
+): RequestBody | undefined {
+  if (!body) return undefined
+  if (isRefObject(body)) {
+    if (!components?.requestBodies) return undefined
+    const ref = body.$ref
+    if (typeof ref !== 'string' || !ref.startsWith('#/components/requestBodies/')) return undefined
+    const name = ref.slice('#/components/requestBodies/'.length)
+    return components.requestBodies[name]
+  }
+  if ('content' in body) return body
+  return undefined
+}
 
 export function makeOptional(
   expr: string,
@@ -99,9 +147,10 @@ export function makeServersPart(servers: NonNullable<Operation['servers']>): str
   return `servers:[${entries.join(',')}]`
 }
 
-export function groupParametersByLocation(allParams: readonly unknown[]) {
+export function groupParametersByLocation(allParams: readonly unknown[], components?: Components) {
   return allParams
-    .filter((param): param is Parameter => !isRefObject(param) && isParameter(param))
+    .map((p) => resolveParameterRef(p, components))
+    .filter((p): p is Parameter => p !== undefined)
     .reduce<{
       readonly [k: string]: {
         readonly name: string
@@ -122,13 +171,16 @@ export function groupParametersByLocation(allParams: readonly unknown[]) {
 
 /**
  * @internal Exported only for unit tests; consumers should use `makeContent` /
- * `makeResponse` which route through this function.
+ * `makeResponse` which route through this function. `useOpenAPI=true` wraps in
+ * hono-openapi's `resolver(...)`; `false` emits the bare schema (plain mode).
  */
 export function resolveSchema(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  useOpenAPI = true,
 ) {
   const expr = schema.$ref ? resolveRef(schema.$ref) : schemaToInlineExpression(schema, schemaLib)
+  if (!useOpenAPI) return expr
   const wrapped = wrapSchemaForValidator(expr, schemaLib)
   return `resolver(${wrapped})`
 }
@@ -136,11 +188,13 @@ export function resolveSchema(
 export function makeContent(
   content: Content | { [k: string]: unknown },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  useOpenAPI = true,
 ): readonly string[] {
   return Object.entries(content)
     .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
     .map(
-      ([mediaType, media]) => `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib)}}`,
+      ([mediaType, media]) =>
+        `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib, useOpenAPI)}}`,
     )
 }
 

@@ -1,6 +1,7 @@
 import { makeImports, makeStandardImports } from '../../../helper/imports.js'
 import type { RouteOperation } from '../../../helper/operations.js'
 import { makeStandardValidators, makeValidators } from '../../../helper/validator.js'
+import type { Components } from '../../../openapi/index.js'
 import { toCamelCase, toHonoPath } from '../../../utils/index.js'
 import { makeDescribeRoute } from '../routes/index.js'
 
@@ -11,24 +12,31 @@ export function makeHandlerCode(
   options?: {
     readonly componentPaths?: { readonly [key: string]: string | undefined } | undefined
     readonly openapi?: boolean | undefined
+    readonly components?: Components | undefined
   },
 ) {
   const handlerName = `${toCamelCase(groupName === '__root' ? 'root' : groupName)}Handler`
   const useOpenAPI = options?.openapi === true
+  const components = options?.components
   const routeLines = useOpenAPI
     ? operations.map(({ method, path, operation, pathItemParameters }) => {
         const honoPath = toHonoPath(path)
         const middlewares = [
           makeDescribeRoute(operation, schemaLib),
-          ...makeValidators(operation, pathItemParameters, schemaLib),
-          "(c)=>{throw new Error('Not implemented')}",
+          ...makeValidators(operation, pathItemParameters, schemaLib, components),
+          '(c)=>{}',
         ]
         return `.${method}(${[`'${honoPath}'`, ...middlewares].join(',')})`
       })
     : operations.map(({ method, path, operation, pathItemParameters }) => {
         const honoPath = toHonoPath(path)
-        const validators = makeStandardValidators(operation, pathItemParameters, schemaLib)
-        const args = [`'${honoPath}'`, ...validators, "(c)=>{throw new Error('Not implemented')}"]
+        const validators = makeStandardValidators(
+          operation,
+          pathItemParameters,
+          schemaLib,
+          components,
+        )
+        const args = [`'${honoPath}'`, ...validators, '(c)=>{}']
         return `.${method}(${args.join(',')})`
       })
   const handlerCode = `export const ${handlerName}=new Hono()${routeLines.join('')}`

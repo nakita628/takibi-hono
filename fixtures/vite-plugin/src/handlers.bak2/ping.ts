@@ -8,5 +8,5 @@ export const pingHandler = new Hono().get(
     operationId: 'ping',
     responses: { 200: { description: 'OK' } },
   }),
-  (c) => {},
+  (c) => c.body(null, 501),
 )

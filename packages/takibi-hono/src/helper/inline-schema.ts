@@ -11,6 +11,8 @@ function singleItems(items: Schema | readonly Schema[] | undefined) {
 
 /**
  * - `$ref` → bare reference (`UserSchema`).
+ * - paramIn ('query' | 'path') → delegate to schema-to-library for wire-string
+ *   coercion (z.coerce.* / Type.Transform.Decode / etc.).
  * - meta present (description / example / examples / deprecated) → delegate
  *   to schema-to-library so each lib emits its idiomatic meta call.
  * - otherwise → hand-written body for backward-compat.
@@ -18,9 +20,13 @@ function singleItems(items: Schema | readonly Schema[] | undefined) {
 export function schemaToInlineExpression(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  paramIn?: 'query' | 'path' | 'header' | 'cookie',
 ) {
   if (schema.$ref) {
     return resolveRef(schema.$ref)
+  }
+  if (paramIn === 'query' || paramIn === 'path') {
+    return inlineViaSchemaLibrary(schema, schemaLib, paramIn)
   }
   if (hasMeta(schema)) {
     return inlineViaSchemaLibrary(schema, schemaLib)
@@ -60,8 +66,9 @@ function hasMeta(schema: Schema): boolean {
 function inlineViaSchemaLibrary(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  paramIn?: 'query' | 'path' | 'header' | 'cookie',
 ): string {
-  const code = extractSchemaExports('Inline', schema, schemaLib, false, false)
+  const code = extractSchemaExports('Inline', schema, schemaLib, false, false, paramIn)
   const expr = code
     .trim()
     .replace(/^export\s+const\s+[A-Za-z_$][\w$]*Schema\s*=\s*/, '')

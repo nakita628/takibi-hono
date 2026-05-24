@@ -13,12 +13,13 @@ export function makeWebhooksCode(
 ) {
   const webhookOperations = collectWebhookOperations(openapi)
   if (webhookOperations.length === 0) return undefined
+  const components = openapi.components
   const routeLines = webhookOperations.map(
     ({ webhookName, method, operation, pathItemParameters }) => {
       const middlewares = [
         makeDescribeRoute(operation, schemaLib),
-        ...makeValidators(operation, pathItemParameters, schemaLib),
-        "(c)=>{throw new Error('Not implemented')}",
+        ...makeValidators(operation, pathItemParameters, schemaLib, components),
+        '(c)=>{}',
       ]
       const args = [`'/${webhookName}'`, ...middlewares].join(',')
       return `.${method}(${args})`

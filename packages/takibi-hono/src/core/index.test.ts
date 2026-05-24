@@ -389,22 +389,10 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
-  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
 `)
       },
     )
@@ -424,9 +412,7 @@ export const petsHandler = new Hono()
       const root = await fsp.readFile(path.join(d, 'handlers/__root.ts'), 'utf-8')
       expect(root).toBe(`import { Hono } from 'hono'
 
-export const rootHandler = new Hono().get('/', (c) => {
-  throw new Error('Not implemented')
-})
+export const rootHandler = new Hono().get('/', (c) => {})
 `)
     })
 
@@ -548,21 +534,15 @@ export const petsHandler = new Hono()
     '/pets',
     sValidator(
       'query',
-      v.object({ limit: v.optional(v.pipe(v.string(), v.toNumber(), v.integer())) }),
+      v.object({
+        limit: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
+      }),
     ),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
-  .delete('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', v.object({ petId: v.string() })), (c) => {})
 `)
       },
     )
@@ -602,7 +582,7 @@ export type CreatePet = Static<typeof CreatePetSchema>
     })
 
     it.concurrent(
-      'handlers/pets.ts: typebox path/query uses inline validator + Value.Convert',
+      'handlers/pets.ts: typebox uses standard tbValidator only (no inline wire coerce)',
       { timeout: 30000 },
       async () => {
         const d = tmpDir('typebox_standard_pets')
@@ -619,54 +599,27 @@ export type CreatePet = Static<typeof CreatePetSchema>
         const pets = await fsp.readFile(path.join(d, 'handlers/pets.ts'), 'utf-8')
         expect(pets).toBe(`import { Hono } from 'hono'
 import { tbValidator } from '@hono/typebox-validator'
-import { validator } from 'hono/validator'
-import { Value } from 'typebox/value'
 import Type from 'typebox'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
   .get(
     '/pets',
-    validator('query', (_v, _c) => {
-      const _s = Type.Object({ limit: Type.Optional(Type.Integer()) })
-      const _x = Value.Convert(_s, _v)
-      return Value.Check(_s, _x)
-        ? _x
-        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
-    }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    tbValidator(
+      'query',
+      Type.Object({
+        limit: Type.Optional(
+          Type.Transform(Type.String())
+            .Decode((v) => Number.parseInt(v, 10))
+            .Encode((v) => String(v)),
+        ),
+      }),
+    ),
+    (c) => {},
   )
-  .post('/pets', tbValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get(
-    '/pets/:petId',
-    validator('param', (_v, _c) => {
-      const _s = Type.Object({ petId: Type.String() })
-      const _x = Value.Convert(_s, _v)
-      return Value.Check(_s, _x)
-        ? _x
-        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
-    }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .delete(
-    '/pets/:petId',
-    validator('param', (_v, _c) => {
-      const _s = Type.Object({ petId: Type.String() })
-      const _x = Value.Convert(_s, _v)
-      return Value.Check(_s, _x)
-        ? _x
-        : _c.json({ success: false, errors: [...Value.Errors(_s, _x)] }, 400)
-    }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
+  .post('/pets', tbValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', tbValidator('param', Type.Object({ petId: Type.String() })), (c) => {})
+  .delete('/pets/:petId', tbValidator('param', Type.Object({ petId: Type.String() })), (c) => {})
 `)
       },
     )
@@ -727,19 +680,11 @@ export const petsHandler = new Hono()
   .get(
     '/pets',
     sValidator('query', type({ limit: type('string.integer.parse').optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {
-    throw new Error('Not implemented')
-  })
-  .delete('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {
-    throw new Error('Not implemented')
-  })
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', type({ petId: type('string') })), (c) => {})
 `)
       },
     )
@@ -807,26 +752,16 @@ export const petsHandler = new Hono()
     '/pets',
     effectValidator(
       'query',
-      Schema.Struct({
-        limit: Schema.optional(Schema.compose(Schema.NumberFromString, Schema.Int)),
-      }),
+      Schema.Struct({ limit: Schema.optional(Schema.NumberFromString.pipe(Schema.int())) }),
     ),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
-  .post('/pets', effectValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get('/pets/:petId', effectValidator('param', Schema.Struct({ petId: Schema.String })), (c) => {
-    throw new Error('Not implemented')
-  })
+  .post('/pets', effectValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', effectValidator('param', Schema.Struct({ petId: Schema.String })), (c) => {})
   .delete(
     '/pets/:petId',
     effectValidator('param', Schema.Struct({ petId: Schema.String })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -902,10 +837,8 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.int().optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    (c) => {},
   )
   .post(
     '/pets',
@@ -919,9 +852,7 @@ export const petsHandler = new Hono()
       },
     }),
     validator('json', CreatePetSchema),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .get(
     '/pets/:petId',
@@ -935,17 +866,13 @@ export const petsHandler = new Hono()
       },
     }),
     validator('param', z.object({ petId: z.string() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .delete(
     '/pets/:petId',
     describeRoute({ summary: 'Delete a pet', responses: { 204: { description: 'Deleted' } } }),
     validator('param', z.object({ petId: z.string() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -1492,9 +1419,7 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .post(
     '/users',
@@ -1510,9 +1435,7 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .get(
     '/users/:userId',
@@ -1533,9 +1456,7 @@ export const usersHandler = new Hono()
       },
     }),
     validator('param', z.object({ userId: z.string() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -1549,9 +1470,7 @@ export const usersHandler = new Hono()
       async () => {
         const expected = `import { Hono } from 'hono'
 
-export const rootHandler = new Hono().get('/', (c) => {
-  throw new Error('Not implemented')
-})
+export const rootHandler = new Hono().get('/', (c) => {})
 `
         for (const schema of ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const) {
           const d = tmpDir(`shared_root_${schema}`)
@@ -2041,9 +1960,7 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .post(
     '/users',
@@ -2059,9 +1976,7 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .get(
     '/users/:userId',
@@ -2082,9 +1997,7 @@ export const usersHandler = new Hono()
       },
     }),
     validator('param', z.object({ userId: z.string() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -2189,9 +2102,7 @@ export const webhooksHandler = new Hono().post(
     },
   }),
   validator('json', z.object({ orderId: z.string() })),
-  (c) => {
-    throw new Error('Not implemented')
-  },
+  (c) => {},
 )
 `)
       },
@@ -2653,22 +2564,10 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
-  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
-  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
 `)
       },
     )
@@ -3093,9 +2992,7 @@ export const usersHandler = new Hono().get(
     operationId: 'listUsers',
     responses: { 200: UserListResponse },
   }),
-  (c) => {
-    throw new Error('Not implemented')
-  },
+  (c) => {},
 )
 `)
       },
@@ -3348,6 +3245,146 @@ components:
           'utf-8',
         )
         expect(mt.includes("from '~/components/schemas'")).toBe(true)
+      },
+    )
+  })
+
+  // ===========================================================================
+  // openapi flag is an output dialect, NOT a feature gate.
+  // - schemas / parameters / headers / requestBodies / examples / mediaTypes /
+  //   securitySchemes / links / callbacks / pathItems are config-driven:
+  //   emitted whenever components.<kind>.output is set, regardless of openapi.
+  // - responses switches dialect: openapi:true uses resolver(), false emits the
+  //   bare schema (no hono-openapi peer dep needed in plain mode).
+  // ===========================================================================
+  describe('openapi flag is a dialect, not a feature gate', () => {
+    it.concurrent(
+      'openapi:false + components.<all>.output → every configured file is emitted',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('dialect_plain_all_components')
+        const result = await hono({
+          input: componentsYaml,
+          schema: 'zod',
+          openapi: false,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: { output: path.join(d, 'components/schemas.ts') },
+              responses: { output: path.join(d, 'components/responses.ts') },
+              parameters: { output: path.join(d, 'components/parameters.ts') },
+              headers: { output: path.join(d, 'components/headers.ts') },
+              requestBodies: { output: path.join(d, 'components/requestBodies.ts') },
+              examples: { output: path.join(d, 'components/examples.ts') },
+              securitySchemes: { output: path.join(d, 'components/securitySchemes.ts') },
+              links: { output: path.join(d, 'components/links.ts') },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const expected = [
+          'schemas.ts',
+          'responses.ts',
+          'parameters.ts',
+          'headers.ts',
+          'requestBodies.ts',
+          'examples.ts',
+          'securitySchemes.ts',
+          'links.ts',
+        ]
+        for (const file of expected) {
+          expect(fs.existsSync(path.join(d, 'components', file))).toBe(true)
+        }
+      },
+    )
+
+    it.concurrent(
+      'openapi:false + responses.output → no resolver() wrapping (plain dialect)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('dialect_plain_responses')
+        const result = await hono({
+          input: componentsYaml,
+          schema: 'zod',
+          openapi: false,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: { output: path.join(d, 'components/schemas.ts') },
+              responses: { output: path.join(d, 'components/responses.ts') },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const responses = await fsp.readFile(path.join(d, 'components/responses.ts'), 'utf-8')
+        expect(responses).toBe(`import * as z from 'zod'
+import { ErrorSchema, UserSchema } from './schemas'
+
+export const UserListResponseResponse = {
+  description: 'A list of users',
+  content: { 'application/json': { schema: z.array(UserSchema) } },
+  headers: {
+    'X-Total-Count': { description: 'Total number of users', schema: { type: 'integer' } as const },
+  },
+}
+
+export const UnauthorizedResponseResponse = {
+  description: 'Authentication required',
+  content: { 'application/json': { schema: ErrorSchema } },
+}
+`)
+      },
+    )
+
+    it.concurrent(
+      'openapi:true + responses.output → resolver() wrapping (openapi dialect)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('dialect_openapi_responses')
+        const result = await hono({
+          input: componentsYaml,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: {
+              schemas: { output: path.join(d, 'components/schemas.ts') },
+              responses: { output: path.join(d, 'components/responses.ts') },
+            },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const responses = await fsp.readFile(path.join(d, 'components/responses.ts'), 'utf-8')
+        expect(responses.startsWith("import { resolver } from 'hono-openapi'")).toBe(true)
+        expect(responses.includes('resolver(z.array(UserSchema))')).toBe(true)
+        expect(responses.includes('resolver(ErrorSchema)')).toBe(true)
+      },
+    )
+
+    it.concurrent(
+      'openapi:false + only schemas configured → only schemas.ts emitted (no silent gen)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('dialect_plain_schemas_only')
+        const result = await hono({
+          input: componentsYaml,
+          schema: 'zod',
+          openapi: false,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { schemas: { output: path.join(d, 'components/schemas.ts') } },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        expect(fs.existsSync(path.join(d, 'components/schemas.ts'))).toBe(true)
+        // Not configured → must not be emitted.
+        expect(fs.existsSync(path.join(d, 'components/responses.ts'))).toBe(false)
+        expect(fs.existsSync(path.join(d, 'components/parameters.ts'))).toBe(false)
+        expect(fs.existsSync(path.join(d, 'components/headers.ts'))).toBe(false)
       },
     )
   })

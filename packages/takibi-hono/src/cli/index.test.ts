@@ -292,16 +292,8 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
 
         const barrel = await fsp.readFile(path.join(d, 'src/handlers/index.ts'), 'utf-8')
@@ -515,16 +507,8 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
     })
 
@@ -654,9 +638,7 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .post(
     '/users',
@@ -671,9 +653,7 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -977,10 +957,8 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.int().optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    (c) => {},
   )
   .post(
     '/pets',
@@ -994,9 +972,7 @@ export const petsHandler = new Hono()
       },
     }),
     validator('json', CreatePetSchema),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
     })

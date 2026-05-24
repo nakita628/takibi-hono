@@ -76,7 +76,7 @@ function replaceRouteParts(
 ) {
   const file = parseSnippet(generatedCode)
   const seenPositions = new Set<number>()
-  const STUBS = new Set(['(c)=>{}', '(c)=>{return}'])
+  const STUBS = new Set(['(c)=>{}'])
   const ops: [start: number, end: number, text: string][] = []
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const namePos = propAccess.getNameNode().getStart()
@@ -234,8 +234,10 @@ function mergeImports(existingFile: SourceFile, generatedImports: string) {
     .getImportDeclarations()
     .filter((decl) => {
       const spec = decl.getModuleSpecifierValue()
-      if (HANDLER_IMPORT_SOURCES.has(spec) || spec.startsWith('.') || generatedSpecifiers.has(spec))
-        return false
+      if (HANDLER_IMPORT_SOURCES.has(spec) || generatedSpecifiers.has(spec)) return false
+      // Type-only relative imports are user-added (e.g. `import type { Pet }`).
+      // Value relative imports are generator-managed.
+      if (spec.startsWith('.') && !decl.isTypeOnly()) return false
       const named = decl.getNamedImports()
       return !(named.length > 0 && named.every((ni) => generatedNamedImports.has(ni.getName())))
     })

@@ -157,17 +157,10 @@ export function makeStandardImports(
   const config = getLibraryConfig(schemaLib)
   const svConfig = getStandardValidatorConfig(schemaLib)
   const defined = collectDefinedExports(code)
-  // \b boundary so we don't false-match `tbValidator(`.
-  const usesInlineValidator = /\bvalidator\(/.test(code)
-  const usesValueModule = code.includes('Value.Convert(') || code.includes('Value.Check(')
 
   return [
     "import{Hono}from'hono'",
     ...(code.includes(`${svConfig.validatorFn}(`) ? [svConfig.validatorImport] : []),
-    ...(schemaLib === 'typebox' && usesInlineValidator
-      ? ["import{validator}from'hono/validator'"]
-      : []),
-    ...(schemaLib === 'typebox' && usesValueModule ? ["import{Value}from'typebox/value'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const

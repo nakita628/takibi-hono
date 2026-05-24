@@ -1,6 +1,7 @@
-import { isHttpMethod, isOperation, isParameter } from '../guard/index.js'
+import { isHttpMethod, isOperation } from '../guard/index.js'
 import type { OpenAPI, Operation, Parameter } from '../openapi/index.js'
 import { makeHandlerFileName } from '../utils/index.js'
+import { resolveParameterRef, resolvePathItemRef } from './openapi.js'
 
 export type RouteOperation = {
   readonly method: string
@@ -9,14 +10,24 @@ export type RouteOperation = {
   readonly pathItemParameters?: readonly Parameter[] | undefined
 }
 
+function resolvePathItemParameters(
+  params: unknown,
+  openapi: OpenAPI,
+): readonly Parameter[] | undefined {
+  if (!Array.isArray(params)) return undefined
+  return params
+    .map((p) => resolveParameterRef(p, openapi.components))
+    .filter((p): p is Parameter => p !== undefined)
+}
+
 export function collectOperations(
   openapi: OpenAPI,
 ): ReadonlyMap<string, readonly RouteOperation[]> {
-  return Object.entries(openapi.paths).reduce((groups, [pathStr, pathItem]) => {
+  return Object.entries(openapi.paths).reduce((groups, [pathStr, rawPathItem]) => {
+    const pathItem = resolvePathItemRef(rawPathItem, openapi.components)
+    if (!pathItem) return groups
     const groupName = makeHandlerFileName(pathStr)
-    const pathItemParameters = Array.isArray(pathItem.parameters)
-      ? pathItem.parameters.filter(isParameter)
-      : undefined
+    const pathItemParameters = resolvePathItemParameters(pathItem.parameters, openapi)
     const ops = Object.entries(pathItem)
       .filter(
         (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
@@ -38,10 +49,10 @@ type WebhookOperation = {
 
 export function collectWebhookOperations(openapi: OpenAPI): readonly WebhookOperation[] {
   if (!openapi.webhooks) return []
-  return Object.entries(openapi.webhooks).flatMap(([webhookName, pathItem]) => {
-    const pathItemParameters = Array.isArray(pathItem.parameters)
-      ? pathItem.parameters.filter(isParameter)
-      : undefined
+  return Object.entries(openapi.webhooks).flatMap(([webhookName, rawPathItem]) => {
+    const pathItem = resolvePathItemRef(rawPathItem, openapi.components)
+    if (!pathItem) return []
+    const pathItemParameters = resolvePathItemParameters(pathItem.parameters, openapi)
     return Object.entries(pathItem)
       .filter(
         (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),

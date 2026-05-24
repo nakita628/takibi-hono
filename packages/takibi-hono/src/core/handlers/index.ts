@@ -23,6 +23,7 @@ export async function makeHandlers(
     const generatedCode = makeHandlerCode(groupName, operations, schemaLib, {
       componentPaths: layout.componentPaths,
       openapi: useOpenAPI,
+      components: openapi.components,
     })
     const handlerOutput = path.join(layout.handlersDir, `${groupName}.ts`)
     const existingResult = await readFile(handlerOutput)

@@ -266,7 +266,9 @@ describe('mergeHandlerFile', () => {
     )
   })
 
-  it('keeps stub when existing has (c) => { return } stub', () => {
+  it('preserves user-written (c) => { return } body across merge (not in STUBS)', () => {
+    // STUBS only contains the canonical generated stub `(c)=>{}`. Anything else
+    // — including `(c) => { return }` — counts as user code and is preserved.
     const existing = [
       "import { Hono } from 'hono'",
       '',
@@ -288,7 +290,7 @@ describe('mergeHandlerFile', () => {
         "import { Hono } from 'hono'",
         "import { describeRoute } from 'hono-openapi'",
         '',
-        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'List' }), (c) => {})",
+        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'List' }), (c) => { return })",
         '',
       ].join('\n'),
     )
@@ -1765,5 +1767,97 @@ describe('mergeHandlerFile: human/generator boundary edge cases', () => {
         '',
       ].join('\n'),
     )
+  })
+})
+
+describe('mergeHandlerFile: import type relative path preservation', () => {
+  it('preserves user-added `import type { Pet }` from a relative path', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      "import type { Pet } from '../components/schemas'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => c.json([] satisfies Pet[]))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    // type-only relative import must survive even though value relative imports
+    // (e.g. `import { PetSchema } from '../components/schemas'`) are generator-managed.
+    expect(result.includes("import type { Pet } from '../components/schemas'")).toBe(true)
+    // user-written non-stub body is also preserved.
+    expect(result.includes('c.json([] satisfies Pet[])')).toBe(true)
+  })
+
+  it('drops a non-type relative import (treated as generator-managed)', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import { something } from '../legacy/helper'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => c.json({}))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes("from '../legacy/helper'")).toBe(false)
+  })
+})
+
+describe('mergeHandlerFile: STUBS boundary', () => {
+  it('overwrites bare stub (c)=>{} with generated stub (no preservation)', () => {
+    // Existing body is exactly the stub shape — merge should NOT preserve it,
+    // so generated content (including any new validators) overrides cleanly.
+    const existing = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('query', z.object({})), (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes('sValidator')).toBe(true)
+  })
+
+  it('preserves any user-written body that is not in the STUBS set', () => {
+    // One extra character (`return undefined`) makes the body non-stub; merge
+    // must preserve it.
+    const existing = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {",
+      '  return undefined',
+      '})',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes('return undefined')).toBe(true)
   })
 })

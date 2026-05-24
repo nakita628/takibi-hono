@@ -9,6 +9,9 @@ import {
   makeOptional,
   makeResponse,
   makeServersPart,
+  resolveParameterRef,
+  resolvePathItemRef,
+  resolveRequestBodyRef,
   resolveSchema,
   wrapSchemaForValidator,
 } from './openapi.js'
@@ -552,5 +555,96 @@ describe('makeResponse', () => {
     expect(result).toBe(
       '200:{description:"OK",content:{\'application/json\':{schema:resolver(PetSchema)}}}',
     )
+  })
+})
+
+// ─── resolveParameterRef ─────────────────────────────────────────────
+describe('resolveParameterRef', () => {
+  test('returns inline Parameter as-is when input is not a $ref', () => {
+    const inline = { name: 'page', in: 'query' as const, schema: { type: 'integer' as const } }
+    expect(resolveParameterRef(inline, undefined)).toBe(inline)
+  })
+
+  test("resolves '#/components/parameters/X' to inline Parameter", () => {
+    const PageQuery = {
+      name: 'page',
+      in: 'query' as const,
+      schema: { type: 'integer' as const },
+    }
+    expect(
+      resolveParameterRef(
+        { $ref: '#/components/parameters/PageQuery' },
+        { parameters: { PageQuery } },
+      ),
+    ).toBe(PageQuery)
+  })
+
+  test('returns undefined for unknown $ref name', () => {
+    expect(
+      resolveParameterRef({ $ref: '#/components/parameters/Missing' }, { parameters: {} }),
+    ).toBeUndefined()
+  })
+
+  test('returns undefined for non-local $ref (external file ref)', () => {
+    expect(resolveParameterRef({ $ref: 'external.yaml#/Foo' }, { parameters: {} })).toBeUndefined()
+  })
+})
+
+// ─── resolveRequestBodyRef ───────────────────────────────────────────
+describe('resolveRequestBodyRef', () => {
+  test("resolves '#/components/requestBodies/X' and preserves required/description", () => {
+    const CreateUserBody = {
+      description: 'New user',
+      required: true,
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/User' } } },
+    } as never
+    expect(
+      resolveRequestBodyRef(
+        { $ref: '#/components/requestBodies/CreateUserBody' },
+        { requestBodies: { CreateUserBody } },
+      ),
+    ).toBe(CreateUserBody)
+  })
+
+  test('returns undefined when components.requestBodies is missing', () => {
+    expect(resolveRequestBodyRef({ $ref: '#/components/requestBodies/X' }, {})).toBeUndefined()
+  })
+})
+
+// ─── resolvePathItemRef ──────────────────────────────────────────────
+describe('resolvePathItemRef', () => {
+  test("resolves '#/components/pathItems/X' to inline PathItem", () => {
+    const AdminPet = {
+      get: { responses: { 200: { description: 'OK' } } },
+    }
+    expect(
+      resolvePathItemRef({ $ref: '#/components/pathItems/AdminPet' }, { pathItems: { AdminPet } }),
+    ).toBe(AdminPet)
+  })
+
+  test('returns undefined for unknown pathItem name', () => {
+    expect(
+      resolvePathItemRef({ $ref: '#/components/pathItems/Missing' }, { pathItems: {} }),
+    ).toBeUndefined()
+  })
+})
+
+// ─── makeContent useOpenAPI=false (plain dialect) ────────────────────
+describe('makeContent dialect', () => {
+  test('useOpenAPI=false emits bare schema (no resolver wrapping)', () => {
+    const result = makeContent(
+      { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+      'zod',
+      false,
+    )
+    expect(result).toStrictEqual(["'application/json':{schema:PetSchema}"])
+  })
+
+  test('useOpenAPI defaults to true (resolver wrapping retained)', () => {
+    const result = makeContent(
+      { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
+      'zod',
+    )
+    expect(result).toStrictEqual(["'application/json':{schema:resolver(PetSchema)}"])
   })
 })
