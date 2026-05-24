@@ -365,7 +365,11 @@ export function parseConfig(config: unknown) {
 
 export async function readConfig() {
   const abs = resolve(process.cwd(), 'takibi-hono.config.ts')
-  if (!existsSync(abs)) return { ok: false, error: `Config not found: ${abs}` } as const
+  if (!existsSync(abs))
+    return {
+      ok: false,
+      error: `Config not found: ${abs}\nCreate takibi-hono.config.ts in the current directory. See https://github.com/nakita628/takibi-hono#configuration for an example.`,
+    } as const
   try {
     const mod = await import(pathToFileURL(abs).href)
     if (
@@ -374,7 +378,10 @@ export async function readConfig() {
       !('default' in mod) ||
       mod.default === undefined
     ) {
-      return { ok: false, error: 'Config must export default object' } as const
+      return {
+        ok: false,
+        error: `Config must export default object from ${abs}\nDid you forget \`export default defineConfig({ ... })\`?`,
+      } as const
     }
     return parseConfig(mod.default)
   } catch (e) {

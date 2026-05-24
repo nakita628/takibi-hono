@@ -1,3 +1,5 @@
+import { OPENAPI_COMPONENT_SUFFIX_MAP } from 'schema-to-library'
+
 export function makeHandlerFileName(path: string) {
   const segments = path.split('/').filter(Boolean)
   if (segments.length === 0) return '__root'
@@ -24,19 +26,6 @@ export function toCamelCase(str: string) {
 }
 
 export function resolveRef(ref: string) {
-  const OPENAPI_COMPONENT_SUFFIX_MAP = [
-    { prefix: '#/components/schemas/', suffix: 'Schema' },
-    { prefix: '#/components/parameters/', suffix: 'ParamsSchema' },
-    { prefix: '#/components/headers/', suffix: 'HeaderSchema' },
-    { prefix: '#/components/securitySchemes/', suffix: 'SecurityScheme' },
-    { prefix: '#/components/requestBodies/', suffix: 'RequestBody' },
-    { prefix: '#/components/responses/', suffix: 'Response' },
-    { prefix: '#/components/examples/', suffix: 'Example' },
-    { prefix: '#/components/links/', suffix: 'Link' },
-    { prefix: '#/components/callbacks/', suffix: 'Callback' },
-    { prefix: '#/components/pathItems/', suffix: 'PathItem' },
-    { prefix: '#/components/mediaTypes/', suffix: 'MediaTypeSchema' },
-  ]
   for (const { prefix, suffix } of OPENAPI_COMPONENT_SUFFIX_MAP) {
     if (ref.startsWith(prefix)) {
       const rest = ref.slice(prefix.length)
@@ -56,4 +45,9 @@ export function renderNamedImport(names: readonly string[], spec: string) {
 
 export function toHonoPath(path: string) {
   return path.replace(/\{([^}]+)\}/g, ':$1')
+}
+
+/** Maps a handler file name to its variable name (`__root` → `rootHandler`, otherwise `<camelCase>Handler`). */
+export function toHandlerVarName(handlerFileName: string) {
+  return `${toCamelCase(handlerFileName === '__root' ? 'root' : handlerFileName)}Handler`
 }

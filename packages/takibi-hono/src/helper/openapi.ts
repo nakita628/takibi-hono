@@ -1,15 +1,54 @@
 import { isHeader, isMedia, isParameter, isRefObject } from '../guard/index.js'
 import type {
+  Components,
   Content,
   Header,
   Media,
   Operation,
   Parameter,
+  PathItem,
   Reference,
   Schema,
 } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
+
+/** Returns the local component name when `value` is `{ $ref: '${prefix}<name>' }`. */
+function localRefName(value: unknown, prefix: string) {
+  if (!isRefObject(value)) return undefined
+  const ref = value.$ref
+  return typeof ref === 'string' && ref.startsWith(prefix) ? ref.slice(prefix.length) : undefined
+}
+
+/** Resolves `{ $ref: '#/components/pathItems/X' }` → `components.pathItems[X]`. */
+export function resolvePathItemRef(
+  pathItem: unknown,
+  components: Components | undefined,
+): PathItem | undefined {
+  if (!pathItem || typeof pathItem !== 'object') return undefined
+  if (!isRefObject(pathItem)) return pathItem
+  const name = localRefName(pathItem, '#/components/pathItems/')
+  return name === undefined ? undefined : components?.pathItems?.[name]
+}
+
+/** Resolves `{ $ref: '#/components/parameters/X' }` → `components.parameters[X]`. */
+export function resolveParameterRef(param: unknown, components: Components | undefined) {
+  if (isParameter(param)) return param
+  const name = localRefName(param, '#/components/parameters/')
+  const resolved = name === undefined ? undefined : components?.parameters?.[name]
+  return isParameter(resolved) ? resolved : undefined
+}
+
+/** Resolves `{ $ref: '#/components/requestBodies/X' }` → `components.requestBodies[X]`. */
+export function resolveRequestBodyRef(
+  body: Operation['requestBody'] | Reference | undefined,
+  components: Components | undefined,
+) {
+  if (!body) return undefined
+  if (!isRefObject(body)) return 'content' in body ? body : undefined
+  const name = localRefName(body, '#/components/requestBodies/')
+  return name === undefined ? undefined : components?.requestBodies?.[name]
+}
 
 export function makeOptional(
   expr: string,
@@ -99,9 +138,10 @@ export function makeServersPart(servers: NonNullable<Operation['servers']>): str
   return `servers:[${entries.join(',')}]`
 }
 
-export function groupParametersByLocation(allParams: readonly unknown[]) {
+export function groupParametersByLocation(allParams: readonly unknown[], components?: Components) {
   return allParams
-    .filter((param): param is Parameter => !isRefObject(param) && isParameter(param))
+    .map((p) => resolveParameterRef(p, components))
+    .filter((p): p is Parameter => p !== undefined)
     .reduce<{
       readonly [k: string]: {
         readonly name: string
@@ -120,11 +160,18 @@ export function groupParametersByLocation(allParams: readonly unknown[]) {
     )
 }
 
+/**
+ * @internal Exported only for unit tests; consumers should use `makeContent` /
+ * `makeResponse` which route through this function. `useOpenAPI=true` wraps in
+ * hono-openapi's `resolver(...)`; `false` emits the bare schema (plain mode).
+ */
 export function resolveSchema(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  useOpenAPI = true,
 ) {
   const expr = schema.$ref ? resolveRef(schema.$ref) : schemaToInlineExpression(schema, schemaLib)
+  if (!useOpenAPI) return expr
   const wrapped = wrapSchemaForValidator(expr, schemaLib)
   return `resolver(${wrapped})`
 }
@@ -132,17 +179,13 @@ export function resolveSchema(
 export function makeContent(
   content: Content | { [k: string]: unknown },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  useOpenAPI = true,
 ): readonly string[] {
   return Object.entries(content)
     .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
     .map(
       ([mediaType, media]) =>
-        // `resolveSchema` applies `wrapSchemaForValidator` so effect schemas
-        // get `standardSchemaV1(...)` and typebox gets `Compile(...)` before
-        // the outer `resolver(...)` — without this, `resolver(UserListSchema)`
-        // fails StandardSchemaV1's `~standard` requirement (TS2345) for
-        // effect schemas.
-        `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib)}}`,
+        `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib, useOpenAPI)}}`,
     )
 }
 

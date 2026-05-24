@@ -142,3 +142,65 @@ describe('collectWebhookOperations', () => {
     expect(result[0].webhookName).toBe('active')
   })
 })
+
+describe('collectOperations: pathItem $ref resolution', () => {
+  it('resolves path-level $ref to components.pathItems[X] and collects its operations', () => {
+    const openapi = {
+      paths: {
+        '/admin/pets/{id}': { $ref: '#/components/pathItems/AdminPet' },
+      },
+      components: {
+        pathItems: {
+          AdminPet: {
+            get: { operationId: 'adminGetPet', responses: { '200': { description: 'OK' } } },
+            delete: { operationId: 'adminDeletePet', responses: { '204': { description: 'OK' } } },
+          },
+        },
+      },
+    } as unknown as OpenAPI
+    const groups = collectOperations(openapi)
+    const ops = groups.get('admin')
+    expect(ops).toBeDefined()
+    expect(ops!.length).toBe(2)
+    expect(ops!.map((o) => o.method).sort()).toStrictEqual(['delete', 'get'])
+    for (const op of ops!) expect(op.path).toBe('/admin/pets/{id}')
+  })
+
+  it('drops the path silently when $ref target is missing (no crash)', () => {
+    const openapi = {
+      paths: { '/missing': { $ref: '#/components/pathItems/Nope' } },
+      components: { pathItems: {} },
+    } as unknown as OpenAPI
+    const groups = collectOperations(openapi)
+    expect(groups.size).toBe(0)
+  })
+
+  it('merges $ref-resolved pathItem.parameters before processing operations', () => {
+    const openapi = {
+      paths: {
+        '/admin/pets/{id}': { $ref: '#/components/pathItems/AdminPet' },
+      },
+      components: {
+        parameters: {
+          IdPath: {
+            name: 'id',
+            in: 'path' as const,
+            required: true,
+            schema: { type: 'integer' as const },
+          },
+        },
+        pathItems: {
+          AdminPet: {
+            parameters: [{ $ref: '#/components/parameters/IdPath' }],
+            get: { responses: { '200': { description: 'OK' } } },
+          },
+        },
+      },
+    } as unknown as OpenAPI
+    const groups = collectOperations(openapi)
+    const ops = groups.get('admin')
+    expect(ops).toBeDefined()
+    expect(ops![0].pathItemParameters?.length).toBe(1)
+    expect(ops![0].pathItemParameters?.[0].name).toBe('id')
+  })
+})

@@ -1,7 +1,7 @@
 import { schemaToInlineExpression } from '../../../helper/inline-schema.js'
 import { makeOptional } from '../../../helper/openapi.js'
 import { makeTypeExport } from '../../../helper/type-export.js'
-import type { Components } from '../../../openapi/index.js'
+import type { Components, Parameter } from '../../../openapi/index.js'
 import { toPascalCase } from '../../../utils/index.js'
 
 /**
@@ -15,13 +15,15 @@ export async function makeParametersCode(
   exportTypes = false,
 ): Promise<string> {
   return Object.entries(parameters)
-    .filter(([, param]) => !('$ref' in param && param.$ref))
-    .filter(([, param]) => 'schema' in param && param.schema)
+    .filter(
+      (entry): entry is [string, Parameter] =>
+        !('$ref' in entry[1] && entry[1].$ref) && 'schema' in entry[1] && !!entry[1].schema,
+    )
     .map(([name, param]) => {
       const pascal = toPascalCase(name)
       const varName = `${pascal}ParamsSchema`
       const typeName = `${pascal}Params`
-      const schemaExpr = schemaToInlineExpression(param.schema!, schemaLib)
+      const schemaExpr = schemaToInlineExpression(param.schema, schemaLib)
       const optionalExpr =
         param.required !== true ? makeOptional(schemaExpr, schemaLib) : schemaExpr
       const constDecl = `export const ${varName}=${optionalExpr}`

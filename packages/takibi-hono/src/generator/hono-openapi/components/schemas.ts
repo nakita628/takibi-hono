@@ -22,28 +22,23 @@ export async function makeSchemasCode(
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const registerRef = options?.registerRef ?? false
-  const declarations: string[] = []
   const circularNames = detectCircularRefs(schemas)
   const schemaNames = Object.keys(schemas)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-  for (const [name, schema] of Object.entries(schemas)) {
-    const rawDecl = extractSchemaExports(name, schema, schemaLib, exportTypes, readonly)
-    declarations.push(
-      processDeclaration(rawDecl, name, schema, schemaLib, {
-        schemaNames,
-        circularNames,
-        cyclicGroupPascal,
-        readonly,
-        registerRef,
-      }),
-    )
-  }
-  const declarationsCode = declarations.join('\n')
-  const sortedDeclarations = ast(declarationsCode)
-  const imports = [config.schemaImport]
-  if (schemaLib === 'typebox' && exportTypes) {
-    imports.push("import type{Static}from'typebox'")
-  }
+  const declarations = Object.entries(schemas).map(([name, schema]) =>
+    processDeclaration(
+      extractSchemaExports(name, schema, schemaLib, exportTypes, readonly),
+      name,
+      schema,
+      schemaLib,
+      { schemaNames, circularNames, cyclicGroupPascal, readonly, registerRef },
+    ),
+  )
+  const sortedDeclarations = ast(declarations.join('\n'))
+  const imports = [
+    config.schemaImport,
+    ...(schemaLib === 'typebox' && exportTypes ? ["import type{Static}from'typebox'"] : []),
+  ]
   return [...imports, '', sortedDeclarations].join('\n')
 }
 
@@ -74,21 +69,16 @@ export async function makeSplitSchemas(
       registerRef,
     })
     const deps = findSchemaRefs(decl, name).filter((d) => d in schemas)
-    const lines: string[] = []
-    lines.push(config.schemaImport)
-    if (schemaLib === 'typebox' && exportTypes) {
-      lines.push("import type{Static}from'typebox'")
-    }
-    if (deps.length > 0) {
-      const sortedDeps = deps.toSorted()
-      for (const dep of sortedDeps) {
-        const depVar = `${toPascalCase(dep)}Schema`
-        const depFile = `./${uncapitalize(dep)}`
-        lines.push(`import{${depVar}}from'${depFile}'`)
-      }
-    }
-    lines.push('')
-    lines.push(decl)
+    const depImports = deps
+      .toSorted()
+      .map((dep) => `import{${toPascalCase(dep)}Schema}from'./${uncapitalize(dep)}'`)
+    const lines = [
+      config.schemaImport,
+      ...(schemaLib === 'typebox' && exportTypes ? ["import type{Static}from'typebox'"] : []),
+      ...depImports,
+      '',
+      decl,
+    ]
     const fileName = `${uncapitalize(name)}.ts`
     const filePath = path.join(outputDir, fileName)
     const result = await emit(lines.join('\n'), outputDir, filePath)
@@ -99,9 +89,7 @@ export async function makeSplitSchemas(
     .map((name) => `export*from'./${uncapitalize(name)}'`)
     .join('\n')
   const barrelPath = path.join(outputDir, 'index.ts')
-  const barrelResult = await emit(barrelCode, outputDir, barrelPath)
-  if (!barrelResult.ok) return barrelResult
-  return { ok: true, value: undefined } as const
+  return emit(barrelCode, outputDir, barrelPath)
 }
 
 function processDeclaration(
@@ -120,8 +108,6 @@ function processDeclaration(
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
   const needsLazy = ctx.circularNames.has(name)
-  // ref registration is only meaningful when the project emits hono-openapi
-  // routes; in plain Hono mode the components.schemas section is unused.
   const maybeInjectRef = (decl: string) =>
     ctx.registerRef ? injectRef(decl, name, schemaLib, hasOuterMeta(schema)) : decl
   if (needsLazy && schemaLib === 'zod') {
@@ -179,12 +165,13 @@ function addCircularTypeAnnotation(
   decl: string,
   varName: string,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
-): string {
-  const typeMap: Partial<Record<'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect', string>> = {
-    valibot: 'v.GenericSchema',
-    effect: 'Schema.Schema<any>',
-  }
-  const annotation = typeMap[schemaLib]
+) {
+  const annotation =
+    schemaLib === 'valibot'
+      ? 'v.GenericSchema'
+      : schemaLib === 'effect'
+        ? 'Schema.Schema<any>'
+        : undefined
   if (!annotation) return decl
   return decl.replace(new RegExp(`(export\\s+const\\s+${varName})\\s*=`), `$1:${annotation}=`)
 }
@@ -222,25 +209,20 @@ function unwrapNonCircularLazy(
         (match, varName) => (needsLazy.has(varName) ? match : varName),
       )
     case 'effect':
-      // `Schema.suspend(() => X)` defers evaluation; for non-circular refs
-      // it's unnecessary AND breaks the StandardSchemaV1 inference chain
-      // (e.g. `Schema.Array(Schema.suspend(() => UserSchema))` doesn't
-      // expose `~standard` so `resolver(...)` rejects it).
+      // Schema.suspend breaks the StandardSchemaV1 inference chain for
+      // non-circular refs: Schema.Array(Schema.suspend(() => X)) drops
+      // ~standard so resolver(...) rejects it.
       return decl.replace(
         /Schema\.suspend\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
         (match, varName) => (needsLazy.has(varName) ? match : varName),
       )
     case 'typebox':
-      if (circularNames.has(selfName)) {
-        decl = decl.replace(
-          /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
-          (_match, varName) => {
-            if (varName === selfVarName) return 'This'
-            return varName
-          },
-        )
-      }
-      return decl
+      return circularNames.has(selfName)
+        ? decl.replace(
+            /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
+            (_match, varName) => (varName === selfVarName ? 'This' : varName),
+          )
+        : decl
     default:
       return decl
   }

@@ -1,14 +1,5 @@
 import { readConfig } from '../config/index.js'
-import {
-  makeApp,
-  makeComponents,
-  makeHandlers,
-  makeSchemas,
-  makeWebhooks,
-  resolveLayout,
-} from '../core/index.js'
-import { setFormatOptions } from '../format/index.js'
-import { parseOpenAPI } from '../openapi/index.js'
+import { hono } from '../core/hono.js'
 
 const HELP_TEXT = `Usage: takibi-hono
 
@@ -34,31 +25,7 @@ export async function takibiHono() {
   const configResult = await readConfig()
   if (!configResult.ok) return configResult
   const config = configResult.value
-  if (config.format) setFormatOptions(config.format)
-  const openAPIResult = await parseOpenAPI(config.input)
-  if (!openAPIResult.ok) return openAPIResult
-  const openapi = openAPIResult.value
-  const ohConfig = config['takibi-hono']
-  const useOpenAPI = config.openapi === true
-  const layout = resolveLayout(ohConfig)
-  const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
-  if (!schemasResult.ok) return schemasResult
-  if (useOpenAPI) {
-    const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
-    if (!componentsResult.ok) return componentsResult
-  }
-  const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
-  if (!handlersResult.ok) return handlersResult
-  if (useOpenAPI) {
-    const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
-    if (!webhooksResult.ok) return webhooksResult
-  }
-  const appResult = await makeApp(
-    openapi,
-    handlersResult.value.handlerFileNames,
-    config.basePath,
-    layout,
-  )
-  if (!appResult.ok) return appResult
+  const honoResult = await hono(config)
+  if (!honoResult.ok) return honoResult
   return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` } as const
 }

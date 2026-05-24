@@ -266,7 +266,9 @@ describe('mergeHandlerFile', () => {
     )
   })
 
-  it('keeps stub when existing has (c) => { return } stub', () => {
+  it('preserves user-written (c) => { return } body across merge (not in STUBS)', () => {
+    // STUBS only contains the canonical generated stub `(c)=>{}`. Anything else
+    // — including `(c) => { return }` — counts as user code and is preserved.
     const existing = [
       "import { Hono } from 'hono'",
       '',
@@ -288,7 +290,7 @@ describe('mergeHandlerFile', () => {
         "import { Hono } from 'hono'",
         "import { describeRoute } from 'hono-openapi'",
         '',
-        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'List' }), (c) => {})",
+        "export const usersHandler = new Hono().get('/users', describeRoute({ summary: 'List' }), (c) => { return })",
         '',
       ].join('\n'),
     )
@@ -578,14 +580,7 @@ describe('mergeHandlerFile', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // @/components should be gone — replaced by ../components
-    expect(result).not.toContain('@/components')
-    expect(result).toContain("from'../components'")
-    // Only one component import line
-    const componentImportLines = result.split('\n').filter((l) => l.includes('CreatePetSchema'))
-    expect(componentImportLines.length).toBe(1)
-    expect(result).toBe(
+    expect(mergeHandlerFile(existing, generated)).toBe(
       [
         "import{Hono}from'hono'",
         "import{CreatePetSchema,PetSchema}from'../components'",
@@ -803,9 +798,18 @@ describe('mergeHandlerFile', () => {
     ].join('\n')
 
     // Non-string-literal path in existing is ignored (can't extract route key)
-    // Generated code should be used with stub handler
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain("get('/users'")
+    // Generated code should be used with stub handler. The unused `const PATH`
+    // line is preserved (not handler code).
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import{Hono}from'hono'",
+        '',
+        "const PATH = '/users'",
+        '',
+        "export const usersHandler=new Hono().get('/users',(c)=>{})",
+        '',
+      ].join('\n'),
+    )
   })
 
   it('handles route call with only one argument', () => {
@@ -823,8 +827,14 @@ describe('mergeHandlerFile', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain("get('/items'")
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import{Hono}from'hono'",
+        '',
+        "export const appHandler=new Hono().get('/items',(c)=>{})",
+        '',
+      ].join('\n'),
+    )
   })
 
   it('handles chained method calls with same method name at different positions', () => {
@@ -1450,13 +1460,24 @@ describe('mergeHandlerFile: user-added external imports', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // User's db import preserved (toContain: merge output format depends on internal structure)
-    expect(result).toContain("import { db } from '@myapp/database'")
-    // User's async handler body preserved
-    expect(result).toContain('await db.query')
-    // Updated metadata from generated
-    expect(result).toContain("summary: 'List users v2'")
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { describeRoute, validator } from 'hono-openapi'",
+        "import * as z from 'zod'",
+        "import { db } from '@myapp/database'",
+        '',
+        "export const usersHandler = new Hono().get('/users',",
+        "  describeRoute({ summary: 'List users v2' }),",
+        "  validator('query', z.object({ page: z.number(), limit: z.number() })),",
+        '  async (c) => {',
+        '    const users = await db.query("SELECT * FROM users")',
+        '    return c.json(users)',
+        '  },',
+        ')',
+        '',
+      ].join('\n'),
+    )
   })
 })
 
@@ -1482,10 +1503,20 @@ describe('mergeHandlerFile: user-added helper functions', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // Helper function and handler body both preserved
-    expect(result).toContain('function formatUser(user: any)')
-    expect(result).toContain('return c.json(formatUser({ first: "John", last: "Doe" }))')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        '',
+        'function formatUser(user: any) {',
+        '  return { ...user, fullName: `${user.first} ${user.last}` }',
+        '}',
+        '',
+        "export const usersHandler = new Hono().get('/users', (c) => {",
+        '  return c.json(formatUser({ first: "John", last: "Doe" }))',
+        '})',
+        '',
+      ].join('\n'),
+    )
   })
 
   it('preserves const helpers defined before handler', () => {
@@ -1507,9 +1538,18 @@ describe('mergeHandlerFile: user-added helper functions', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain('const DEFAULT_PAGE_SIZE = 20')
-    expect(result).toContain('return c.json({ pageSize: DEFAULT_PAGE_SIZE })')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        '',
+        'const DEFAULT_PAGE_SIZE = 20',
+        '',
+        "export const usersHandler = new Hono().get('/users', (c) => {",
+        '  return c.json({ pageSize: DEFAULT_PAGE_SIZE })',
+        '})',
+        '',
+      ].join('\n'),
+    )
   })
 })
 
@@ -1727,5 +1767,97 @@ describe('mergeHandlerFile: human/generator boundary edge cases', () => {
         '',
       ].join('\n'),
     )
+  })
+})
+
+describe('mergeHandlerFile: import type relative path preservation', () => {
+  it('preserves user-added `import type { Pet }` from a relative path', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      "import type { Pet } from '../components/schemas'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => c.json([] satisfies Pet[]))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    // type-only relative import must survive even though value relative imports
+    // (e.g. `import { PetSchema } from '../components/schemas'`) are generator-managed.
+    expect(result.includes("import type { Pet } from '../components/schemas'")).toBe(true)
+    // user-written non-stub body is also preserved.
+    expect(result.includes('c.json([] satisfies Pet[])')).toBe(true)
+  })
+
+  it('drops a non-type relative import (treated as generator-managed)', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import { something } from '../legacy/helper'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => c.json({}))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes("from '../legacy/helper'")).toBe(false)
+  })
+})
+
+describe('mergeHandlerFile: STUBS boundary', () => {
+  it('overwrites bare stub (c)=>{} with generated stub (no preservation)', () => {
+    // Existing body is exactly the stub shape — merge should NOT preserve it,
+    // so generated content (including any new validators) overrides cleanly.
+    const existing = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('query', z.object({})), (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes('sValidator')).toBe(true)
+  })
+
+  it('preserves any user-written body that is not in the STUBS set', () => {
+    // One extra character (`return undefined`) makes the body non-stub; merge
+    // must preserve it.
+    const existing = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {",
+      '  return undefined',
+      '})',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', (c) => {})",
+      '',
+    ].join('\n')
+    const result = mergeHandlerFile(existing, generated)
+    expect(result.includes('return undefined')).toBe(true)
   })
 })

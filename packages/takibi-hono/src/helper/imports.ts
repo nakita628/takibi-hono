@@ -7,15 +7,10 @@ const JS_IDENT = '[A-Za-z_$][A-Za-z0-9_$]*'
 const EXPORT_CONST_PATTERN = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
 
 /**
- * OpenAPI Components Object fields and the identifier suffix each one uses.
- * Covers OpenAPI 3.0 / 3.1 / 3.2 — all three share the same 11 Fixed Fields
- * under `components`. Top-level `webhooks` (3.1+) is intentionally omitted:
- * it lives outside `components` and reuses schemas/responses refs rather
- * than introducing a `*Webhook` identifier suffix of its own.
- *
- * Listed in OpenAPI 3.0 spec order — purely cosmetic. `classifyRef` selects
- * the longest matching suffix so `Schema` (substring of `ParamsSchema` /
- * `HeaderSchema` / `MediaTypeSchema`) doesn't shadow the longer ones.
+ * OpenAPI 3.0/3.1/3.2 Components fields → identifier suffix. Listed in spec
+ * order; **reordering changes user-visible import line ordering**.
+ * `classifyRef` picks the longest matching suffix so `Schema` doesn't shadow
+ * `ParamsSchema` / `HeaderSchema` / `MediaTypeSchema`.
  */
 const COMPONENT_SUFFIXES = [
   ['schemas', 'Schema'],
@@ -32,12 +27,9 @@ const COMPONENT_SUFFIXES = [
 ] as const
 
 /**
- * Single regex that simultaneously SKIPS strings/comments and CAPTURES
- * component-type identifiers. The string / comment alternatives come first
- * so the engine consumes them whole — identifier-shape tokens hiding inside
- * (e.g. `operationId: 'userCreatedCallback'`) are unreachable because the
- * preceding alternative has already consumed the surrounding quotes and
- * everything between them.
+ * String / comment alternatives MUST come first so the engine consumes them
+ * whole — identifier-shape tokens inside strings/comments (e.g.
+ * `operationId: 'userCreatedCallback'`) are then unreachable.
  */
 const SCAN = new RegExp(
   [
@@ -51,12 +43,7 @@ const SCAN = new RegExp(
   'g',
 )
 
-/**
- * Maps a captured identifier back to its component-type key by suffix.
- * Picks the LONGEST matching suffix so `UserParamsSchema` is classified as
- * `parameters` (12 chars) rather than `schemas` (6 chars) regardless of
- * `COMPONENT_SUFFIXES` source order.
- */
+/** Longest matching suffix wins so `UserParamsSchema` → parameters, not schemas. */
 const classifyRef = (name: string): string | undefined =>
   COMPONENT_SUFFIXES.reduce<readonly [string, string] | undefined>(
     (best, entry) =>
@@ -96,9 +83,8 @@ function collectComponentImportLines(
       if (!kind) return acc
       return new Map(acc).set(kind, new Set([...(acc.get(kind) ?? []), name]))
     }, new Map())
-  // Emit import lines in `COMPONENT_SUFFIXES` declaration order — same as
-  // the OpenAPI 3.x components / takibi-hono config field order — instead of
-  // scan-encounter order which varies with source layout.
+  // Emit in COMPONENT_SUFFIXES declaration order (= OpenAPI 3.x spec order)
+  // instead of scan-encounter order, which varies with source layout.
   return COMPONENT_SUFFIXES.flatMap(([kind]) => {
     const names = grouped.get(kind)
     const importPath = componentPaths[kind]
@@ -117,7 +103,7 @@ export function makeComponentImports(
   const config = getLibraryConfig(schemaLib)
   const defined = collectDefinedExports(code)
   return [
-    ...(code.includes('resolver(') ? [`import{resolver}from'${config.modulePath}'`] : []),
+    ...(code.includes('resolver(') ? ["import{resolver}from'hono-openapi'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
@@ -171,19 +157,10 @@ export function makeStandardImports(
   const config = getLibraryConfig(schemaLib)
   const svConfig = getStandardValidatorConfig(schemaLib)
   const defined = collectDefinedExports(code)
-  // typebox path/query uses an inline `validator(...)` from hono/validator
-  // wrapping `Value.Convert` + `Value.Check`. Detect with a word boundary so
-  // we don't false-match `tbValidator(`.
-  const usesInlineValidator = /\bvalidator\(/.test(code)
-  const usesValueModule = code.includes('Value.Convert(') || code.includes('Value.Check(')
 
   return [
     "import{Hono}from'hono'",
     ...(code.includes(`${svConfig.validatorFn}(`) ? [svConfig.validatorImport] : []),
-    ...(schemaLib === 'typebox' && usesInlineValidator
-      ? ["import{validator}from'hono/validator'"]
-      : []),
-    ...(schemaLib === 'typebox' && usesValueModule ? ["import{Value}from'typebox/value'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const

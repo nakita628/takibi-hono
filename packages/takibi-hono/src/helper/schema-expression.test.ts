@@ -540,35 +540,35 @@ describe('extractSchemaExports: not schema (typed predicate)', () => {
   it.concurrent('zod: not — z.any().refine', () => {
     const result = extractSchemaExports('Shape', schema as any, 'zod')
     expect(result).toBe(
-      "export const ShapeSchema = z.any().refine((v) => typeof v !== 'string')\n\nexport type Shape = z.infer<typeof ShapeSchema>",
+      "export const ShapeSchema = z.any().refine((val) => typeof val !== 'string')\n\nexport type Shape = z.infer<typeof ShapeSchema>",
     )
   })
 
   it.concurrent('valibot: not — v.custom predicate', () => {
     const result = extractSchemaExports('Shape', schema as any, 'valibot')
     expect(result).toBe(
-      "export const ShapeSchema = v.custom<unknown>((v) => typeof v !== 'string')\n\nexport type Shape = v.InferOutput<typeof ShapeSchema>",
+      "export const ShapeSchema = v.custom<unknown>((val) => typeof val !== 'string')\n\nexport type Shape = v.InferOutput<typeof ShapeSchema>",
     )
   })
 
-  it.concurrent('typebox: not — Type.Not()', () => {
+  it.concurrent('typebox: not — Type.Any() with FIXME', () => {
     const result = extractSchemaExports('Shape', schema as any, 'typebox')
     expect(result).toBe(
-      'export const ShapeSchema = Type.Not(Type.String())\n\nexport type Shape = Static<typeof ShapeSchema>',
+      '// FIXME: JSON Schema `not` is not enforced by this generator; TypeBox v1 has no runtime `Type.Not` and `Value.Check` ignores the keyword (falls back to `Type.Any()`)\n\n\nexport const ShapeSchema = Type.Any()\n\nexport type Shape = Static<typeof ShapeSchema>',
     )
   })
 
   it.concurrent('arktype: not — type("unknown").narrow', () => {
     const result = extractSchemaExports('Shape', schema as any, 'arktype')
     expect(result).toBe(
-      'export const ShapeSchema = type("unknown").narrow((v: unknown) => typeof v !== \'string\')\n\nexport type Shape = typeof ShapeSchema.infer',
+      'export const ShapeSchema = type("unknown").narrow((val: unknown) => typeof val !== \'string\')\n\nexport type Shape = typeof ShapeSchema.infer',
     )
   })
 
   it.concurrent('effect: not — Schema.Unknown.pipe(Schema.filter)', () => {
     const result = extractSchemaExports('Shape', schema as any, 'effect')
     expect(result).toBe(
-      "export const ShapeSchema = Schema.Unknown.pipe(Schema.filter((v) => typeof v !== 'string'))\n\nexport type Shape = typeof ShapeSchema.Encoded",
+      "export const ShapeSchema = Schema.Unknown.pipe(Schema.filter((val) => typeof val !== 'string'))\n\nexport type Shape = typeof ShapeSchema.Encoded",
     )
   })
 })
@@ -1132,6 +1132,99 @@ describe('extractSchemaExports: title override', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
       'export const ItemSchema = Schema.partial(Schema.Struct({id:Schema.Number.pipe(Schema.int())}))\n\nexport type Item = typeof ItemSchema.Encoded',
+    )
+  })
+})
+
+describe('extractSchemaExports: x-* vendor extension transparency', () => {
+  it.concurrent('x-trim: zod emits .trim()', () => {
+    const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'zod')
+    expect(result).toBe(
+      'export const ASchema = z.string().trim()\n\nexport type A = z.infer<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-trim: valibot emits v.trim()', () => {
+    const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'valibot')
+    expect(result).toBe(
+      'export const ASchema = v.pipe(v.string(),v.trim())\n\nexport type A = v.InferOutput<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-trim: typebox emits Type.Transform with .trim()', () => {
+    const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'typebox')
+    expect(result).toBe(
+      'export const ASchema = Type.Transform(Type.String()).Decode((val: string) => val.trim()).Encode((val: string) => val)\n\nexport type A = Static<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-trim: arktype emits .pipe with .trim()', () => {
+    const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'arktype')
+    expect(result).toBe(
+      'export const ASchema = type("string").pipe((val: string) => val.trim())\n\nexport type A = typeof ASchema.infer',
+    )
+  })
+
+  it.concurrent('x-trim: effect emits Schema.Trim', () => {
+    const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'effect')
+    expect(result).toBe(
+      'export const ASchema = Schema.Trim\n\nexport type A = typeof ASchema.Encoded',
+    )
+  })
+
+  it.concurrent('x-coerce: zod emits z.coerce.number()', () => {
+    const result = extractSchemaExports('A', { type: 'number', 'x-coerce': true }, 'zod')
+    expect(result).toBe(
+      'export const ASchema = z.coerce.number()\n\nexport type A = z.infer<typeof ASchema>',
+    )
+  })
+
+  // --- XExtMessages: x-pattern-message — emit integration regression ---
+  it.concurrent('x-pattern-message: zod injects custom error into .regex()', () => {
+    const result = extractSchemaExports(
+      'A',
+      { type: 'string', pattern: '^[A-Z]+$', 'x-pattern-message': 'Must be uppercase' },
+      'zod',
+    )
+    expect(result).toBe(
+      'export const ASchema = z.string().regex(/^[A-Z]+$/,{error:"Must be uppercase"})\n\nexport type A = z.infer<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-readonly: zod emits .readonly()', () => {
+    const result = extractSchemaExports(
+      'A',
+      { type: 'array', items: { type: 'string' }, 'x-readonly': true },
+      'zod',
+    )
+    expect(result).toBe(
+      'export const ASchema = z.array(z.string()).readonly()\n\nexport type A = z.infer<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-refine: dropped without unsafeCodeExtensions', () => {
+    const result = extractSchemaExports(
+      'A',
+      { type: 'string', 'x-refine': '(v) => v.length > 3' } as never,
+      'zod',
+    )
+    expect(result).toBe(
+      'export const ASchema = z.string()\n\nexport type A = z.infer<typeof ASchema>',
+    )
+  })
+
+  it.concurrent('x-error-message produces different emit than without', () => {
+    const without = extractSchemaExports('A', { type: 'string', minLength: 1 }, 'zod')
+    const withExt = extractSchemaExports(
+      'A',
+      { type: 'string', minLength: 1, 'x-error-message': 'Custom' },
+      'zod',
+    )
+    expect(without).toBe(
+      'export const ASchema = z.string().min(1)\n\nexport type A = z.infer<typeof ASchema>',
+    )
+    expect(withExt).toBe(
+      'export const ASchema = z.string({error:"Custom"}).min(1)\n\nexport type A = z.infer<typeof ASchema>',
     )
   })
 })

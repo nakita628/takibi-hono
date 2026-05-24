@@ -8,5 +8,7 @@ export const pingHandler = new Hono().get(
     operationId: 'ping',
     responses: { 200: { description: 'OK' } },
   }),
-  (c) => {},
+  (c) => {
+    throw new Error('Not implemented')
+  },
 )

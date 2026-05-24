@@ -704,7 +704,9 @@ describe('readConfig', () => {
       expect(result.ok).toBe(false)
       if (!result.ok) {
         const expectedPath = path.resolve(fakeCwd, 'takibi-hono.config.ts')
-        expect(result.error).toBe(`Config not found: ${expectedPath}`)
+        expect(result.error).toBe(
+          `Config not found: ${expectedPath}\nCreate takibi-hono.config.ts in the current directory. See https://github.com/nakita628/takibi-hono#configuration for an example.`,
+        )
       }
     } finally {
       process.cwd = originalCwd
@@ -719,7 +721,7 @@ describe('readConfig', () => {
       const result = await readConfig()
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error.endsWith('takibi-hono.config.ts')).toBe(true)
+        expect(result.error.includes('takibi-hono.config.ts')).toBe(true)
       }
     } finally {
       process.cwd = originalCwd
@@ -763,13 +765,21 @@ describe('readConfig', () => {
     it('returns error when default export is missing', async () => {
       const dir = makeConfigDir('no-default', `export const config = { input: 'a.yaml' }\n`)
       const result = await withCwd(dir, () => readConfig())
-      expect(result).toStrictEqual({ ok: false, error: 'Config must export default object' })
+      const expectedPath = path.resolve(dir, 'takibi-hono.config.ts')
+      expect(result).toStrictEqual({
+        ok: false,
+        error: `Config must export default object from ${expectedPath}\nDid you forget \`export default defineConfig({ ... })\`?`,
+      })
     })
 
     it('returns error when default export is undefined', async () => {
       const dir = makeConfigDir('undef-default', `export default undefined\n`)
       const result = await withCwd(dir, () => readConfig())
-      expect(result).toStrictEqual({ ok: false, error: 'Config must export default object' })
+      const expectedPath = path.resolve(dir, 'takibi-hono.config.ts')
+      expect(result).toStrictEqual({
+        ok: false,
+        error: `Config must export default object from ${expectedPath}\nDid you forget \`export default defineConfig({ ... })\`?`,
+      })
     })
 
     it('returns error message from import-time exception', async () => {

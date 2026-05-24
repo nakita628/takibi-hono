@@ -13,7 +13,7 @@ export const webhooksHandler = new Hono()
       responses: { 200: { description: 'Acknowledged' } },
     }),
     validator('json', z.object({ orderId: z.string(), amount: z.number().optional() })),
-    (c) => {},
+    (c) => c.body(null, 501),
   )
   .post(
     '/userCreated',
@@ -23,5 +23,5 @@ export const webhooksHandler = new Hono()
       responses: { 200: { description: 'Acknowledged' } },
     }),
     validator('json', UserSchema),
-    (c) => {},
+    (c) => c.body(null, 501),
   )

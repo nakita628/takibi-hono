@@ -2,75 +2,25 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
-import { parseConfig } from '../config/index.js'
-import {
-  makeApp,
-  makeComponents,
-  makeHandlers,
-  makeSchemas,
-  makeWebhooks,
-  resolveLayout,
-} from '../core/index.js'
-import { setFormatOptions } from '../format/index.js'
-import { parseOpenAPI } from '../openapi/index.js'
+import { readConfig } from '../config/index.js'
+import { hono } from '../core/hono.js'
 
-/**
- * CLI integration test helper.
- *
- * Simulates the full CLI pipeline by orchestrating the same generator
- * sequence as takibiHono in cli/index.ts.
- */
-async function runCli(
-  dir: string,
-): Promise<
-  { readonly ok: true; readonly value: string } | { readonly ok: false; readonly error: string }
-> {
+async function runCli(dir: string) {
   const originalCwd = process.cwd()
   process.chdir(dir)
   try {
-    const configPath = path.resolve(dir, 'takibi-hono.config.ts')
-    if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
-
-    const url = pathToFileURL(configPath).href
-    const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
-    if (!('default' in mod) || mod.default === undefined)
-      return { ok: false, error: 'Config must export default object' }
-
-    const configResult = parseConfig(mod.default)
+    const configResult = await readConfig()
     if (!configResult.ok) return configResult
-
     const config = configResult.value
-    if (config.format) setFormatOptions(config.format)
-    const openAPIResult = await parseOpenAPI(config.input)
-    if (!openAPIResult.ok) return openAPIResult
-    const openapi = openAPIResult.value
-    const ohConfig = config['takibi-hono']
-    const useOpenAPI = config.openapi === true
-    const layout = resolveLayout(ohConfig)
-    const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
-    if (!schemasResult.ok) return schemasResult
-    if (useOpenAPI) {
-      const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
-      if (!componentsResult.ok) return componentsResult
+    const honoResult = await hono(config)
+    if (!honoResult.ok) return honoResult
+    return {
+      ok: true as const,
+      value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅`,
     }
-    const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
-    if (!handlersResult.ok) return handlersResult
-    if (useOpenAPI) {
-      const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
-      if (!webhooksResult.ok) return webhooksResult
-    }
-    const appResult = await makeApp(
-      openapi,
-      handlersResult.value.handlerFileNames,
-      config.basePath,
-      layout,
-    )
-    if (!appResult.ok) return appResult
-    return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
   } finally {
     process.chdir(originalCwd)
   }
@@ -342,16 +292,8 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
 
         const barrel = await fsp.readFile(path.join(d, 'src/handlers/index.ts'), 'utf-8')
@@ -565,16 +507,8 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get(
-    '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().pipe(z.int()).optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
-  )
-  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
-    throw new Error('Not implemented')
-  })
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
     })
 
@@ -704,9 +638,7 @@ export const usersHandler = new Hono()
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
   .post(
     '/users',
@@ -721,9 +653,7 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
       },
@@ -1027,10 +957,8 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.int().optional() })),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    (c) => {},
   )
   .post(
     '/pets',
@@ -1044,9 +972,7 @@ export const petsHandler = new Hono()
       },
     }),
     validator('json', CreatePetSchema),
-    (c) => {
-      throw new Error('Not implemented')
-    },
+    (c) => {},
   )
 `)
     })
@@ -1094,7 +1020,7 @@ export default app
       const result = await runCli(d)
       expect(result).toStrictEqual({
         ok: false,
-        error: `Config not found: ${path.resolve(d, 'takibi-hono.config.ts')}`,
+        error: `Config not found: ${path.resolve(d, 'takibi-hono.config.ts')}\nCreate takibi-hono.config.ts in the current directory. See https://github.com/nakita628/takibi-hono#configuration for an example.`,
       })
     })
 

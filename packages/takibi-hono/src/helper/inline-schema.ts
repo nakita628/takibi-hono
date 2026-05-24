@@ -3,9 +3,6 @@ import type { Schema } from '../openapi/index.js'
 import { resolveRef } from '../utils/index.js'
 import { extractSchemaExports } from './schema-expression.js'
 
-/**
- * Extracts a single Schema from items (ignoring array/tuple form).
- */
 function singleItems(items: Schema | readonly Schema[] | undefined) {
   if (!items) return undefined
   if (isSchemaArray(items)) return items[0]
@@ -13,27 +10,27 @@ function singleItems(items: Schema | readonly Schema[] | undefined) {
 }
 
 /**
- * Converts an OpenAPI Schema to an inline validation library expression.
- *
- * - Top-level `$ref`: returns bare reference (e.g. `UserSchema`).
- * - With meta (`description` / `example` / `examples` / `deprecated`):
- *   delegates to `schema-to-library` so each library gets its idiomatic meta
- *   encoding (`.meta` / `v.pipe(...,v.metadata)` / `Type.X(...,opts)` /
- *   `.describe` / `.annotations`). Lazy/suspend wrappers around nested $refs
- *   are unwrapped because inline schemas live next to their referenced ones.
- * - Without meta: hand-written body generation for backward-compat.
+ * - `$ref` → bare reference (`UserSchema`).
+ * - paramIn ('query' | 'path') → delegate to schema-to-library for wire-string
+ *   coercion (z.coerce.* / Type.Transform.Decode / etc.).
+ * - meta present (description / example / examples / deprecated) → delegate
+ *   to schema-to-library so each lib emits its idiomatic meta call.
+ * - otherwise → hand-written body for backward-compat.
  */
 export function schemaToInlineExpression(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  paramIn?: 'query' | 'path' | 'header' | 'cookie',
 ) {
   if (schema.$ref) {
     return resolveRef(schema.$ref)
   }
+  if (paramIn === 'query' || paramIn === 'path') {
+    return inlineViaSchemaLibrary(schema, schemaLib, paramIn)
+  }
   if (hasMeta(schema)) {
     return inlineViaSchemaLibrary(schema, schemaLib)
   }
-  // Handle allOf/anyOf/oneOf combinators before dispatching to library
   if (schema.allOf) {
     return handleAllOf(schema.allOf, schemaLib)
   }
@@ -69,10 +66,9 @@ function hasMeta(schema: Schema): boolean {
 function inlineViaSchemaLibrary(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  paramIn?: 'query' | 'path' | 'header' | 'cookie',
 ): string {
-  // exportType=false suppresses the trailing `export type X = ...` line.
-  const code = extractSchemaExports('Inline', schema, schemaLib, false, false)
-  // Strip the leading `export const <Name>Schema = `.
+  const code = extractSchemaExports('Inline', schema, schemaLib, false, false, paramIn)
   const expr = code
     .trim()
     .replace(/^export\s+const\s+[A-Za-z_$][\w$]*Schema\s*=\s*/, '')
@@ -80,13 +76,7 @@ function inlineViaSchemaLibrary(
   return unwrapLazyRefs(expr, schemaLib)
 }
 
-/**
- * schema-to-library wraps every $ref with `z.lazy(() => X)` (zod),
- * `v.lazy(() => X)` (valibot), or `Schema.suspend(() => X)` (effect) to support
- * forward references in component declarations. For inline schemas embedded in
- * handler files, the referenced schemas are imported alongside, so we strip
- * those wrappers to keep the generated code compact.
- */
+/** schema-to-library wraps every $ref with z.lazy / v.lazy / Schema.suspend for forward refs in components. Inline schemas live next to their refs so we strip those wrappers. */
 function unwrapLazyRefs(
   expr: string,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -179,29 +169,21 @@ function wrapNullable(
   }
 }
 
-/**
- * Extracts the arktype string from a type('...') expression.
- * Returns the inner string if matched, otherwise returns the original expression.
- */
 function extractArktypeString(expr: string) {
   const match = expr.match(/^type\('(.+)'\)$/)
   if (match) return match[1]
   return expr
 }
 
-/**
- * Returns true if the expression is an arktype string-definition form: type('...').
- * Returns false for object-definition form: type({...}), variable refs, or chained calls.
- */
+/** True for string form `type('...')`; false for object form `type({...})`, var refs, or chained calls. */
 function isArktypeStringForm(expr: string) {
   return /^type\('(.+)'\)$/.test(expr)
 }
 
 function zodInlineExpr(schema: Schema): string {
   if (schema.enum) {
-    return schema.enum.map((v) => JSON.stringify(v)).join(',')
-      ? `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
-      : 'z.unknown()'
+    if (schema.enum.length === 0) return 'z.unknown()'
+    return `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])

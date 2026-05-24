@@ -6,6 +6,7 @@ export async function makeResponsesCode(
   responses: NonNullable<Components['responses']>,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   readonly?: boolean,
+  useOpenAPI = true,
 ): Promise<string> {
   const asConst = readonly ? ' as const' : ''
 
@@ -17,7 +18,7 @@ export async function makeResponsesCode(
         ...(response.description ? [`description:${JSON.stringify(response.description)}`] : []),
         ...(response.content
           ? (() => {
-              const entries = makeContent(response.content, schemaLib)
+              const entries = makeContent(response.content, schemaLib, useOpenAPI)
               return entries.length > 0 ? [`content:{${entries.join(',')}}`] : []
             })()
           : []),
