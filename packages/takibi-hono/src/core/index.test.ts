@@ -3388,4 +3388,130 @@ export const UnauthorizedResponseResponse = {
       },
     )
   })
+
+  describe('app: existing file merge', () => {
+    it.concurrent(
+      'preserves user-added middleware imports/calls between imports and api statement',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('app_existing_merge')
+        await fsp.mkdir(d, { recursive: true })
+        // Pre-seed an app index.ts that contains a user import and a
+        // user-added middleware applied before the api statement.
+        await fsp.writeFile(
+          path.join(d, 'index.ts'),
+          `import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { rootHandler, petsHandler } from './handlers'
+
+const app = new Hono()
+
+app.use('*', cors())
+
+export const api = app.route('/', rootHandler).route('/', petsHandler)
+
+export default app
+`,
+        )
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const merged = await fsp.readFile(path.join(d, 'index.ts'), 'utf-8')
+        // User imports + user middleware preserved; route chain regenerated.
+        expect(merged).toBe(`import { Hono } from 'hono'
+import { rootHandler, petsHandler } from './handlers'
+import { cors } from 'hono/cors'
+
+const app = new Hono()
+
+app.use('*', cors())
+
+export const api = app.route('/', rootHandler).route('/', petsHandler)
+
+export default app
+`)
+      },
+    )
+  })
+
+  describe('webhooks: empty webhooks block emits nothing', () => {
+    it.concurrent(
+      'spec has webhooks key with no usable operations → webhooks.ts is not created',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('webhooks_empty')
+        const yamlPath = path.join(d, 'spec.yaml')
+        await fsp.mkdir(d, { recursive: true })
+        await fsp.writeFile(
+          yamlPath,
+          `openapi: '3.1.0'
+info:
+  title: Empty webhooks
+  version: '1.0.0'
+paths:
+  /ping:
+    get:
+      summary: Ping
+      responses:
+        '200':
+          description: OK
+webhooks: {}
+`,
+        )
+        const result = await hono({
+          input: yamlPath,
+          schema: 'zod',
+          openapi: true,
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+        expect(fs.existsSync(path.join(d, 'handlers/webhooks.ts'))).toBe(false)
+      },
+    )
+  })
+
+  describe('format config flows through to oxfmt', () => {
+    it.concurrent(
+      'config.format with printWidth: 200 prevents wrapping of the route chain',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('format_wide')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+          format: { printWidth: 200 },
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'handlers') },
+            components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const pets = await fsp.readFile(path.join(d, 'handlers/pets.ts'), 'utf-8')
+        // At printWidth 200, every chained .get/.post/.delete call must stay
+        // on a single line — proves format options reached oxfmt.
+        expect(pets).toBe(`import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '../schemas'
+
+export const petsHandler = new Hono()
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`)
+      },
+    )
+  })
 })
