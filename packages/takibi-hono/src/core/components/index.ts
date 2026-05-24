@@ -11,18 +11,12 @@ import { makePathItemsCode } from '../../generator/hono-openapi/components/path-
 import { makeRequestBodiesCode } from '../../generator/hono-openapi/components/request-bodies.js'
 import { makeResponsesCode } from '../../generator/hono-openapi/components/responses.js'
 import { makeSecuritySchemesCode } from '../../generator/hono-openapi/components/security-schemes.js'
+import { makeBarrelCode } from '../../helper/barrel.js'
 import { makeComponentImports, makeModuleSpec } from '../../helper/imports.js'
 import type { Components, OpenAPI } from '../../openapi/index.js'
 import type { Layout, SchemaLib, TakibiHonoOptions } from '../layout.js'
 
-/**
- * Emits component files (`responses`, `parameters`, `headers`, `requestBodies`,
- * `examples`, `securitySchemes`, `links`, `callbacks`, `pathItems`).
- *
- * Honors per-component `output` paths and `split` flags from the user's config.
- * When the user supplies a base `components.output` directory, missing
- * per-component paths default to `<base>/<kind>/index.ts`.
- */
+/** Honors per-component output / split flags; falls back to `<base>/<kind>/index.ts` when only `components.output` is given. */
 export async function makeComponents(
   openapi: OpenAPI,
   schemaLib: SchemaLib,
@@ -128,13 +122,7 @@ export async function makeComponents(
   return { ok: true, value: undefined } as const
 }
 
-/**
- * Resolves the module specifier used to import component `componentKey` from
- * the file at `fromFile`. Honors the user's `components.<key>.import` alias
- * when set; otherwise falls back to a relative path computed via
- * `makeModuleSpec`. Used by every cross-component / component-to-handler
- * import site so alias config flows uniformly.
- */
+/** Honors `components.<key>.import` alias; falls back to a relative path. */
 function resolveComponentImportSpec(
   fromFile: string,
   componentKey: string,
@@ -231,10 +219,7 @@ async function splitComponentCode(
     const result = await emit(fullCode, outputDir, filePath)
     if (!result.ok) return result
   }
-  const barrelCode = fileNames
-    .toSorted()
-    .map((name) => `export*from'./${name}'`)
-    .join('\n')
+  const barrelCode = makeBarrelCode(fileNames)
   const barrelPath = path.join(outputDir, 'index.ts')
   const barrelResult = await emit(barrelCode, outputDir, barrelPath)
   if (!barrelResult.ok) return barrelResult

@@ -578,14 +578,7 @@ describe('mergeHandlerFile', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // @/components should be gone — replaced by ../components
-    expect(result).not.toContain('@/components')
-    expect(result).toContain("from'../components'")
-    // Only one component import line
-    const componentImportLines = result.split('\n').filter((l) => l.includes('CreatePetSchema'))
-    expect(componentImportLines.length).toBe(1)
-    expect(result).toBe(
+    expect(mergeHandlerFile(existing, generated)).toBe(
       [
         "import{Hono}from'hono'",
         "import{CreatePetSchema,PetSchema}from'../components'",
@@ -803,9 +796,18 @@ describe('mergeHandlerFile', () => {
     ].join('\n')
 
     // Non-string-literal path in existing is ignored (can't extract route key)
-    // Generated code should be used with stub handler
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain("get('/users'")
+    // Generated code should be used with stub handler. The unused `const PATH`
+    // line is preserved (not handler code).
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import{Hono}from'hono'",
+        '',
+        "const PATH = '/users'",
+        '',
+        "export const usersHandler=new Hono().get('/users',(c)=>{})",
+        '',
+      ].join('\n'),
+    )
   })
 
   it('handles route call with only one argument', () => {
@@ -823,8 +825,14 @@ describe('mergeHandlerFile', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain("get('/items'")
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import{Hono}from'hono'",
+        '',
+        "export const appHandler=new Hono().get('/items',(c)=>{})",
+        '',
+      ].join('\n'),
+    )
   })
 
   it('handles chained method calls with same method name at different positions', () => {
@@ -1450,13 +1458,24 @@ describe('mergeHandlerFile: user-added external imports', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // User's db import preserved (toContain: merge output format depends on internal structure)
-    expect(result).toContain("import { db } from '@myapp/database'")
-    // User's async handler body preserved
-    expect(result).toContain('await db.query')
-    // Updated metadata from generated
-    expect(result).toContain("summary: 'List users v2'")
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { describeRoute, validator } from 'hono-openapi'",
+        "import * as z from 'zod'",
+        "import { db } from '@myapp/database'",
+        '',
+        "export const usersHandler = new Hono().get('/users',",
+        "  describeRoute({ summary: 'List users v2' }),",
+        "  validator('query', z.object({ page: z.number(), limit: z.number() })),",
+        '  async (c) => {',
+        '    const users = await db.query("SELECT * FROM users")',
+        '    return c.json(users)',
+        '  },',
+        ')',
+        '',
+      ].join('\n'),
+    )
   })
 })
 
@@ -1482,10 +1501,20 @@ describe('mergeHandlerFile: user-added helper functions', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    // Helper function and handler body both preserved
-    expect(result).toContain('function formatUser(user: any)')
-    expect(result).toContain('return c.json(formatUser({ first: "John", last: "Doe" }))')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        '',
+        'function formatUser(user: any) {',
+        '  return { ...user, fullName: `${user.first} ${user.last}` }',
+        '}',
+        '',
+        "export const usersHandler = new Hono().get('/users', (c) => {",
+        '  return c.json(formatUser({ first: "John", last: "Doe" }))',
+        '})',
+        '',
+      ].join('\n'),
+    )
   })
 
   it('preserves const helpers defined before handler', () => {
@@ -1507,9 +1536,18 @@ describe('mergeHandlerFile: user-added helper functions', () => {
       '',
     ].join('\n')
 
-    const result = mergeHandlerFile(existing, generated)
-    expect(result).toContain('const DEFAULT_PAGE_SIZE = 20')
-    expect(result).toContain('return c.json({ pageSize: DEFAULT_PAGE_SIZE })')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        '',
+        'const DEFAULT_PAGE_SIZE = 20',
+        '',
+        "export const usersHandler = new Hono().get('/users', (c) => {",
+        '  return c.json({ pageSize: DEFAULT_PAGE_SIZE })',
+        '})',
+        '',
+      ].join('\n'),
+    )
   })
 })
 

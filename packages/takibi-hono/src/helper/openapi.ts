@@ -120,6 +120,10 @@ export function groupParametersByLocation(allParams: readonly unknown[]) {
     )
 }
 
+/**
+ * @internal Exported only for unit tests; consumers should use `makeContent` /
+ * `makeResponse` which route through this function.
+ */
 export function resolveSchema(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -136,13 +140,7 @@ export function makeContent(
   return Object.entries(content)
     .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
     .map(
-      ([mediaType, media]) =>
-        // `resolveSchema` applies `wrapSchemaForValidator` so effect schemas
-        // get `standardSchemaV1(...)` and typebox gets `Compile(...)` before
-        // the outer `resolver(...)` — without this, `resolver(UserListSchema)`
-        // fails StandardSchemaV1's `~standard` requirement (TS2345) for
-        // effect schemas.
-        `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib)}}`,
+      ([mediaType, media]) => `'${mediaType}':{schema:${resolveSchema(media.schema, schemaLib)}}`,
     )
 }
 

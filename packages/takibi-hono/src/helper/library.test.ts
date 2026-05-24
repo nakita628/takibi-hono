@@ -16,55 +16,48 @@ describe('getLibraryConfig', () => {
       const config = getLibraryConfig(lib)
       expect(typeof config.modulePath).toBe('string')
       expect(typeof config.validatorAlias).toBe('string')
-      expect(typeof config.resolverImport).toBe('string')
-      expect(typeof config.validatorImport).toBe('string')
       expect(typeof config.schemaImport).toBe('string')
     })
   }
 
   it.concurrent('zod config should have correct values', () => {
-    const config = getLibraryConfig('zod')
-    expect(config.modulePath).toBe('hono-openapi')
-    expect(config.validatorAlias).toBe('validator')
-    expect(config.resolverImport).toBe("import{describeRoute,resolver,validator}from'hono-openapi'")
-    expect(config.validatorImport).toBe("import{describeRoute,validator}from'hono-openapi'")
-    expect(config.schemaImport).toBe("import*as z from'zod'")
+    expect(getLibraryConfig('zod')).toStrictEqual({
+      modulePath: 'hono-openapi',
+      validatorAlias: 'validator',
+      schemaImport: "import*as z from'zod'",
+    })
   })
 
   it.concurrent('valibot config should have correct values', () => {
-    const config = getLibraryConfig('valibot')
-    expect(config.modulePath).toBe('hono-openapi')
-    expect(config.validatorAlias).toBe('validator')
-    expect(config.resolverImport).toBe("import{describeRoute,resolver,validator}from'hono-openapi'")
-    expect(config.validatorImport).toBe("import{describeRoute,validator}from'hono-openapi'")
-    expect(config.schemaImport).toBe("import*as v from'valibot'")
+    expect(getLibraryConfig('valibot')).toStrictEqual({
+      modulePath: 'hono-openapi',
+      validatorAlias: 'validator',
+      schemaImport: "import*as v from'valibot'",
+    })
   })
 
   it.concurrent('typebox config should have correct values', () => {
-    const config = getLibraryConfig('typebox')
-    expect(config.modulePath).toBe('hono-openapi')
-    expect(config.validatorAlias).toBe('validator')
-    expect(config.resolverImport).toBe("import{describeRoute,resolver,validator}from'hono-openapi'")
-    expect(config.validatorImport).toBe("import{describeRoute,validator}from'hono-openapi'")
-    expect(config.schemaImport).toBe("import Type from'typebox'")
+    expect(getLibraryConfig('typebox')).toStrictEqual({
+      modulePath: 'hono-openapi',
+      validatorAlias: 'validator',
+      schemaImport: "import Type from'typebox'",
+    })
   })
 
   it.concurrent('arktype config should have correct values', () => {
-    const config = getLibraryConfig('arktype')
-    expect(config.modulePath).toBe('hono-openapi')
-    expect(config.validatorAlias).toBe('validator')
-    expect(config.resolverImport).toBe("import{describeRoute,resolver,validator}from'hono-openapi'")
-    expect(config.validatorImport).toBe("import{describeRoute,validator}from'hono-openapi'")
-    expect(config.schemaImport).toBe("import{type}from'arktype'")
+    expect(getLibraryConfig('arktype')).toStrictEqual({
+      modulePath: 'hono-openapi',
+      validatorAlias: 'validator',
+      schemaImport: "import{type}from'arktype'",
+    })
   })
 
   it.concurrent('effect config should have correct values', () => {
-    const config = getLibraryConfig('effect')
-    expect(config.modulePath).toBe('hono-openapi')
-    expect(config.validatorAlias).toBe('validator')
-    expect(config.resolverImport).toBe("import{describeRoute,resolver,validator}from'hono-openapi'")
-    expect(config.validatorImport).toBe("import{describeRoute,validator}from'hono-openapi'")
-    expect(config.schemaImport).toBe("import{Schema}from'effect'")
+    expect(getLibraryConfig('effect')).toStrictEqual({
+      modulePath: 'hono-openapi',
+      validatorAlias: 'validator',
+      schemaImport: "import{Schema}from'effect'",
+    })
   })
 })
 

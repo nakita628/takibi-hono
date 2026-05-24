@@ -1,15 +1,9 @@
 import { Node, Project, type SourceFile, SyntaxKind } from 'ts-morph'
 
-/**
- * Parses a code snippet into a temporary in-memory SourceFile for AST analysis.
- */
 function parseSnippet(code: string) {
   return new Project({ useInMemoryFileSystem: true }).createSourceFile('snippet.ts', code)
 }
 
-/**
- * Creates a pair of in-memory source files sharing one Project instance.
- */
 function makeSourcePair(existingCode: string, generatedCode: string) {
   const project = new Project({ useInMemoryFileSystem: true })
   return {
@@ -18,40 +12,23 @@ function makeSourcePair(existingCode: string, generatedCode: string) {
   }
 }
 
-/**
- * Returns the source position just after the last import declaration.
- * Returns 0 if there are no import declarations.
- */
 function getBodyStart(file: SourceFile) {
   const decls = file.getImportDeclarations()
   return decls.length > 0 ? decls[decls.length - 1].getEnd() : 0
 }
 
-/**
- * Returns the source slice that includes everything up to (and including) the
- * trailing newline after the last import. Empty string when there are no imports.
- */
 function extractImportSection(file: SourceFile, code: string) {
   const end = getBodyStart(file)
   return end === 0 ? '' : `${code.slice(0, end)}\n`
 }
 
-/**
- * Applies range operations (replacements/deletions) to source code.
- * Each op is `[start, end, replacement]`. Ops are applied right-to-left so
- * earlier indices are not invalidated.
- */
+/** Applied right-to-left so earlier indices are not invalidated. */
 function applyRangeOps(code: string, ops: readonly [start: number, end: number, text: string][]) {
   return [...ops]
     .toSorted(([a], [b]) => b - a)
     .reduce((acc, [start, end, text]) => acc.slice(0, start) + text + acc.slice(end), code)
 }
 
-/**
- * Walks `file` for `app.get(path, ..., handler)` style chains and yields each
- * matched call expression along with its method name, route path, and the
- * containing property-access node (for source-position queries).
- */
 function* iterateRouteCalls(file: SourceFile) {
   for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const expr = call.getExpression()
@@ -66,10 +43,6 @@ function* iterateRouteCalls(file: SourceFile) {
   }
 }
 
-/**
- * Extracts existing route handlers (final argument of each `.method()` call)
- * along with any leading JSDoc comment. Keyed by `${method}:${path}`.
- */
 function extractRouteInfo(code: string) {
   const file = parseSnippet(code)
   const result = new Map<
@@ -91,11 +64,6 @@ function extractRouteInfo(code: string) {
   return result
 }
 
-/**
- * For each generated route call that has a matching existing handler body
- * (and isn't a stub), substitute the generated last-argument with the existing
- * one. Returns the rewritten generated code.
- */
 function replaceRouteParts(
   generatedCode: string,
   existingRoutes: ReadonlyMap<
@@ -162,14 +130,6 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   return restoreRouteComments(assembled, existingRoutes)
 }
 
-/**
- * Merges generated app file (index.ts) with existing user-modified version.
- *
- * - The `export const api = ...` statement is replaced with generated version.
- * - User code between imports and api (middleware, helpers) is preserved.
- * - Code after api is preserved.
- * - Imports are reconciled (user imports kept, hono/relative imports overwritten).
- */
 export function mergeAppFile(existingCode: string, generatedCode: string) {
   const { existingFile, generatedFile } = makeSourcePair(existingCode, generatedCode)
   const existingApiStmt = findApiStatement(existingFile)
@@ -225,10 +185,7 @@ function restoreRouteComments(
     }, code)
 }
 
-/**
- * Merges imports for an app file. Only `hono` and relative imports are
- * generator-managed; everything else from the user is preserved verbatim.
- */
+/** Only `hono` and relative imports are generator-managed; everything else from the user is preserved verbatim. */
 function mergeAppImports(existingFile: SourceFile, generatedImports: string) {
   const userImports = existingFile
     .getImportDeclarations()
@@ -265,11 +222,7 @@ const HANDLER_IMPORT_SOURCES = new Set<string>([
   'effect/Schema',
 ])
 
-/**
- * Merges imports for a handler file. User imports are preserved unless they
- * are managed by the generator (handler import sources), are relative, or are
- * already declared by the generated file with the same names.
- */
+/** User imports are preserved unless generator-managed (HANDLER_IMPORT_SOURCES), relative, or duplicated by generated names. */
 function mergeImports(existingFile: SourceFile, generatedImports: string) {
   const generatedFile = parseSnippet(generatedImports)
   const generatedDecls = generatedFile.getImportDeclarations()

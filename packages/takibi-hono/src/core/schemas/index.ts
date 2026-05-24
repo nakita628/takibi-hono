@@ -6,15 +6,7 @@ import {
 import type { OpenAPI } from '../../openapi/index.js'
 import type { Layout, SchemaLib, TakibiHonoOptions } from '../layout.js'
 
-/**
- * Emits component schemas to disk.
- *
- * - When `useOpenAPI` is true, each schema is annotated with a library-specific
- *   `ref` registration key so hono-openapi populates `components.schemas` and
- *   uses `$ref` at call sites; in plain Hono mode the key is omitted.
- * - When `components.schemas.split: true`, each schema is written to its own
- *   file alongside a barrel `index.ts`.
- */
+/** `useOpenAPI` adds a per-lib `ref` key for `$ref` registration; `split: true` writes one file per schema + barrel. */
 export async function makeSchemas(
   openapi: OpenAPI,
   schemaLib: SchemaLib,

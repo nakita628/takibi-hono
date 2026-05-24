@@ -7,14 +7,7 @@ import { mergeAppFile } from '../../merge/index.js'
 import type { OpenAPI } from '../../openapi/index.js'
 import type { Layout } from '../layout.js'
 
-/**
- * Emits the app entry file (`<appDir>/index.ts`) which wires every handler
- * module into a single Hono router, optionally applying `basePath`.
- *
- * If the file already exists, user-added imports / middleware are preserved
- * via `mergeAppFile`; generator-managed bits (handler imports, route chain)
- * are overwritten.
- */
+/** User-added imports / middleware are preserved via `mergeAppFile`; handler imports and the route chain are overwritten. */
 export async function makeApp(
   openapi: OpenAPI,
   handlerFileNames: readonly string[],

@@ -2,19 +2,7 @@ import { isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 
-/**
- * Returns a coerced expression for query/path parameters that need type
- * conversion. HTTP path and query parameters are always strings on the
- * wire, so non-string types need coercion to convert from string.
- *
- * Uses each library's built-in coercion where available:
- * - zod: z.coerce.number(), z.stringbool()
- * - valibot: v.toNumber()
- * - arktype: 'string.numeric.parse', 'string.integer.parse'
- * - effect: Schema.NumberFromString, Schema.BooleanFromString
- *
- * Returns undefined if no coercion is needed (e.g., string type).
- */
+/** HTTP query/path arrive as strings — non-string types need lib-specific coercion. Returns undefined when no coercion is needed. */
 export function coerceQueryExpression(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -45,8 +33,7 @@ function coerceNumber(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'ef
     case 'valibot':
       return 'v.pipe(v.string(),v.toNumber())'
     case 'typebox':
-      // typebox does the conversion in the validator wrapper via Value.Convert,
-      // so the schema itself is the target type.
+      // typebox: conversion happens in the validator wrapper via Value.Convert.
       return 'Type.Number()'
     case 'arktype':
       return "type('string.numeric.parse')"
@@ -85,11 +72,7 @@ function coerceBoolean(schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'e
   }
 }
 
-/**
- * Returns a coerced array expression for query parameters.
- * Query arrays arrive as string[] (e.g., ?tag=a&tag=b).
- * Items of non-string types need per-element coercion.
- */
+/** Query arrays arrive as string[] (e.g., ?tag=a&tag=b); coerce per-element. */
 function coerceArray(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -98,10 +81,7 @@ function coerceArray(
   if (!itemSchema) return undefined
 
   const itemCoercion = coerceQueryExpression(itemSchema, schemaLib)
-  if (!itemCoercion) {
-    // Items are string or uncoerced — no coercion needed for the array
-    return undefined
-  }
+  if (!itemCoercion) return undefined
 
   switch (schemaLib) {
     case 'zod':
@@ -117,10 +97,7 @@ function coerceArray(
   }
 }
 
-/**
- * Returns a coerced object expression for query parameters.
- * Query objects arrive as JSON strings, so we parse them.
- */
+/** Query objects arrive as JSON strings; parse first then validate. */
 function coerceObject(
   schema: Schema,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',

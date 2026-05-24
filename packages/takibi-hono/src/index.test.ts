@@ -2,77 +2,25 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 
-import { parseConfig } from './config/index.js'
-import {
-  makeApp,
-  makeComponents,
-  makeHandlers,
-  makeSchemas,
-  makeWebhooks,
-  resolveLayout,
-} from './core/index.js'
-import { setFormatOptions } from './format/index.js'
-import { parseOpenAPI } from './openapi/index.js'
+import { readConfig } from './config/index.js'
+import { hono } from './core/hono.js'
 
-/**
- * Entry point integration test helper.
- *
- * Replicates the exact logic of src/index.ts + src/cli/index.ts:
- *   1. readConfig() → parseConfig(mod.default)
- *   2. orchestrate generators
- *   3. Return success message or error
- */
-async function runEntryPoint(
-  dir: string,
-): Promise<
-  { readonly ok: true; readonly value: string } | { readonly ok: false; readonly error: string }
-> {
+async function runEntryPoint(dir: string) {
   const originalCwd = process.cwd()
   process.chdir(dir)
   try {
-    const configPath = path.resolve(dir, 'takibi-hono.config.ts')
-    if (!fs.existsSync(configPath)) return { ok: false, error: `Config not found: ${configPath}` }
-
-    const url = pathToFileURL(configPath).href
-    const mod: { default?: unknown } = await import(`${url}?t=${Date.now()}`)
-    if (!('default' in mod) || mod.default === undefined)
-      return { ok: false, error: 'Config must export default object' }
-
-    const configResult = parseConfig(mod.default)
+    const configResult = await readConfig()
     if (!configResult.ok) return configResult
-
     const config = configResult.value
-    if (config.format) setFormatOptions(config.format)
-    const openAPIResult = await parseOpenAPI(config.input)
-    if (!openAPIResult.ok) return openAPIResult
-    const openapi = openAPIResult.value
-    const ohConfig = config['takibi-hono']
-    const useOpenAPI = config.openapi === true
-    const layout = resolveLayout(ohConfig)
-    const schemasResult = await makeSchemas(openapi, config.schema, useOpenAPI, ohConfig, layout)
-    if (!schemasResult.ok) return schemasResult
-    if (useOpenAPI) {
-      const componentsResult = await makeComponents(openapi, config.schema, ohConfig, layout)
-      if (!componentsResult.ok) return componentsResult
+    const honoResult = await hono(config)
+    if (!honoResult.ok) return honoResult
+    return {
+      ok: true as const,
+      value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅`,
     }
-    const handlersResult = await makeHandlers(openapi, config.schema, useOpenAPI, layout)
-    if (!handlersResult.ok) return handlersResult
-    if (useOpenAPI) {
-      const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
-      if (!webhooksResult.ok) return webhooksResult
-    }
-    const appResult = await makeApp(
-      openapi,
-      handlersResult.value.handlerFileNames,
-      config.basePath,
-      layout,
-    )
-    if (!appResult.ok) return appResult
-    return { ok: true, value: `🔥 takibi-hono: ${config.input} (${config.schema}) ✅` }
   } finally {
     process.chdir(originalCwd)
   }

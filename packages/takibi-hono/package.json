@@ -27,20 +27,20 @@
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
-    "@typespec/compiler": "^1.11.0",
-    "@typespec/openapi3": "^1.11.0",
-    "oxfmt": "^0.48.0",
-    "schema-to-library": "0.2.2",
+    "@typespec/compiler": "^1.12.0",
+    "@typespec/openapi3": "^1.12.0",
+    "oxfmt": "^0.51.0",
+    "schema-to-library": "0.3.0",
     "ts-morph": "^28.0.0",
     "typescript": "^6.0.3",
     "valibot": "^1.4.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
-    "@typespec/http": "^1.11.0",
-    "@typespec/rest": "^0.81.0",
-    "@typespec/versioning": "^0.81.0",
+    "@types/node": "^25.9.1",
+    "@typespec/http": "^1.12.0",
+    "@typespec/rest": "^0.82.0",
+    "@typespec/versioning": "^0.82.0",
     "tsdown": "^0.22.0",
-    "vite": "^8.0.11"
+    "vite": "^8.0.14"
   }
 }

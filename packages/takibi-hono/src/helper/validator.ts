@@ -11,9 +11,6 @@ import {
   wrapSchemaForValidator,
 } from './openapi.js'
 
-/**
- * Generates validator middleware code from an operation's parameters and request body.
- */
 export function makeValidators(
   operation: Operation,
   pathItemParameters: readonly Parameter[] | undefined,
@@ -48,11 +45,7 @@ export function makeValidators(
   return [...paramValidators, ...bodyValidators] as const
 }
 
-/**
- * Generates library-specific validator middleware code.
- * Uses @hono/zod-validator, @hono/valibot-validator, etc. based on schemaLib.
- * Applies coercion for query parameters (number/integer/boolean).
- */
+/** Uses @hono/<lib>-validator. Applies wire-string coercion for path/query parameters. */
 export function makeStandardValidators(
   operation: Operation,
   pathItemParameters: readonly Parameter[] | undefined,
@@ -66,7 +59,6 @@ export function makeStandardValidators(
   const grouped = groupParametersByLocation(allParameters)
   const paramValidators = Object.entries(grouped).map(([location, parameters]) => {
     const validatorTarget = location === 'path' ? 'param' : location
-    // Path and query both arrive as strings on the wire — coerce both.
     const isStringWire = location === 'query' || location === 'path'
     const fields = parameters.map((parameter) => {
       const coerced = isStringWire ? coerceQueryExpression(parameter.schema, schemaLib) : undefined
@@ -75,9 +67,8 @@ export function makeStandardValidators(
       return `${parameter.name}:${isOptional ? makeOptional(expr, schemaLib) : expr}` as const
     })
     const objExpr = makeObjectExpression(fields, schemaLib)
-    // tbValidator only runs `Compile().Check()` and ignores any Type.Decode
-    // transform, so for typebox path/query we replace it with an inline
-    // validator that runs `Value.Convert(...)` (string→typed) before checking.
+    // tbValidator runs Compile().Check() only and ignores Type.Decode transforms;
+    // wire-string typebox params need an inline validator with Value.Convert.
     if (schemaLib === 'typebox' && isStringWire) {
       return `validator('${validatorTarget}',(_v,_c)=>{const _s=${objExpr};const _x=Value.Convert(_s,_v);return Value.Check(_s,_x)?_x:_c.json({success:false,errors:[...Value.Errors(_s,_x)]},400)})` as const
     }

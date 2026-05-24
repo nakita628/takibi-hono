@@ -10,11 +10,7 @@ import { makeWebhooks } from './webhooks/index.js'
 
 /**
  * Single-call orchestrator: parses the input spec and runs every generator
- * in order.
- *
- * Used by the vite plugin (which only knows about a single entry point) and
- * kept as a convenience for callers who want one-shot generation. The CLI
- * inlines the same sequence so it can short-circuit cleanly on failure.
+ * in order. Used by the CLI and the Vite plugin.
  */
 export async function hono(config: {
   readonly input: string

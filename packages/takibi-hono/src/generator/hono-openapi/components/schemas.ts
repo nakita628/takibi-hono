@@ -120,8 +120,6 @@ function processDeclaration(
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
   const needsLazy = ctx.circularNames.has(name)
-  // ref registration is only meaningful when the project emits hono-openapi
-  // routes; in plain Hono mode the components.schemas section is unused.
   const maybeInjectRef = (decl: string) =>
     ctx.registerRef ? injectRef(decl, name, schemaLib, hasOuterMeta(schema)) : decl
   if (needsLazy && schemaLib === 'zod') {
@@ -222,25 +220,20 @@ function unwrapNonCircularLazy(
         (match, varName) => (needsLazy.has(varName) ? match : varName),
       )
     case 'effect':
-      // `Schema.suspend(() => X)` defers evaluation; for non-circular refs
-      // it's unnecessary AND breaks the StandardSchemaV1 inference chain
-      // (e.g. `Schema.Array(Schema.suspend(() => UserSchema))` doesn't
-      // expose `~standard` so `resolver(...)` rejects it).
+      // Schema.suspend breaks the StandardSchemaV1 inference chain for
+      // non-circular refs: Schema.Array(Schema.suspend(() => X)) drops
+      // ~standard so resolver(...) rejects it.
       return decl.replace(
         /Schema\.suspend\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
         (match, varName) => (needsLazy.has(varName) ? match : varName),
       )
     case 'typebox':
-      if (circularNames.has(selfName)) {
-        decl = decl.replace(
-          /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
-          (_match, varName) => {
-            if (varName === selfVarName) return 'This'
-            return varName
-          },
-        )
-      }
-      return decl
+      return circularNames.has(selfName)
+        ? decl.replace(
+            /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
+            (_match, varName) => (varName === selfVarName ? 'This' : varName),
+          )
+        : decl
     default:
       return decl
   }

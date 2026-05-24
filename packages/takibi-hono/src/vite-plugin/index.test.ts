@@ -321,9 +321,9 @@ describe('takibiHonoVite: configureServer', () => {
     const configPath = path.resolve(process.cwd(), 'takibi-hono.config.ts')
     await vi.waitFor(() => {
       expect(loadCalls.length).toBe(1)
-      expect(loadCalls[0]).toMatch(
-        new RegExp(`^${configPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\?t=\\d+$`),
-      )
+      const [prefix, timestamp] = loadCalls[0].split('?t=')
+      expect(prefix).toBe(configPath)
+      expect(Number.isInteger(Number(timestamp)) && Number(timestamp) > 0).toBe(true)
     })
   })
 

@@ -9,15 +9,7 @@ import { mergeBarrelFile, mergeHandlerFile } from '../../merge/index.js'
 import type { OpenAPI } from '../../openapi/index.js'
 import type { Layout, SchemaLib } from '../layout.js'
 
-/**
- * Emits one handler file per route group (`__root`, `users`, `pets`, …) plus
- * a barrel `index.ts`, then deletes any orphan handler files that no longer
- * appear in the spec.
- *
- * Existing handler bodies and JSDoc are preserved via `mergeHandlerFile`;
- * generated metadata (route paths, validators) overwrites whatever the user
- * had previously.
- */
+/** Existing handler bodies/JSDoc are preserved via `mergeHandlerFile`; route metadata is overwritten. Orphan handler files (no longer in spec) are deleted. */
 export async function makeHandlers(
   openapi: OpenAPI,
   schemaLib: SchemaLib,
@@ -52,9 +44,6 @@ export async function makeHandlers(
     const barrelResult = await emit(finalBarrel, layout.handlersDir, barrelOutput)
     if (!barrelResult.ok) return barrelResult
   }
-  // Clean up handler files that no longer correspond to any spec path. The
-  // handlers directory only contains generated `.ts` files, so we filter by
-  // extension (the wrapped `readdir` returns names only, no Dirent objects).
   const expectedFiles = new Set([...handlerFileNames.map((name) => `${name}.ts`), 'index.ts'])
   const dirResult = await readdir(layout.handlersDir)
   if (dirResult.ok) {

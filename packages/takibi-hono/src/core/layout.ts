@@ -1,13 +1,8 @@
 import path from 'node:path'
 
-/** Validation library targeted by the generated code. */
 export type SchemaLib = 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
 
-/**
- * User-facing `takibi-hono` config block as accepted by `defineConfig`. Re-used
- * by every orchestrator that needs to know per-component output / import
- * overrides.
- */
+/** User-facing `takibi-hono` config block accepted by `defineConfig`. */
 export type TakibiHonoOptions = {
   readonly readonly?: boolean | undefined
   readonly exportSchemasTypes?: boolean | undefined
@@ -40,10 +35,7 @@ export type TakibiHonoOptions = {
     | undefined
 }
 
-/**
- * Resolved file/directory paths for a generation run, computed once from the
- * user's `takibi-hono` config and reused across every generator.
- */
+/** Computed once per run from config; every generator consumes this instead of re-deriving paths. */
 export type Layout = {
   readonly schemasFile: string
   readonly schemasDir: string
@@ -54,13 +46,6 @@ export type Layout = {
   readonly appDir: string
 }
 
-/**
- * Resolves the file/directory layout for one generation run.
- *
- * Computes once: schemas file, handlers dir, app dir, components base output,
- * and the per-component-type relative import paths. Every generator then
- * consumes this layout instead of re-deriving paths.
- */
 export function resolveLayout(ohConfig: TakibiHonoOptions | undefined): Layout {
   const handlersOutput = ohConfig?.handlers?.output ?? 'src/handlers'
   const componentsBaseOutput = ohConfig?.components?.output
@@ -123,10 +108,6 @@ function makeComponentPaths(
   return paths
 }
 
-/**
- * Computes a relative import specifier (e.g. `../components`) from `fromDir`
- * to `toFile`, stripping the `.ts` extension and `/index` suffix.
- */
 function computeRelativeImport(fromDir: string, toFile: string): string {
   const rel = path.relative(fromDir, toFile)
   const stripped = rel.replace(/\.ts$/, '').replace(/\/index$/, '')

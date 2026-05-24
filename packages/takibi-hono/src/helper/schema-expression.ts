@@ -7,9 +7,6 @@ import { schemaToZod } from 'schema-to-library/zod'
 import type { Schema } from '../openapi/index.js'
 import { toPascalCase } from '../utils/index.js'
 
-/**
- * Strips import lines from schema-to-library output, returning only declarations.
- */
 function stripImportLines(code: string) {
   return code
     .split('\n')
@@ -18,27 +15,11 @@ function stripImportLines(code: string) {
     .trim()
 }
 
-/**
- * Convert an OpenAPI Schema to a JSONSchema-shaped record for schema-to-library.
- *
- * The only adjustment is appending the `Schema` suffix to `title` so the
- * generated `export const` matches OpenAPI component naming. Metadata fields
- * (`description`, `example`, `examples`, `deprecated`, etc.) are passed through
- * — schema-to-library 0.2.0 emits the appropriate library-specific metadata
- * call (`.meta`, `v.pipe(...,v.description,v.metadata)`, `Type.Object(...,opts)`,
- * `.describe`, `.annotations`) for each library.
- */
+/** `${name}Schema` title forces schema-to-library to emit `export const ${name}Schema = ...` matching OpenAPI component naming. */
 function toJSONSchema(name: string, schema: Schema) {
   return { ...schema, title: `${name}Schema` } as const
 }
 
-/**
- * Post-processes schema-to-library output:
- * - Renames type alias `${varName}` / `${varName}Output` / `${varName}Encoded`
- *   to the bare `${pascalName}` to match OpenAPI component naming.
- * - Drops valibot's `${varName}Input` (we keep only Output).
- * - Nests multi-arg `z.intersection` / `Schema.extend` calls into 2-arg form.
- */
 function postProcess(
   code: string,
   name: string,
@@ -47,25 +28,22 @@ function postProcess(
   const pascalName = toPascalCase(name)
   const varName = `${pascalName}Schema`
   const transforms: readonly ((s: string) => string)[] = [
-    // Effect emits `${varName}Encoded`; other libs emit `${varName}` directly.
     schemaLib === 'effect'
       ? (s) => s
       : (s) =>
           s.replace(new RegExp(`export\\s+type\\s+${varName}\\s*=`), `export type ${pascalName} =`),
-    // Valibot: drop `${varName}Input`, rename `${varName}Output` → `${pascalName}`.
+    // valibot emits both Input and Output; we keep only Output.
     (s) => s.replace(new RegExp(`\\n*export\\s+type\\s+${varName}Input\\s*=\\s*[^\\n]+\\n?`), ''),
     (s) =>
       s.replace(
         new RegExp(`export\\s+type\\s+${varName}Output\\s*=`),
         `export type ${pascalName} =`,
       ),
-    // Effect: rename `${varName}Encoded` → `${pascalName}`.
     (s) =>
       s.replace(
         new RegExp(`export\\s+type\\s+${varName}Encoded\\s*=`),
         `export type ${pascalName} =`,
       ),
-    // Nest multi-arg calls into 2-arg form.
     schemaLib === 'zod' ? (s) => fixMultiArgCall(s, 'z.intersection') : (s) => s,
     schemaLib === 'effect' ? (s) => fixMultiArgCall(s, 'Schema.extend') : (s) => s,
   ]
@@ -73,10 +51,7 @@ function postProcess(
   return transforms.reduce((result, fn) => fn(result), code)
 }
 
-/**
- * Fixes calls with 3+ arguments by nesting into 2-arg calls.
- * e.g., fn(A,B,C) → fn(fn(A,B),C)
- */
+/** fn(A,B,C) → fn(fn(A,B),C) — `z.intersection` and `Schema.extend` only accept 2 args. */
 function fixMultiArgCall(code: string, fnName: string): string {
   const escaped = fnName.replace(/\./g, '\\.')
   const pattern = new RegExp(`${escaped}\\(`, 'g')
@@ -138,9 +113,6 @@ function findClosingParen(code: string, openIdx: number): number {
   return -1
 }
 
-/**
- * Extracts schema export declarations from a schema-to-library generated output.
- */
 export function extractSchemaExports(
   name: string,
   schema: Schema,
