@@ -1809,12 +1809,12 @@ export default app
       const files = await fsp.readdir(path.join(d, 'responses'))
       expect(files.sort()).toStrictEqual([
         'index.ts',
-        'unauthorizedResponseResponse.ts',
-        'userListResponseResponse.ts',
+        'unauthorizedResponse.ts',
+        'userListResponse.ts',
       ])
 
       const userListResp = await fsp.readFile(
-        path.join(d, 'responses/userListResponseResponse.ts'),
+        path.join(d, 'responses/userListResponse.ts'),
         'utf-8',
       )
       expect(userListResp).toBe(`import { resolver } from 'hono-openapi'
@@ -1831,7 +1831,7 @@ export const UserListResponseResponse = {
 `)
 
       const unauthorizedResp = await fsp.readFile(
-        path.join(d, 'responses/unauthorizedResponseResponse.ts'),
+        path.join(d, 'responses/unauthorizedResponse.ts'),
         'utf-8',
       )
       expect(unauthorizedResp).toBe(`import { resolver } from 'hono-openapi'
@@ -1844,8 +1844,8 @@ export const UnauthorizedResponseResponse = {
 `)
 
       const barrel = await fsp.readFile(path.join(d, 'responses/index.ts'), 'utf-8')
-      expect(barrel).toBe(`export * from './unauthorizedResponseResponse'
-export * from './userListResponseResponse'
+      expect(barrel).toBe(`export * from './unauthorizedResponse'
+export * from './userListResponse'
 `)
     })
   })
@@ -3106,10 +3106,7 @@ components:
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
-        const cb = await fsp.readFile(
-          path.join(d, 'components/callbacks/userCreatedCallback.ts'),
-          'utf-8',
-        )
+        const cb = await fsp.readFile(path.join(d, 'components/callbacks/userCreated.ts'), 'utf-8')
         // Real cross-component import via alias.
         expect(cb.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
         // No bogus `userCreatedCallback` import line.
@@ -3150,10 +3147,7 @@ components:
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
-        const pi = await fsp.readFile(
-          path.join(d, 'components/pathItems/productsPathItem.ts'),
-          'utf-8',
-        )
+        const pi = await fsp.readFile(path.join(d, 'components/pathItems/products.ts'), 'utf-8')
         expect(pi.includes("import { ProductSchema } from '@/components/schemas'")).toBe(true)
         expect(pi.includes('items: ProductSchema')).toBe(true)
       },
@@ -3189,10 +3183,7 @@ components:
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
-        const mt = await fsp.readFile(
-          path.join(d, 'components/mediaTypes/jsonUserMediaTypeSchema.ts'),
-          'utf-8',
-        )
+        const mt = await fsp.readFile(path.join(d, 'components/mediaTypes/jsonUser.ts'), 'utf-8')
         expect(mt.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
         expect(mt.includes('export const JsonUserMediaTypeSchema = UserSchema')).toBe(true)
       },
@@ -3234,16 +3225,10 @@ components:
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
         // The callback file uses `~` alias for schemas (defined under `~`).
-        const cb = await fsp.readFile(
-          path.join(d, 'components/callbacks/userCreatedCallback.ts'),
-          'utf-8',
-        )
+        const cb = await fsp.readFile(path.join(d, 'components/callbacks/userCreated.ts'), 'utf-8')
         expect(cb.includes("from '~/components/schemas'")).toBe(true)
         // The mediaType file also uses `~` alias for schemas.
-        const mt = await fsp.readFile(
-          path.join(d, 'components/mediaTypes/jsonUserMediaTypeSchema.ts'),
-          'utf-8',
-        )
+        const mt = await fsp.readFile(path.join(d, 'components/mediaTypes/jsonUser.ts'), 'utf-8')
         expect(mt.includes("from '~/components/schemas'")).toBe(true)
       },
     )
