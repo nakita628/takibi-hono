@@ -323,9 +323,30 @@ describe('extractSchemaExports: example metadata', () => {
 })
 
 // ===================================================================
-// 5. postProcess / fixMultiArgCall — allOf with 3+ items
+// 5. allOf with 2+ items — binary fold for zod/effect
 // ===================================================================
-describe('extractSchemaExports: allOf nesting (fixMultiArgCall)', () => {
+describe('extractSchemaExports: allOf nesting (binary fold)', () => {
+  const allOf2Schema = {
+    allOf: [
+      { type: 'object' as const, properties: { a: { type: 'string' as const } }, required: ['a'] },
+      { type: 'object' as const, properties: { b: { type: 'string' as const } }, required: ['b'] },
+    ],
+  }
+
+  it.concurrent('zod: allOf 2 items — no nesting needed', () => {
+    const result = extractSchemaExports('Pair', allOf2Schema as any, 'zod')
+    expect(result).toBe(
+      'export const PairSchema = z.intersection(z.object({a:z.string()}),z.object({b:z.string()}))\n\nexport type Pair = z.infer<typeof PairSchema>',
+    )
+  })
+
+  it.concurrent('effect: allOf 2 items — no nesting needed', () => {
+    const result = extractSchemaExports('Pair', allOf2Schema as any, 'effect')
+    expect(result).toBe(
+      'export const PairSchema = Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String}))\n\nexport type Pair = typeof PairSchema.Encoded',
+    )
+  })
+
   const allOf3Schema = {
     allOf: [
       { type: 'object' as const, properties: { a: { type: 'string' as const } }, required: ['a'] },
