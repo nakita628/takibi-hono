@@ -10,7 +10,7 @@ import type {
   Reference,
   Schema,
 } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import { makeStatusKey, resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 
 /** Returns the local component name when `value` is `{ $ref: '${prefix}<name>' }`. */
@@ -216,7 +216,7 @@ export function makeResponse(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
 ) {
   if (response.$ref) {
-    return `${statusCode}:${resolveRef(response.$ref)}`
+    return `${makeStatusKey(statusCode)}:${resolveRef(response.$ref)}`
   }
   const parts = [
     ...(response.description ? [`description:${JSON.stringify(response.description)}`] : []),
@@ -240,5 +240,5 @@ export function makeResponse(
         })()
       : []),
   ]
-  return `${statusCode}:{${parts.join(',')}}`
+  return `${makeStatusKey(statusCode)}:{${parts.join(',')}}`
 }

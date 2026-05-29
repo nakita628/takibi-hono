@@ -412,6 +412,18 @@ describe('makeResponse', () => {
     )
   })
 
+  test('wildcard status range is quoted', () => {
+    expect(makeResponse('2XX', { description: 'Any 2xx response' }, 'zod')).toBe(
+      '"2XX":{description:"Any 2xx response"}',
+    )
+  })
+
+  test('default status key stays unquoted', () => {
+    expect(makeResponse('default', { description: 'Unexpected response' }, 'zod')).toBe(
+      'default:{description:"Unexpected response"}',
+    )
+  })
+
   // --- inline schema with meta is registered with hono-openapi via .meta() ---
   // For $ref schemas, meta lives on the referenced component (e.g.,
   // `UserSchema.meta({...})`) and propagates through `resolver(UserSchema)`.

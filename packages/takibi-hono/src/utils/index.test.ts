@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import {
   makeHandlerFileName,
   makeSafeKey,
+  makeStatusKey,
   renderNamedImport,
   resolveRef,
   toCamelCase,
@@ -68,6 +69,14 @@ describe('toPascalCase', () => {
 
   it.concurrent('should leave pure-ASCII names byte-for-byte unchanged', () => {
     expect(toPascalCase('Schema_With_Underscores')).toBe('SchemaWithUnderscores')
+  })
+
+  it.concurrent('should prefix underscore for names starting with a digit', () => {
+    expect(toPascalCase('2FAConfig')).toBe('_2FAConfig')
+  })
+
+  it.concurrent('should uppercase the letter after a leading digit run', () => {
+    expect(toPascalCase('123value')).toBe('_123Value')
   })
 })
 
@@ -138,6 +147,10 @@ describe('resolveRef', () => {
 
   it.concurrent('should return empty string for ref with no segments', () => {
     expect(resolveRef('')).toBe('')
+  })
+
+  it.concurrent('should prefix underscore for schema names starting with a digit', () => {
+    expect(resolveRef('#/components/schemas/2FAConfig')).toBe('_2FAConfigSchema')
   })
 })
 
@@ -250,5 +263,19 @@ describe('makeSafeKey', () => {
 
   it.concurrent('quotes a numeric key', () => {
     expect(makeSafeKey('200')).toBe('"200"')
+  })
+})
+
+describe('makeStatusKey', () => {
+  it.concurrent('leaves an integer status code as a bare numeric key', () => {
+    expect(makeStatusKey('200')).toBe('200')
+  })
+
+  it.concurrent('leaves the default key unquoted', () => {
+    expect(makeStatusKey('default')).toBe('default')
+  })
+
+  it.concurrent('quotes a wildcard status range', () => {
+    expect(makeStatusKey('2XX')).toBe('"2XX"')
   })
 })

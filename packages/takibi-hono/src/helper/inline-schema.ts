@@ -333,6 +333,12 @@ function typeboxInline(schema: Schema) {
 function arktypeInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
+    // ArkType enums are a `'a | b | c'` string union; array/object members
+    // can't be expressed there (their JSON form breaks the string), so a
+    // pathological mixed enum falls back to `unknown`.
+    if (schema.enum.some((v) => v !== null && typeof v === 'object')) {
+      return wrapNullable("type('unknown')", schema, 'arktype')
+    }
     const values = schema.enum.map((v) => JSON.stringify(v)).join(' | ')
     return wrapNullable(`type('${values}')`, schema, 'arktype')
   }

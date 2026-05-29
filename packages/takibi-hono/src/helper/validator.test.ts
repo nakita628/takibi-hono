@@ -93,6 +93,24 @@ describe('makeValidators', () => {
     const result = makeValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual(["validator('json',z.intersection(BaseSchema,ExtraSchema))"])
   })
+
+  it.concurrent('collapses multiple json content types to a single json validator', () => {
+    const operation: Operation = {
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/CreateUser' },
+          },
+          'text/plain': {
+            schema: { type: 'string' },
+          },
+        },
+      },
+      responses: { '201': { description: 'Created' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual(["validator('json',CreateUserSchema)"])
+  })
 })
 
 describe('makeStandardValidators', () => {

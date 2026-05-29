@@ -1,5 +1,5 @@
 import { isMedia } from '../guard/index.js'
-import type { Components, Media, Operation, Parameter } from '../openapi/index.js'
+import type { Components, Media, Operation, Parameter, RequestBody } from '../openapi/index.js'
 import { makeSafeKey, resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 import { getStandardValidatorConfig } from './library.js'
@@ -18,6 +18,29 @@ function locationParamIn(location: string) {
     location === 'cookie'
     ? location
     : undefined
+}
+
+function bodyValidatorTarget(mediaType: string) {
+  return mediaType === 'application/x-www-form-urlencoded' ? 'form' : 'json'
+}
+
+/**
+ * Hono's validator overloads accept one schema per target, so multiple
+ * request-body content types collapse to a single entry per target.
+ * `application/json` wins its target; otherwise the first encountered entry does.
+ */
+function selectBodyContentEntries(content: NonNullable<RequestBody['content']>) {
+  const byTarget = Object.entries(content)
+    .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
+    .reduce<ReadonlyMap<string, readonly [string, Media]>>((acc, entry) => {
+      const target = bodyValidatorTarget(entry[0])
+      const current = acc.get(target)
+      if (current && (current[0] === 'application/json' || entry[0] !== 'application/json')) {
+        return acc
+      }
+      return new Map(acc).set(target, entry)
+    }, new Map())
+  return [...byTarget.values()]
 }
 
 export function makeValidators(
@@ -41,16 +64,14 @@ export function makeValidators(
   })
   const resolvedBody = resolveRequestBodyRef(operation.requestBody, components)
   const bodyValidators = resolvedBody?.content
-    ? Object.entries(resolvedBody.content)
-        .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
-        .map(([mediaType, media]) => {
-          const target = mediaType === 'application/x-www-form-urlencoded' ? 'form' : 'json'
-          const { schema } = media
-          const expr = schema.$ref
-            ? resolveRef(schema.$ref)
-            : schemaToInlineExpression(schema, schemaLib)
-          return `${alias}('${target}',${wrapSchemaForValidator(expr, schemaLib)})`
-        })
+    ? selectBodyContentEntries(resolvedBody.content).map(([mediaType, media]) => {
+        const target = bodyValidatorTarget(mediaType)
+        const { schema } = media
+        const expr = schema.$ref
+          ? resolveRef(schema.$ref)
+          : schemaToInlineExpression(schema, schemaLib)
+        return `${alias}('${target}',${wrapSchemaForValidator(expr, schemaLib)})`
+      })
     : ([] as const)
   return [...paramValidators, ...bodyValidators] as const
 }
@@ -81,16 +102,14 @@ export function makeStandardValidators(
   })
   const resolvedBody = resolveRequestBodyRef(operation.requestBody, components)
   const bodyValidators = resolvedBody?.content
-    ? Object.entries(resolvedBody.content)
-        .filter((entry): entry is [string, Media] => isMedia(entry[1]) && !!entry[1].schema)
-        .map(([mediaType, media]) => {
-          const target = mediaType === 'application/x-www-form-urlencoded' ? 'form' : 'json'
-          const { schema } = media
-          const expr = schema.$ref
-            ? resolveRef(schema.$ref)
-            : schemaToInlineExpression(schema, schemaLib)
-          return `${validatorFn}('${target}',${expr})` as const
-        })
+    ? selectBodyContentEntries(resolvedBody.content).map(([mediaType, media]) => {
+        const target = bodyValidatorTarget(mediaType)
+        const { schema } = media
+        const expr = schema.$ref
+          ? resolveRef(schema.$ref)
+          : schemaToInlineExpression(schema, schemaLib)
+        return `${validatorFn}('${target}',${expr})` as const
+      })
     : ([] as const)
   return [...paramValidators, ...bodyValidators] as const
 }

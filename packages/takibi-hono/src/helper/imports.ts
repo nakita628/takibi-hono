@@ -87,9 +87,18 @@ function collectComponentImportLines(
   // instead of scan-encounter order, which varies with source layout.
   return COMPONENT_SUFFIXES.flatMap(([kind]) => {
     const names = grouped.get(kind)
-    const importPath = componentPaths[kind]
-    if (!names || !importPath) return []
-    return [renderNamedImport([...names].toSorted(), importPath)]
+    if (!names) return []
+    const ownPath = componentPaths[kind]
+    if (ownPath) return [renderNamedImport([...names].toSorted(), ownPath)]
+    // No dedicated path (e.g. basic mode): a `*Schema` export may be a schema
+    // whose suffix made classifyRef pick a non-schemas kind (e.g. a schema named
+    // `searchParams` → `SearchParamsSchema`). Those co-live in the schemas module,
+    // so import them from there; drop the rest (identifiers the scan over-matched,
+    // such as a form field named `StatusCallback`).
+    const schemaPath = componentPaths['schemas']
+    const schemaNames = [...names].filter((n) => n.endsWith('Schema'))
+    if (!schemaPath || schemaNames.length === 0) return []
+    return [renderNamedImport(schemaNames.toSorted(), schemaPath)]
   })
 }
 

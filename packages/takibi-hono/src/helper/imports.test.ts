@@ -839,6 +839,14 @@ export const X={schema:UserSchema}`
     ).toStrictEqual(["import{UserParamsSchema}from'./parameters'"])
   })
 
+  it.concurrent('falls back to schemas path when parameters path is undefined', () => {
+    expect(
+      makeComponentImports('SearchParamsSchema', 'zod', {
+        schemas: '../components',
+      }),
+    ).toStrictEqual(["import{SearchParamsSchema}from'../components'"])
+  })
+
   it.concurrent('classifies *HeaderSchema as headers not schemas', () => {
     expect(
       makeComponentImports('XRequestIdHeaderSchema', 'zod', {

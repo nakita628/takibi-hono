@@ -26,12 +26,21 @@ function encodeNonAscii(str: string) {
 }
 
 export function toPascalCase(str: string) {
-  return encodeNonAscii(str)
+  const pascal = encodeNonAscii(str)
     .replace(/[^A-Za-z0-9]/g, ' ')
     .trim()
     .split(/\s+/)
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join('')
+  // A component name can start with a digit (e.g. `2FAConfig`); prefix `_` so the
+  // emitted identifier is valid TS. Mirrors schema-to-library's `toIdentifierPascalCase`
+  // so `$ref` resolution matches the component declaration names it emits.
+  return /^[0-9]/.test(pascal)
+    ? `_${pascal}`.replace(
+        /([0-9])([a-z])/,
+        (_match, digit, char) => `${digit}${char.toUpperCase()}`,
+      )
+    : pascal
 }
 
 export function toCamelCase(str: string) {
@@ -75,6 +84,18 @@ export function makeSafeKey(key: string) {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key)
 }
 
+/**
+ * Encode a response status key for object-literal output. Pure non-negative
+ * integers (`200`) emit as bare numeric keys and bare identifiers (`default`)
+ * stay unquoted; wildcard ranges (`2XX`) and anything else are JSON-encoded so
+ * the generated `responses` object is valid TypeScript.
+ */
+export function makeStatusKey(statusCode: string) {
+  return /^[0-9]+$/.test(statusCode) || /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(statusCode)
+    ? statusCode
+    : JSON.stringify(statusCode)
+}
+
 /** Maps a handler file name to its variable name (`__root` → `rootHandler`, otherwise `<camelCase>Handler`). */
 export function toHandlerVarName(handlerFileName: string) {
   const base = toCamelCase(handlerFileName === '__root' ? 'root' : handlerFileName)
@@ -82,4 +103,27 @@ export function toHandlerVarName(handlerFileName: string) {
   // generated `const <name>Handler` is a valid identifier.
   const safeBase = /^[0-9]/.test(base) ? `_${base}` : base
   return `${safeBase}Handler`
+}
+
+const HONO_CHAIN_METHODS: ReadonlySet<string> = new Set([
+  'get',
+  'post',
+  'put',
+  'delete',
+  'options',
+  'patch',
+])
+
+/**
+ * Emit a chained Hono route call. Methods Hono exposes on its chain
+ * (`get`/`post`/`put`/`delete`/`options`/`patch`) use `.method(path, ...rest)`;
+ * any other HTTP method (`head`/`trace`/`connect`) uses `.on('METHOD', path, ...rest)`.
+ * `args[0]` is the quoted path; the rest are middlewares/handlers.
+ */
+export function emitRouteCall(method: string, args: readonly string[]) {
+  if (HONO_CHAIN_METHODS.has(method)) {
+    return `.${method}(${args.join(',')})`
+  }
+  const [pathArg, ...rest] = args
+  return `.on(${[`'${method.toUpperCase()}'`, pathArg, ...rest].join(',')})`
 }
