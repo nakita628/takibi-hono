@@ -24,7 +24,7 @@ describe('makeHeadersCode', () => {
       },
     }
     const result = await makeHeadersCode(headers, 'zod')
-    expect(result).toBe('export const XRateLimitHeaderSchema=z.int().optional()')
+    expect(result).toBe('export const XRateLimitHeaderSchema=z.int().exactOptional()')
   })
 
   it.concurrent('should generate header from $ref', async () => {

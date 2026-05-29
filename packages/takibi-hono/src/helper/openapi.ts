@@ -56,7 +56,7 @@ export function makeOptional(
 ) {
   switch (schemaLib) {
     case 'zod':
-      return `${expr}.optional()`
+      return `${expr}.exactOptional()`
     case 'valibot':
       return `v.optional(${expr})`
     case 'typebox':

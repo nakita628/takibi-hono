@@ -236,7 +236,16 @@ describe('schemaToInlineExpression', () => {
         required: ['name'],
       }
       expect(schemaToInlineExpression(schema, 'zod')).toBe(
-        'z.object({name:z.string(),age:z.int().optional()})',
+        'z.object({name:z.string(),age:z.int().exactOptional()})',
+      )
+    })
+    it.concurrent('quotes a non-identifier property key (dotted name)', () => {
+      const schema: Schema = {
+        type: 'object',
+        properties: { 'Parameter1.Name': { type: 'string' } },
+      }
+      expect(schemaToInlineExpression(schema, 'zod')).toBe(
+        'z.object({"Parameter1.Name":z.string().exactOptional()})',
       )
     })
     it.concurrent('enum', () => {
@@ -688,7 +697,7 @@ describe('schemaToInlineExpression', () => {
         required: ['address'],
       }
       expect(schemaToInlineExpression(schema, 'zod')).toBe(
-        'z.object({address:z.object({city:z.string(),zip:z.string().optional()})})',
+        'z.object({address:z.object({city:z.string(),zip:z.string().exactOptional()})})',
       )
     })
     it.concurrent('valibot: nested object', () => {

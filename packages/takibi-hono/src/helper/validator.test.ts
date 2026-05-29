@@ -14,7 +14,7 @@ describe('makeValidators', () => {
     }
     const result = makeValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual([
-      "validator('query',z.object({page:z.coerce.int().optional(),limit:z.coerce.int()}))",
+      "validator('query',z.object({page:z.coerce.number().int().exactOptional(),limit:z.coerce.number().int()}))",
     ])
   })
 
@@ -169,7 +169,7 @@ describe('makeStandardValidators', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["sValidator('query',z.object({page:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["sValidator('query',z.object({page:z.coerce.number().int()}))"])
   })
 
   it.concurrent('zod: query coercion for boolean', () => {
@@ -196,7 +196,7 @@ describe('makeStandardValidators', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["sValidator('param',z.object({id:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["sValidator('param',z.object({id:z.coerce.number().int()}))"])
   })
 
   it.concurrent('zod: path number is coerced', () => {
@@ -314,7 +314,7 @@ describe('makeStandardValidators', () => {
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual([
-      "sValidator('query',z.object({limit:z.coerce.int().optional()}))",
+      "sValidator('query',z.object({limit:z.coerce.number().int().exactOptional()}))",
     ])
   })
 })
@@ -417,7 +417,7 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('param',z.object({id:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["validator('param',z.object({id:z.coerce.number().int()}))"])
   })
 
   it.concurrent('does NOT emit coerce for header integer (header is not wire-string scope)', () => {
@@ -426,7 +426,9 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('header',z.object({traceId:z.int().optional()}))"])
+    expect(result).toStrictEqual([
+      "validator('header',z.object({traceId:z.int().exactOptional()}))",
+    ])
   })
 
   it.concurrent('does NOT emit coerce for cookie integer (cookie is not wire-string scope)', () => {
@@ -435,7 +437,7 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('cookie',z.object({sid:z.int().optional()}))"])
+    expect(result).toStrictEqual(["validator('cookie',z.object({sid:z.int().exactOptional()}))"])
   })
 
   it.concurrent('resolves requestBody $ref via components and emits json validator', () => {
@@ -452,5 +454,41 @@ describe('makeValidators — wire-string coerce contract', () => {
       },
     })
     expect(result).toStrictEqual(["validator('json',UserSchema)"])
+  })
+})
+
+// ─── object-key safety: non-identifier parameter names must be quoted ──
+describe('makeValidators — non-identifier parameter names are quoted keys', () => {
+  it.concurrent('quotes a hyphenated header name (X-Request-ID)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'X-Request-ID', in: 'header', schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([
+      `validator('header',z.object({"X-Request-ID":z.string().exactOptional()}))`,
+    ])
+  })
+
+  it.concurrent('quotes a hyphenated query name (page-size)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'page-size', in: 'query', required: true, schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([`validator('query',z.object({"page-size":z.string()}))`])
+  })
+})
+
+describe('makeStandardValidators — non-identifier parameter names are quoted keys', () => {
+  it.concurrent('quotes a hyphenated header name (X-Request-ID)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'X-Request-ID', in: 'header', schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([
+      `sValidator('header',z.object({"X-Request-ID":z.string().exactOptional()}))`,
+    ])
   })
 })

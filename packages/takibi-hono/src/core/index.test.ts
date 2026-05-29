@@ -354,13 +354,13 @@ describe('hono', () => {
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -389,7 +389,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
   .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
   .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
@@ -715,14 +719,14 @@ export const PetSchema = Schema.Struct({
   examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
 })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
     })
 
@@ -786,7 +790,7 @@ export const petsHandler = new Hono()
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({
     ref: 'Pet',
     description: 'A pet in the store',
@@ -796,7 +800,7 @@ export const PetSchema = z
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -837,7 +841,7 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    validator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
     (c) => {},
   )
   .post(
@@ -970,7 +974,7 @@ export default app
       expect(pet).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({
     ref: 'Pet',
     description: 'A pet in the store',
@@ -1000,7 +1004,7 @@ export type Pet = z.infer<typeof PetSchema>
       expect(createPet).toBe(`import * as z from 'zod'
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ ref: 'CreatePet', description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -1182,9 +1186,9 @@ export const UnauthorizedResponseResponse = {
       const parameters = await fsp.readFile(path.join(d, 'parameters.ts'), 'utf-8')
       expect(parameters).toBe(`import * as z from 'zod'
 
-export const PageParamParamsSchema = z.int().optional()
+export const PageParamParamsSchema = z.int().exactOptional()
 
-export const LimitParamParamsSchema = z.int().optional()
+export const LimitParamParamsSchema = z.int().exactOptional()
 `)
     })
 
@@ -1209,7 +1213,7 @@ export const LimitParamParamsSchema = z.int().optional()
 
 export const XRequestIdHeaderSchema = z.string()
 
-export const XRateLimitHeaderSchema = z.int().optional()
+export const XRateLimitHeaderSchema = z.int().exactOptional()
 `)
     })
 
@@ -1357,9 +1361,11 @@ export const UserSchema = z
     id: z.int(),
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
-    tags: z.array(z.string()).optional(),
-    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
   })
   .meta({ ref: 'User' })
 
@@ -1369,7 +1375,7 @@ export const CreateUserSchema = z
   .object({
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
   })
   .meta({ ref: 'CreateUser' })
 
@@ -1667,7 +1673,7 @@ export const PetSchema = Schema.Struct({
   examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
 })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 `)
       },
     )
@@ -1698,7 +1704,7 @@ export const CreatePetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
       },
     )
@@ -1881,9 +1887,11 @@ export const UserSchema = z
     id: z.int(),
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
-    tags: z.array(z.string()).optional(),
-    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
   })
   .meta({ ref: 'User' })
 
@@ -1893,7 +1901,7 @@ export const CreateUserSchema = z
   .object({
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
   })
   .meta({ ref: 'CreateUser' })
 
@@ -1908,9 +1916,9 @@ export type Error = z.infer<typeof ErrorSchema>
         const parameters = await fsp.readFile(path.join(d, 'parameters.ts'), 'utf-8')
         expect(parameters).toBe(`import * as z from 'zod'
 
-export const PageParamParamsSchema = z.int().optional()
+export const PageParamParamsSchema = z.int().exactOptional()
 
-export const LimitParamParamsSchema = z.int().optional()
+export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         // responses.ts should import from schemas
@@ -1939,7 +1947,7 @@ export const UnauthorizedResponseResponse = {
 
 export const XRequestIdHeaderSchema = z.string()
 
-export const XRateLimitHeaderSchema = z.int().optional()
+export const XRateLimitHeaderSchema = z.int().exactOptional()
 `)
 
         // handler should import from all components
@@ -2096,7 +2104,9 @@ export const webhooksHandler = new Hono().post(
       200: {
         description: 'Acknowledged',
         content: {
-          'application/json': { schema: resolver(z.object({ received: z.boolean().optional() })) },
+          'application/json': {
+            schema: resolver(z.object({ received: z.boolean().exactOptional() })),
+          },
         },
       },
     },
@@ -2192,13 +2202,13 @@ export const webhooksHandler = new Hono().post(
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -2225,11 +2235,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -2255,11 +2265,11 @@ export const CreatePetSchema = z
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -2293,14 +2303,14 @@ export const PetSchema = Schema.Struct({
   examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
 })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
       },
     )
@@ -2328,11 +2338,11 @@ export type CreatePet = typeof CreatePetSchema.Encoded
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -2360,11 +2370,11 @@ export const CreatePetSchema = z
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -2396,9 +2406,11 @@ export const UserSchema = z
     id: z.int(),
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
-    tags: z.array(z.string()).optional(),
-    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
   })
   .meta({ ref: 'User' })
 
@@ -2406,7 +2418,7 @@ export const CreateUserSchema = z
   .object({
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
   })
   .meta({ ref: 'CreateUser' })
 
@@ -2441,9 +2453,9 @@ export const UnauthorizedResponseResponse = {
         )
         expect(parameters).toBe(`import * as z from 'zod'
 
-export const PageParamParamsSchema = z.int().optional()
+export const PageParamParamsSchema = z.int().exactOptional()
 
-export const LimitParamParamsSchema = z.int().optional()
+export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
@@ -2451,7 +2463,7 @@ export const LimitParamParamsSchema = z.int().optional()
 
 export const XRequestIdHeaderSchema = z.string()
 
-export const XRateLimitHeaderSchema = z.int().optional()
+export const XRateLimitHeaderSchema = z.int().exactOptional()
 `)
 
         const examples = await fsp.readFile(path.join(d, 'src/openapi/examples/index.ts'), 'utf-8')
@@ -2527,13 +2539,13 @@ export const CreateUserBodyRequestBody = {
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -2564,7 +2576,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
   .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
   .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
@@ -2675,12 +2691,12 @@ export * from './pet'
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
@@ -2707,11 +2723,11 @@ export const CreatePetSchema = z
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -2736,12 +2752,12 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
@@ -2767,14 +2783,14 @@ export const CreatePetSchema = z
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 
@@ -2802,11 +2818,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
       },
@@ -3491,7 +3507,7 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })), (c) => {})
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
   .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
   .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})

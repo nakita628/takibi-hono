@@ -1,6 +1,6 @@
 import { isNullable, isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import { makeSafeKey, resolveRef } from '../utils/index.js'
 import { extractSchemaExports } from './schema-expression.js'
 
 function singleItems(items: Schema | readonly Schema[] | undefined) {
@@ -215,7 +215,7 @@ function zodInlineExpr(schema: Schema): string {
       const props = Object.entries(schema.properties).map(([key, prop]) => {
         const isRequired = schema.required?.includes(key)
         const propExpr = zodInline(prop)
-        return `${key}:${isRequired ? propExpr : `${propExpr}.optional()`}`
+        return `${makeSafeKey(key)}:${isRequired ? propExpr : `${propExpr}.exactOptional()`}`
       })
       return `z.object({${props.join(',')}})`
     }
@@ -269,7 +269,7 @@ function valibotInline(schema: Schema): string {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = valibotInline(prop)
-          return `${key}:${isRequired ? propExpr : `v.optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `v.optional(${propExpr})`}`
         })
         return `v.object({${props.join(',')}})`
       }
@@ -319,7 +319,7 @@ function typeboxInline(schema: Schema) {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = typeboxInline(prop)
-          return `${key}:${isRequired ? propExpr : `Type.Optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `Type.Optional(${propExpr})`}`
         })
         return `Type.Object({${props.join(',')}})`
       }
@@ -420,7 +420,7 @@ function effectInline(schema: Schema) {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = effectInline(prop)
-          return `${key}:${isRequired ? propExpr : `Schema.optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `Schema.optional(${propExpr})`}`
         })
         return `Schema.Struct({${props.join(',')}})`
       }

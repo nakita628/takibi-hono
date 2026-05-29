@@ -247,7 +247,11 @@ function tarjanConnect(
 function collectRefs(schema: Schema): readonly string[] {
   const selfRef =
     schema.$ref && schema.$ref.startsWith('#/components/schemas/')
-      ? [schema.$ref.split('/').at(-1) ?? '']
+      ? // $ref tails are percent-encoded by the bundler for non-ASCII names
+        // (`日本語スキーマ` → `%E6%97%A5...`); decode so they match the decoded
+        // schema-map keys, otherwise self/cyclic Unicode refs go undetected and
+        // skip the required `z.lazy(...)` wrapper.
+        [decodeURIComponent(schema.$ref.split('/').at(-1) ?? '')]
       : []
   const itemRefs = schema.items
     ? isSchemaArray(schema.items)

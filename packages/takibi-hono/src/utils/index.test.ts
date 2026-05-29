@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import {
   makeHandlerFileName,
+  makeSafeKey,
   renderNamedImport,
   resolveRef,
   toCamelCase,
+  toHandlerVarName,
   toHonoPath,
   toPascalCase,
 } from './index.js'
@@ -46,6 +48,26 @@ describe('toPascalCase', () => {
 
   it.concurrent('should handle already PascalCase', () => {
     expect(toPascalCase('UserName')).toBe('UserName')
+  })
+
+  it.concurrent('should encode non-ASCII names injectively (Japanese)', () => {
+    expect(toPascalCase('日本語スキーマ')).toBe('U65e5u672cu8a9eu30b9u30adu30fcu30de')
+  })
+
+  it.concurrent('should encode non-ASCII names injectively (Cyrillic)', () => {
+    expect(toPascalCase('Схема_Русский')).toBe('U421u445u435u43cu430U420u443u441u441u43au438u439')
+  })
+
+  it.concurrent('should encode mixed ASCII/non-ASCII names injectively (French)', () => {
+    expect(toPascalCase('Schéma_Français')).toBe('Schue9maFranue7ais')
+  })
+
+  it.concurrent('should distinguish two different non-ASCII names', () => {
+    expect(toPascalCase('日本語スキーマ')).not.toBe(toPascalCase('Схема_Русский'))
+  })
+
+  it.concurrent('should leave pure-ASCII names byte-for-byte unchanged', () => {
+    expect(toPascalCase('Schema_With_Underscores')).toBe('SchemaWithUnderscores')
   })
 })
 
@@ -94,6 +116,20 @@ describe('resolveRef', () => {
 
   it.concurrent('should handle URL-encoded names with nested path', () => {
     expect(resolveRef('#/components/schemas/My%20Schema/properties/field')).toBe('MySchemaSchema')
+  })
+
+  it.concurrent('should resolve percent-encoded non-ASCII schema ref to the injective declaration name', () => {
+    expect(
+      resolveRef(
+        '#/components/schemas/%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%9E',
+      ),
+    ).toBe('U65e5u672cu8a9eu30b9u30adu30fcu30deSchema')
+  })
+
+  it.concurrent('should resolve decoded non-ASCII schema ref to the injective declaration name', () => {
+    expect(resolveRef('#/components/schemas/日本語スキーマ')).toBe(
+      'U65e5u672cu8a9eu30b9u30adu30fcu30deSchema',
+    )
   })
 
   it.concurrent('should fallback for unknown prefix', () => {
@@ -182,5 +218,37 @@ describe('resolveRef (additional cases)', () => {
 
   it.concurrent('should handle underscored names', () => {
     expect(resolveRef('#/components/schemas/user_profile')).toBe('UserProfileSchema')
+  })
+})
+
+describe('toHandlerVarName', () => {
+  it.concurrent('maps __root to rootHandler', () => {
+    expect(toHandlerVarName('__root')).toBe('rootHandler')
+  })
+
+  it.concurrent('camelCases a normal segment', () => {
+    expect(toHandlerVarName('pets')).toBe('petsHandler')
+  })
+
+  it.concurrent('prefixes _ when the segment starts with a digit', () => {
+    expect(toHandlerVarName('2010-04-01')).toBe('_20100401Handler')
+  })
+})
+
+describe('makeSafeKey', () => {
+  it.concurrent('leaves a bare identifier unquoted', () => {
+    expect(makeSafeKey('userName')).toBe('userName')
+  })
+
+  it.concurrent('quotes a hyphenated key', () => {
+    expect(makeSafeKey('X-Request-ID')).toBe('"X-Request-ID"')
+  })
+
+  it.concurrent('quotes a dotted key', () => {
+    expect(makeSafeKey('Parameter1.Name')).toBe('"Parameter1.Name"')
+  })
+
+  it.concurrent('quotes a numeric key', () => {
+    expect(makeSafeKey('200')).toBe('"200"')
   })
 })

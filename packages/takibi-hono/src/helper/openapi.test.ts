@@ -22,7 +22,7 @@ describe('makeOptional', () => {
   const ALL_LIBS = ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const
 
   test('zod', () => {
-    expect(makeOptional('z.string()', 'zod')).toBe('z.string().optional()')
+    expect(makeOptional('z.string()', 'zod')).toBe('z.string().exactOptional()')
   })
 
   test('valibot', () => {

@@ -277,11 +277,11 @@ describe('takibiHono CLI integration', () => {
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
 
@@ -292,7 +292,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
 
@@ -344,14 +348,14 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'A pet in the store' })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
     })
 
@@ -489,11 +493,11 @@ export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).descri
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
 
@@ -507,7 +511,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
     })
@@ -543,9 +551,11 @@ export const UserSchema = z
     id: z.int(),
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
-    tags: z.array(z.string()).optional(),
-    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
   })
   .meta({ ref: 'User' })
 
@@ -572,9 +582,9 @@ export const UserListResponseResponse = {
         )
         expect(parameters).toBe(`import * as z from 'zod'
 
-export const PageParamParamsSchema = z.int().optional()
+export const PageParamParamsSchema = z.int().exactOptional()
 
-export const LimitParamParamsSchema = z.int().optional()
+export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
@@ -683,13 +693,13 @@ export const usersHandler = new Hono()
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -722,11 +732,11 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
 
@@ -759,12 +769,12 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
@@ -794,11 +804,11 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
     })
@@ -827,12 +837,12 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
@@ -862,14 +872,14 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 
@@ -906,14 +916,14 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'A pet in the store' })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
     })
   })
@@ -957,7 +967,7 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    validator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
     (c) => {},
   )
   .post(

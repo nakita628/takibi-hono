@@ -1,3 +1,5 @@
 packages:
   - packages/*
   - fixtures/*
+overrides:
+  schema-to-library: link:../schema-to-libray/packages/schema-to-library

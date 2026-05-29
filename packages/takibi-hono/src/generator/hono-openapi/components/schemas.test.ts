@@ -24,7 +24,7 @@ describe('makeSchemasCode', () => {
     expect(result).toBe(
       `import*as z from'zod'
 
-export const UserSchema = z.object({name:z.string(),age:z.int().optional()})`,
+export const UserSchema = z.object({name:z.string(),age:z.int().exactOptional()})`,
     )
   })
 
@@ -196,7 +196,7 @@ export type User = typeof UserSchema.infer`,
 
 export const UserSchema = Schema.Struct({name:Schema.String})
 
-export type User = typeof UserSchema.Encoded`,
+export type UserSchema = typeof UserSchema.Type`,
     )
   })
 
@@ -249,7 +249,7 @@ export type Todo = z.infer<typeof TodoSchema>`,
 
 export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})
 
-export type Pet = typeof PetSchema.Encoded`,
+export type PetSchema = typeof PetSchema.Type`,
     )
   })
 
@@ -408,7 +408,7 @@ export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet
 
 type CategoryType={name:string;children?:CategoryType[]}
 
-export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).optional()}))`,
+export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).exactOptional()}))`,
     )
   })
 
@@ -881,7 +881,7 @@ export type Pet = z.infer<typeof PetSchema>
 
 export const PetSchema = Schema.Struct({ name: Schema.String })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 `,
     )
   })

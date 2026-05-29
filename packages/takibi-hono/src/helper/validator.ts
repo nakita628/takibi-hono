@@ -1,6 +1,6 @@
 import { isMedia } from '../guard/index.js'
 import type { Components, Media, Operation, Parameter } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import { makeSafeKey, resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 import { getStandardValidatorConfig } from './library.js'
 import {
@@ -35,7 +35,7 @@ export function makeValidators(
     const fields = parameters.map((parameter) => {
       const expr = schemaToInlineExpression(parameter.schema, schemaLib, paramIn)
       const isOptional = !parameter.required && location !== 'path'
-      return `${parameter.name}:${isOptional ? makeOptional(expr, schemaLib) : expr}`
+      return `${makeSafeKey(parameter.name)}:${isOptional ? makeOptional(expr, schemaLib) : expr}`
     })
     return `${alias}('${validatorTarget}',${wrapSchemaForValidator(makeObjectExpression(fields, schemaLib), schemaLib)})`
   })
@@ -74,7 +74,7 @@ export function makeStandardValidators(
     const fields = parameters.map((parameter) => {
       const expr = schemaToInlineExpression(parameter.schema, schemaLib, paramIn)
       const isOptional = !parameter.required && location !== 'path'
-      return `${parameter.name}:${isOptional ? makeOptional(expr, schemaLib) : expr}` as const
+      return `${makeSafeKey(parameter.name)}:${isOptional ? makeOptional(expr, schemaLib) : expr}` as const
     })
     const objExpr = makeObjectExpression(fields, schemaLib)
     return `${validatorFn}('${validatorTarget}',${objExpr})` as const
