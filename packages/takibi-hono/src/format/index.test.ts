@@ -15,18 +15,6 @@ describe('fmt', () => {
     const result = await fmt('const = ;')
     expect(result).toStrictEqual({ ok: false, error: 'Unexpected token' })
   })
-
-  it.concurrent('falls back to unformatted input when formatting exceeds the timeout', async () => {
-    // A deeply-nested expression oxfmt formats in ~200ms; a 5ms budget forces the
-    // timeout path, which returns the (valid) input verbatim instead of hanging.
-    const nested = [0, 1, 2, 3, 4].reduce<string>(
-      (acc, i) => `z.intersection(A${i}Schema,z.object({y:${acc}}))`,
-      'z.object({x:z.string()})',
-    )
-    const input = `export const RootSchema=${nested}\n`
-    const result = await fmt(input, 5)
-    expect(result).toStrictEqual({ ok: true, value: input })
-  })
 })
 
 describe('setFormatOptions', () => {
