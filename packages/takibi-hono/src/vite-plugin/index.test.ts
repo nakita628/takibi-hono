@@ -644,6 +644,58 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     consoleSpy.mockRestore()
   })
 
+  it('cleans split client directories before regeneration', async () => {
+    const { hono } = await import('../core/index.js')
+    vi.mocked(hono).mockClear()
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const tqDir = path.resolve(process.cwd(), 'src/client/tq')
+    const mockDirEntry = (name: string) => ({
+      name,
+      isFile: () => true,
+      isDirectory: () => false,
+      isBlockDevice: () => false,
+      isCharacterDevice: () => false,
+      isFIFO: () => false,
+      isSocket: () => false,
+      isSymbolicLink: () => false,
+      parentPath: tqDir,
+      path: tqDir,
+    })
+
+    vi.mocked(fsp.stat).mockImplementation(async (p) => {
+      if (String(p) === tqDir) {
+        return { isDirectory: () => true, isFile: () => false } as any
+      }
+      throw new Error('ENOENT')
+    })
+    vi.mocked(fsp.readdir).mockResolvedValue([
+      mockDirEntry('getPing.ts') as any,
+      mockDirEntry('index.ts') as any,
+    ])
+    vi.mocked(fsp.unlink).mockResolvedValue(undefined)
+
+    const plugin = takibiHonoVite()
+    const { server } = createMockServer({
+      input: 'openapi.yaml',
+      schema: 'zod',
+      'takibi-hono': {
+        client: {
+          tanstackQuery: { output: 'src/client/tq', import: './index', split: true },
+        },
+      },
+    })
+    plugin.configureServer(server)
+
+    await vi.waitFor(() => {
+      expect(hono).toHaveBeenCalled()
+    })
+
+    expect(fsp.unlink).toHaveBeenCalledWith(path.join(tqDir, 'getPing.ts'))
+    consoleSpy.mockRestore()
+  })
+
   it('skips cleanup when handlers output is a .ts file (not a directory)', async () => {
     const { hono } = await import('../core/index.js')
     vi.mocked(hono).mockClear()
@@ -758,6 +810,56 @@ describe('takibiHonoVite: config change cleanup', () => {
 
     // Old handler directory should have been cleaned up
     expect(fsp.rm).toHaveBeenCalledWith(oldHandlersPath, { recursive: true, force: true })
+    consoleSpy.mockRestore()
+  })
+
+  it('cleans a stale client output when it is dropped from config', async () => {
+    const { hono } = await import('../core/index.js')
+    vi.mocked(hono).mockClear()
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const oldRpcPath = path.resolve(process.cwd(), 'src/client/rpc.ts')
+
+    let loadCount = 0
+    const plugin = takibiHonoVite()
+    const { server, watcherCallbacks } = createMockServer()
+    server.ssrLoadModule = async () => {
+      loadCount++
+      if (loadCount === 1) {
+        return {
+          default: {
+            input: 'openapi.yaml',
+            schema: 'zod',
+            'takibi-hono': {
+              client: { rpc: { output: 'src/client/rpc.ts', import: './index' } },
+            },
+          },
+        }
+      }
+      return { default: { input: 'openapi.yaml', schema: 'zod' } }
+    }
+
+    vi.mocked(fsp.stat).mockImplementation(async (p) => {
+      if (String(p) === oldRpcPath) {
+        return { isDirectory: () => false, isFile: () => true } as any
+      }
+      throw new Error('ENOENT')
+    })
+    vi.mocked(fsp.unlink).mockResolvedValue(undefined)
+
+    plugin.configureServer(server)
+    await vi.waitFor(() => {
+      expect(watcherCallbacks.length).toBe(1)
+      expect(loadCount).toBe(1)
+    })
+
+    watcherCallbacks[0]('change', path.resolve(process.cwd(), 'takibi-hono.config.ts'))
+    await vi.waitFor(() => {
+      expect(loadCount).toBe(2)
+    })
+
+    expect(fsp.unlink).toHaveBeenCalledWith(oldRpcPath)
     consoleSpy.mockRestore()
   })
 

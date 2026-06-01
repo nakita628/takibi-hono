@@ -952,6 +952,60 @@ export default app
         }
       },
     )
+
+    it.concurrent(
+      'returns ok: false (does not throw) when the schemas output directory cannot be created',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('error_schemas_emit')
+        fs.mkdirSync(d, { recursive: true })
+        // A regular file sits where a directory is needed, so mkdir of the
+        // schemas output dir fails and the failure must propagate as a Result.
+        fs.writeFileSync(path.join(d, 'blocker'), 'not a directory')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'src/handlers') },
+            components: {
+              schemas: { output: path.join(d, 'blocker', 'schemas.ts') },
+            },
+          },
+        })
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          expect(typeof result.error).toBe('string')
+          expect(result.error.length > 0).toBe(true)
+        }
+      },
+    )
+
+    it.concurrent(
+      'returns ok: false (does not throw) when the app output path is a directory',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('error_app_readfile')
+        // appDir is the parent of handlersDir; app writes appDir/index.ts.
+        // Pre-create a directory at that path so readFile fails with EISDIR
+        // and the failure propagates instead of throwing.
+        fs.mkdirSync(path.join(d, 'src/index.ts'), { recursive: true })
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+          'takibi-hono': {
+            handlers: { output: path.join(d, 'src/handlers') },
+            components: {
+              schemas: { output: path.join(d, 'src/components/index.ts') },
+            },
+          },
+        })
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          expect(typeof result.error).toBe('string')
+          expect(result.error.length > 0).toBe(true)
+        }
+      },
+    )
   })
 
   describe('split schemas mode (openapi: true, schemas split)', () => {

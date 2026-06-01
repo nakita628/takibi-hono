@@ -1,6 +1,7 @@
 import { setFormatOptions } from '../format/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
 import { makeApp } from './app/index.js'
+import { makeClients } from './client/index.js'
 import { makeComponents } from './components/index.js'
 import { makeHandlers } from './handlers/index.js'
 import type { TakibiHonoOptions } from './layout.js'
@@ -43,5 +44,16 @@ export async function hono(config: {
     const webhooksResult = await makeWebhooks(openapi, config.schema, layout)
     if (!webhooksResult.ok) return webhooksResult
   }
-  return makeApp(openapi, handlersResult.value.handlerFileNames, config.basePath, layout)
+  const appResult = await makeApp(
+    openapi,
+    handlersResult.value.handlerFileNames,
+    config.basePath,
+    layout,
+  )
+  if (!appResult.ok) return appResult
+  if (ohConfig?.client) {
+    const clientResult = await makeClients(openapi, ohConfig.client, process.cwd(), config.basePath)
+    if (!clientResult.ok) return clientResult
+  }
+  return appResult
 }

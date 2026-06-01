@@ -1,5 +1,40 @@
 import path from 'node:path'
 
+/** Shared shape for the framework query-hook generators (swr / tanstack / vue / ...). */
+type ClientQueryOptions = {
+  readonly output: string
+  readonly import: string
+  readonly split?: boolean | undefined
+  readonly client?: string | undefined
+}
+
+/** Client-code generators delegated to `hono-takibi`. Each entry is opt-in. */
+export type ClientOptions = {
+  readonly rpc?:
+    | (ClientQueryOptions & {
+        readonly parseResponse?: boolean | undefined
+        readonly docs?: boolean | undefined
+      })
+    | undefined
+  readonly swr?: ClientQueryOptions | undefined
+  readonly tanstackQuery?: ClientQueryOptions | undefined
+  readonly svelteQuery?: ClientQueryOptions | undefined
+  readonly vueQuery?: ClientQueryOptions | undefined
+  readonly preactQuery?: ClientQueryOptions | undefined
+  readonly solidQuery?: ClientQueryOptions | undefined
+  readonly angularQuery?: ClientQueryOptions | undefined
+  readonly type?: { readonly output: string; readonly readonly?: boolean | undefined } | undefined
+  readonly docs?:
+    | {
+        readonly output: string
+        readonly entry?: string | undefined
+        readonly basePath?: string | undefined
+        readonly curl?: boolean | undefined
+        readonly baseUrl?: string | undefined
+      }
+    | undefined
+}
+
 /** User-facing `takibi-hono` config block accepted by `defineConfig`. */
 export type TakibiHonoOptions = {
   readonly readonly?: boolean | undefined
@@ -7,6 +42,7 @@ export type TakibiHonoOptions = {
   readonly exportParametersTypes?: boolean | undefined
   readonly exportHeadersTypes?: boolean | undefined
   readonly exportMediaTypesTypes?: boolean | undefined
+  readonly client?: ClientOptions | undefined
   readonly handlers?: { readonly output: string } | undefined
   readonly components?:
     | ({ readonly output?: string | undefined } & Partial<

@@ -5,6 +5,63 @@ import { pathToFileURL } from 'node:url'
 import type { FormatConfig } from 'oxfmt'
 import * as v from 'valibot'
 
+const ClientQuerySchema = v.pipe(
+  v.strictObject({
+    output: v.string(),
+    import: v.string(),
+    split: v.exactOptional(v.boolean()),
+    client: v.exactOptional(v.string()),
+  }),
+  v.readonly(),
+)
+
+const ClientSchema = v.pipe(
+  v.strictObject({
+    rpc: v.exactOptional(
+      v.pipe(
+        v.strictObject({
+          output: v.string(),
+          import: v.string(),
+          split: v.exactOptional(v.boolean()),
+          client: v.exactOptional(v.string()),
+          parseResponse: v.exactOptional(v.boolean()),
+          docs: v.exactOptional(v.boolean()),
+        }),
+        v.readonly(),
+      ),
+    ),
+    swr: v.exactOptional(ClientQuerySchema),
+    tanstackQuery: v.exactOptional(ClientQuerySchema),
+    svelteQuery: v.exactOptional(ClientQuerySchema),
+    vueQuery: v.exactOptional(ClientQuerySchema),
+    preactQuery: v.exactOptional(ClientQuerySchema),
+    solidQuery: v.exactOptional(ClientQuerySchema),
+    angularQuery: v.exactOptional(ClientQuerySchema),
+    type: v.exactOptional(
+      v.pipe(
+        v.strictObject({
+          output: v.pipe(v.string(), v.regex(/\.ts$/, 'type output must be a .ts file')),
+          readonly: v.exactOptional(v.boolean()),
+        }),
+        v.readonly(),
+      ),
+    ),
+    docs: v.exactOptional(
+      v.pipe(
+        v.strictObject({
+          output: v.string(),
+          entry: v.exactOptional(v.string()),
+          basePath: v.exactOptional(v.string()),
+          curl: v.exactOptional(v.boolean()),
+          baseUrl: v.exactOptional(v.string()),
+        }),
+        v.readonly(),
+      ),
+    ),
+  }),
+  v.readonly(),
+)
+
 const ConfigSchema = v.pipe(
   v.strictObject({
     input: v.custom<`${string}.yaml` | `${string}.json` | `${string}.tsp`>(
@@ -27,6 +84,7 @@ const ConfigSchema = v.pipe(
           exportParametersTypes: v.exactOptional(v.boolean()),
           exportHeadersTypes: v.exactOptional(v.boolean()),
           exportMediaTypesTypes: v.exactOptional(v.boolean()),
+          client: v.exactOptional(ClientSchema),
           handlers: v.exactOptional(v.pipe(v.strictObject({ output: v.string() }), v.readonly())),
           components: v.exactOptional(
             v.pipe(

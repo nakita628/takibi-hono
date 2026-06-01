@@ -82,7 +82,10 @@ function extractOutputPaths(
     .map(([, v]) => (isComponentConfig(v) ? v.output : undefined))
   const baseOutput =
     typeof takibiHono?.components?.output === 'string' ? [takibiHono.components.output] : []
-  return [takibiHono?.handlers?.output, ...componentOutputs, ...baseOutput]
+  const clientOutputs = Object.values(takibiHono?.client ?? {})
+    .filter((v) => isComponentConfig(v))
+    .map((v) => (isComponentConfig(v) ? v.output : undefined))
+  return [takibiHono?.handlers?.output, ...componentOutputs, ...baseOutput, ...clientOutputs]
     .filter((p) => p !== undefined)
     .map(toAbsolutePath)
 }
@@ -134,6 +137,15 @@ async function readConfigWithHotReload(server: ViteDevServer) {
   }
 }
 
+function cleanupSplitDir(name: string, output: string) {
+  return (async () => {
+    const absDir = toAbsolutePath(output)
+    const files = await listTypeScriptFilesShallow(absDir)
+    const deleted = await deleteTypeScriptFiles(files)
+    return deleted.length > 0 ? `🧹 ${name}: cleaned ${deleted.length} files` : null
+  })()
+}
+
 async function runGeneration(
   config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
 ) {
@@ -145,26 +157,18 @@ async function runGeneration(
     if (!isComponentConfig(cfg)) continue
     if (!('split' in cfg) || cfg.split !== true) continue
     if (cfg.output.endsWith('.ts')) continue
-    const name = k
-    const absDir = toAbsolutePath(cfg.output)
-    splitCleanups.push(
-      (async () => {
-        const files = await listTypeScriptFilesShallow(absDir)
-        const deleted = await deleteTypeScriptFiles(files)
-        return deleted.length > 0 ? `🧹 ${name}: cleaned ${deleted.length} files` : null
-      })(),
-    )
+    splitCleanups.push(cleanupSplitDir(k, cfg.output))
+  }
+  const client = config['takibi-hono']?.client ?? {}
+  for (const [k, cfg] of Object.entries(client)) {
+    if (!isComponentConfig(cfg)) continue
+    if (!('split' in cfg) || cfg.split !== true) continue
+    if (cfg.output.endsWith('.ts')) continue
+    splitCleanups.push(cleanupSplitDir(k, cfg.output))
   }
   const handlersCfg = config['takibi-hono']?.handlers
   if (handlersCfg?.output && !handlersCfg.output.endsWith('.ts')) {
-    splitCleanups.push(
-      (async () => {
-        const absDir = toAbsolutePath(handlersCfg.output)
-        const files = await listTypeScriptFilesShallow(absDir)
-        const deleted = await deleteTypeScriptFiles(files)
-        return deleted.length > 0 ? `🧹 handlers: cleaned ${deleted.length} files` : null
-      })(),
-    )
+    splitCleanups.push(cleanupSplitDir('handlers', handlersCfg.output))
   }
   const cleanupLogs = (await Promise.all(splitCleanups)).filter((l) => l !== null)
   const result = await hono({
