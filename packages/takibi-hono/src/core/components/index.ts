@@ -41,12 +41,9 @@ export async function makeComponents(
   const components = openapi.components
   if (!components) return { ok: true, value: undefined } as const
   const isReadonly = ohConfig?.readonly ?? false
-  const parametersExportTypes =
-    ohConfig?.components?.parameters?.exportTypes ?? ohConfig?.exportParametersTypes ?? false
-  const headersExportTypes =
-    ohConfig?.components?.headers?.exportTypes ?? ohConfig?.exportHeadersTypes ?? false
-  const mediaTypesExportTypes =
-    ohConfig?.components?.mediaTypes?.exportTypes ?? ohConfig?.exportMediaTypesTypes ?? false
+  const parametersExportTypes = ohConfig?.components?.parameters?.exportTypes ?? false
+  const headersExportTypes = ohConfig?.components?.headers?.exportTypes ?? false
+  const mediaTypesExportTypes = ohConfig?.components?.mediaTypes?.exportTypes ?? false
   const generators = [
     {
       data: components.responses,
@@ -117,8 +114,7 @@ export async function makeComponents(
   // Single-file aggregate mode: schemas + every component in one file (imports are local, so only
   // the schema-library import is needed).
   if (layout.componentsSingleFile) {
-    const schemasExportTypes =
-      ohConfig?.components?.schemas?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
+    const schemasExportTypes = ohConfig?.components?.schemas?.exportTypes ?? false
     const parts = await Promise.all([
       components.schemas
         ? makeSchemasCode(components.schemas, schemaLib, {

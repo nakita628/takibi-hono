@@ -136,10 +136,6 @@ const ConfigSchema = v.pipe(
     openapi: v.exactOptional(v.boolean()),
     format: v.exactOptional(v.custom<FormatConfig>(() => true)),
     readonly: v.exactOptional(v.boolean()),
-    exportSchemasTypes: v.exactOptional(v.boolean()),
-    exportParametersTypes: v.exactOptional(v.boolean()),
-    exportHeadersTypes: v.exactOptional(v.boolean()),
-    exportMediaTypesTypes: v.exactOptional(v.boolean()),
     client: v.exactOptional(ClientSchema),
     pathAlias: v.exactOptional(v.string()),
     components: v.exactOptional(

@@ -16,7 +16,7 @@ export async function makeSchemas(
 ) {
   if (!openapi.components?.schemas) return { ok: true, value: undefined } as const
   const schemasConfig = ohConfig?.components?.schemas
-  const exportTypes = schemasConfig?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
+  const exportTypes = schemasConfig?.exportTypes ?? false
   const isReadonly = ohConfig?.readonly ?? false
   const split = schemasConfig?.split ?? false
   const registerRef = useOpenAPI

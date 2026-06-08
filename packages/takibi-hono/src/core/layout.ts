@@ -38,10 +38,6 @@ export type ClientOptions = {
 /** User-facing `takibi-hono` config block accepted by `defineConfig`. */
 export type TakibiHonoOptions = {
   readonly readonly?: boolean | undefined
-  readonly exportSchemasTypes?: boolean | undefined
-  readonly exportParametersTypes?: boolean | undefined
-  readonly exportHeadersTypes?: boolean | undefined
-  readonly exportMediaTypesTypes?: boolean | undefined
   readonly client?: ClientOptions | undefined
   /** Directory for generated handler files (default `src/handlers`). */
   readonly output?: string | undefined
