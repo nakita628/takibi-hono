@@ -132,10 +132,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -201,10 +200,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -224,10 +222,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -249,10 +246,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -286,11 +282,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-            exportSchemasTypes: true,
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
+          exportSchemasTypes: true,
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -325,11 +320,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -364,12 +358,11 @@ export const CreatePetSchema = z
             input: 'petstore.yaml',
             schema: 'effect',
             openapi: true,
-            'takibi-hono': {
-              readonly: true,
-              handlers: { output: 'src/handlers' },
-              components: { output: 'src/openapi' },
-              exportSchemasTypes: true,
-            },
+
+            readonly: true,
+            output: 'src/handlers',
+            components: { output: 'src/openapi' },
+            exportSchemasTypes: true,
           },
           'petstore.yaml',
           PETSTORE_YAML,

@@ -577,9 +577,8 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     const { server } = createMockServer({
       input: 'openapi.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        handlers: { output: 'src/handlers' },
-      },
+
+      output: 'src/handlers',
     })
     plugin.configureServer(server)
 
@@ -628,10 +627,9 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     const { server } = createMockServer({
       input: 'openapi.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          schemas: { output: 'src/schemas', split: true },
-        },
+
+      components: {
+        schemas: { output: 'src/schemas', split: true },
       },
     })
     plugin.configureServer(server)
@@ -680,10 +678,9 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     const { server } = createMockServer({
       input: 'openapi.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        client: {
-          tanstackQuery: { output: 'src/client/tq', import: './index', split: true },
-        },
+
+      client: {
+        tanstackQuery: { output: 'src/client/tq', import: './index', split: true },
       },
     })
     plugin.configureServer(server)
@@ -696,7 +693,7 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     consoleSpy.mockRestore()
   })
 
-  it('skips cleanup when handlers output is a .ts file (not a directory)', async () => {
+  it('skips handler dir cleanup when the directory does not exist', async () => {
     const { hono } = await import('../core/index.js')
     vi.mocked(hono).mockClear()
     vi.mocked(fsp.stat).mockRejectedValue(new Error('ENOENT'))
@@ -709,9 +706,8 @@ describe('takibiHonoVite: split-mode cleanup', () => {
     const { server } = createMockServer({
       input: 'openapi.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        handlers: { output: 'src/handlers.ts' },
-      },
+
+      output: 'src/handlers',
     })
     plugin.configureServer(server)
 
@@ -719,7 +715,7 @@ describe('takibiHonoVite: split-mode cleanup', () => {
       expect(hono).toHaveBeenCalled()
     })
 
-    // readdir should not be called since handlers.ts is a file (ends with .ts), not a directory
+    // stat rejects (ENOENT), so listTypeScriptFilesShallow bails before readdir
     expect(fsp.readdir).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
@@ -768,9 +764,8 @@ describe('takibiHonoVite: config change cleanup', () => {
           default: {
             input: 'openapi.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              handlers: { output: 'src/old-handlers' },
-            },
+
+            output: 'src/old-handlers',
           },
         }
       }
@@ -778,9 +773,8 @@ describe('takibiHonoVite: config change cleanup', () => {
         default: {
           input: 'openapi.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/new-handlers' },
-          },
+
+          output: 'src/new-handlers',
         },
       }
     }
@@ -831,9 +825,8 @@ describe('takibiHonoVite: config change cleanup', () => {
           default: {
             input: 'openapi.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              client: { rpc: { output: 'src/client/rpc.ts', import: './index' } },
-            },
+
+            client: { rpc: { output: 'src/client/rpc.ts', import: './index' } },
           },
         }
       }
@@ -912,10 +905,9 @@ describe('takibiHonoVite: config change cleanup', () => {
           default: {
             input: 'openapi.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              components: {
-                schemas: { output: 'src/old-schemas.ts' },
-              },
+
+            components: {
+              schemas: { output: 'src/old-schemas.ts' },
             },
           },
         }
@@ -924,10 +916,9 @@ describe('takibiHonoVite: config change cleanup', () => {
         default: {
           input: 'openapi.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            components: {
-              schemas: { output: 'src/new-schemas.ts' },
-            },
+
+          components: {
+            schemas: { output: 'src/new-schemas.ts' },
           },
         },
       }
@@ -980,9 +971,8 @@ describe('takibiHonoVite: config change cleanup', () => {
           default: {
             input: 'openapi.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              handlers: { output: 'src/old-output' },
-            },
+
+            output: 'src/old-output',
           },
         }
       }
@@ -990,9 +980,8 @@ describe('takibiHonoVite: config change cleanup', () => {
         default: {
           input: 'openapi.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/new-output' },
-          },
+
+          output: 'src/new-output',
         },
       }
     }
@@ -1184,7 +1173,7 @@ describe('takibiHonoVite: error catch paths', () => {
         default: {
           input: 'openapi.yaml',
           schema: 'zod',
-          'takibi-hono': { handlers: { output: 'src/handlers' } },
+          output: 'src/handlers',
         },
       }),
     }

@@ -5,6 +5,74 @@ import { pathToFileURL } from 'node:url'
 import type { FormatConfig } from 'oxfmt'
 import * as v from 'valibot'
 
+const DirectoryOutputSchema = v.pipe(
+  v.string(),
+  v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
+)
+
+const FileOutputSchema = v.pipe(
+  v.string(),
+  v.transform((value) => (value.endsWith('.ts') ? value : `${value}/index.ts`)),
+)
+
+const OutputSchema = v.exactOptional(
+  v.variant('split', [
+    v.pipe(
+      v.strictObject({
+        split: v.literal(true),
+        output: DirectoryOutputSchema,
+        import: v.exactOptional(v.string()),
+      }),
+      v.readonly(),
+    ),
+    v.pipe(
+      v.strictObject({
+        split: v.exactOptional(v.literal(false)),
+        output: FileOutputSchema,
+        import: v.exactOptional(v.string()),
+      }),
+      v.readonly(),
+    ),
+  ]),
+)
+
+const ExportTypesOutputSchema = v.exactOptional(
+  v.variant('split', [
+    v.pipe(
+      v.strictObject({
+        split: v.literal(true),
+        output: DirectoryOutputSchema,
+        import: v.exactOptional(v.string()),
+        exportTypes: v.exactOptional(v.boolean()),
+      }),
+      v.readonly(),
+    ),
+    v.pipe(
+      v.strictObject({
+        split: v.exactOptional(v.literal(false)),
+        output: FileOutputSchema,
+        import: v.exactOptional(v.string()),
+        exportTypes: v.exactOptional(v.boolean()),
+      }),
+      v.readonly(),
+    ),
+  ]),
+)
+
+const RpcSchema = v.exactOptional(
+  v.pipe(
+    v.strictObject({
+      output: v.string(),
+      import: v.string(),
+      split: v.exactOptional(v.boolean()),
+      client: v.exactOptional(v.string()),
+      parseResponse: v.exactOptional(v.boolean()),
+      docs: v.exactOptional(v.boolean()),
+    }),
+    v.readonly(),
+  ),
+)
+
 const ClientQuerySchema = v.pipe(
   v.strictObject({
     output: v.string(),
@@ -17,19 +85,7 @@ const ClientQuerySchema = v.pipe(
 
 const ClientSchema = v.pipe(
   v.strictObject({
-    rpc: v.exactOptional(
-      v.pipe(
-        v.strictObject({
-          output: v.string(),
-          import: v.string(),
-          split: v.exactOptional(v.boolean()),
-          client: v.exactOptional(v.string()),
-          parseResponse: v.exactOptional(v.boolean()),
-          docs: v.exactOptional(v.boolean()),
-        }),
-        v.readonly(),
-      ),
-    ),
+    rpc: RpcSchema,
     swr: v.exactOptional(ClientQuerySchema),
     tanstackQuery: v.exactOptional(ClientQuerySchema),
     svelteQuery: v.exactOptional(ClientQuerySchema),
@@ -76,333 +132,54 @@ const ConfigSchema = v.pipe(
     ),
     openapi: v.exactOptional(v.boolean()),
     format: v.exactOptional(v.custom<FormatConfig>(() => true)),
-    'takibi-hono': v.exactOptional(
+    readonly: v.exactOptional(v.boolean()),
+    exportSchemasTypes: v.exactOptional(v.boolean()),
+    exportParametersTypes: v.exactOptional(v.boolean()),
+    exportHeadersTypes: v.exactOptional(v.boolean()),
+    exportMediaTypesTypes: v.exactOptional(v.boolean()),
+    client: v.exactOptional(ClientSchema),
+    pathAlias: v.exactOptional(v.string()),
+    output: v.exactOptional(
+      v.pipe(v.string(), v.regex(/^(?!.*\.ts$).+/, 'output must be a directory, not a .ts file')),
+    ),
+    components: v.exactOptional(
       v.pipe(
         v.strictObject({
-          readonly: v.exactOptional(v.boolean()),
-          exportSchemasTypes: v.exactOptional(v.boolean()),
-          exportParametersTypes: v.exactOptional(v.boolean()),
-          exportHeadersTypes: v.exactOptional(v.boolean()),
-          exportMediaTypesTypes: v.exactOptional(v.boolean()),
-          client: v.exactOptional(ClientSchema),
-          handlers: v.exactOptional(v.pipe(v.strictObject({ output: v.string() }), v.readonly())),
-          components: v.exactOptional(
-            v.pipe(
-              v.strictObject({
-                output: v.exactOptional(v.string()),
-                schemas: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                responses: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                parameters: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                examples: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                requestBodies: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                headers: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                securitySchemes: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                links: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                callbacks: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                pathItems: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-                mediaTypes: v.exactOptional(
-                  v.variant('split', [
-                    v.pipe(
-                      v.strictObject({
-                        split: v.literal(true),
-                        output: v.pipe(
-                          v.string(),
-                          v.regex(/^(?!.*\.ts$).+/, 'split mode requires directory, not .ts file'),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                    v.pipe(
-                      v.strictObject({
-                        split: v.exactOptional(v.literal(false)),
-                        output: v.pipe(
-                          v.string(),
-                          v.transform((v) => (v.endsWith('.ts') ? v : `${v}/index.ts`)),
-                        ),
-                        import: v.exactOptional(v.string()),
-                        exportTypes: v.exactOptional(v.boolean()),
-                      }),
-                      v.readonly(),
-                    ),
-                  ]),
-                ),
-              }),
-              v.readonly(),
-            ),
-          ),
+          output: v.exactOptional(v.string()),
+          schemas: ExportTypesOutputSchema,
+          responses: OutputSchema,
+          parameters: ExportTypesOutputSchema,
+          examples: OutputSchema,
+          requestBodies: OutputSchema,
+          headers: ExportTypesOutputSchema,
+          securitySchemes: OutputSchema,
+          links: OutputSchema,
+          callbacks: OutputSchema,
+          pathItems: OutputSchema,
+          mediaTypes: ExportTypesOutputSchema,
         }),
+        v.check(
+          (c) =>
+            !(
+              c.output &&
+              (
+                [
+                  'schemas',
+                  'responses',
+                  'parameters',
+                  'examples',
+                  'requestBodies',
+                  'headers',
+                  'securitySchemes',
+                  'links',
+                  'callbacks',
+                  'pathItems',
+                  'mediaTypes',
+                ] as const
+              ).some((k) => c[k] !== undefined)
+            ),
+          'components.output is mutually exclusive with per-type component outputs (schemas, responses, ...). Use output for single-file mode, or per-type fields for split mode.',
+        ),
         v.readonly(),
       ),
     ),

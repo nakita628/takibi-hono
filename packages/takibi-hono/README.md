@@ -59,83 +59,31 @@ export default defineConfig({
   // format: {},
 
   // Code generation options
-  'takibi-hono': {
-    readonly: true, // Add 'as const' to generated schemas
+  readonly: true, // Add 'as const' to generated schemas
 
-    // Export type inference from schemas
-    exportSchemasTypes: true,
-    exportParametersTypes: true,
-    exportHeadersTypes: true,
+  // Export type inference from schemas
+  exportSchemasTypes: true,
 
-    // Handler stub generation
-    handlers: {
-      output: './src/handlers', // Output directory for handler files
-    },
+  // Handler stub output directory (any directory you like)
+  output: 'src/handlers',
 
-    // Split components into separate files (OpenAPI Components Object)
-    components: {
-      output: './src/components', // Single file output for all components
+  // Resolve generated imports through a path alias instead of relative paths
+  // (matches the `paths` in your tsconfig, e.g. "@/*": ["src/*"])
+  pathAlias: '@',
 
-      schemas: {
-        output: './src/schemas',
-        exportTypes: true,
-        split: true,
-        import: '../schemas',
-      },
-      parameters: {
-        output: './src/parameters',
-        exportTypes: true,
-        split: true,
-        import: '../parameters',
-      },
-      headers: {
-        output: './src/headers',
-        exportTypes: true,
-        split: true,
-        import: '../headers',
-      },
-      securitySchemes: {
-        output: './src/securitySchemes',
-        split: true,
-        import: '../securitySchemes',
-      },
-      requestBodies: {
-        output: './src/requestBodies',
-        split: true,
-        import: '../requestBodies',
-      },
-      responses: {
-        output: './src/responses',
-        split: true,
-        import: '../responses',
-      },
-      examples: {
-        output: './src/examples',
-        split: true,
-        import: '../examples',
-      },
-      links: {
-        output: './src/links',
-        split: true,
-        import: '../links',
-      },
-      callbacks: {
-        output: './src/callbacks',
-        split: true,
-        import: '../callbacks',
-      },
-      pathItems: {
-        output: './src/pathItems',
-        split: true,
-        import: '../pathItems',
-      },
-      webhooks: {
-        output: './src/webhooks',
-        split: true,
-        import: '../webhooks',
-      },
-    },
+  // Components (OpenAPI Components Object). `output` and the per-type fields
+  // are mutually exclusive — pick one mode:
+  //
+  // (a) Single-file: aggregate every component into one `.ts` file
+  components: {
+    output: 'src/components.ts',
   },
+  //
+  // (b) Per-type: configure each component kind independently
+  // components: {
+  //   schemas: { output: 'src/schemas', split: true, exportTypes: true },
+  //   responses: { output: 'src/responses.ts' },
+  // },
 })
 ```
 

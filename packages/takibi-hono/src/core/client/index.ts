@@ -1,15 +1,9 @@
 import path from 'node:path'
 
-import { angularQuery } from 'hono-takibi/angular-query'
 import { docs } from 'hono-takibi/docs'
-import { preactQuery } from 'hono-takibi/preact-query'
+import { hooks } from 'hono-takibi/hooks'
 import { rpc } from 'hono-takibi/rpc'
-import { solidQuery } from 'hono-takibi/solid-query'
-import { svelteQuery } from 'hono-takibi/svelte-query'
-import { swr } from 'hono-takibi/swr'
-import { tanstackQuery } from 'hono-takibi/tanstack-query'
 import * as typeModule from 'hono-takibi/type'
-import { vueQuery } from 'hono-takibi/vue-query'
 
 import type { OpenAPI } from '../../openapi/index.js'
 import type { ClientOptions } from '../layout.js'
@@ -17,6 +11,19 @@ import type { ClientOptions } from '../layout.js'
 // The client generators are delegated to hono-takibi; their entrypoint type is
 // the single source of truth for the OpenAPI shape they accept.
 type ClientOpenAPI = Parameters<typeof rpc>[0]
+
+// takibi-hono's config keys stay camelCase; hono-takibi's `hooks` takes the
+// library as a kebab-case literal. `satisfies` makes a hono-takibi rename of a
+// library surface here as a build error instead of a silent runtime miss.
+const HOOK_LIBRARIES = {
+  swr: 'swr',
+  tanstackQuery: 'tanstack-query',
+  svelteQuery: 'svelte-query',
+  vueQuery: 'vue-query',
+  preactQuery: 'preact-query',
+  solidQuery: 'solid-query',
+  angularQuery: 'angular-query',
+} as const satisfies Record<string, Parameters<typeof hooks>[3]>
 
 const isTsPath = (output: string): output is `${string}.ts` => output.endsWith('.ts')
 
@@ -54,20 +61,23 @@ export async function makeClients(
   const oa = openapi as ClientOpenAPI
 
   const queries = [
-    { fn: swr, cfg: client.swr },
-    { fn: tanstackQuery, cfg: client.tanstackQuery },
-    { fn: svelteQuery, cfg: client.svelteQuery },
-    { fn: vueQuery, cfg: client.vueQuery },
-    { fn: preactQuery, cfg: client.preactQuery },
-    { fn: solidQuery, cfg: client.solidQuery },
-    { fn: angularQuery, cfg: client.angularQuery },
+    { library: HOOK_LIBRARIES.swr, cfg: client.swr },
+    { library: HOOK_LIBRARIES.tanstackQuery, cfg: client.tanstackQuery },
+    { library: HOOK_LIBRARIES.svelteQuery, cfg: client.svelteQuery },
+    { library: HOOK_LIBRARIES.vueQuery, cfg: client.vueQuery },
+    { library: HOOK_LIBRARIES.preactQuery, cfg: client.preactQuery },
+    { library: HOOK_LIBRARIES.solidQuery, cfg: client.solidQuery },
+    { library: HOOK_LIBRARIES.angularQuery, cfg: client.angularQuery },
   ] as const
 
-  for (const { fn, cfg } of queries) {
+  for (const { library, cfg } of queries) {
     if (cfg) {
       const safe = resolveWithin(baseDir, cfg.output)
       if (!safe.ok) return safe
-      const result = await fn(oa, safe.value, cfg.import, cfg.split, cfg.client)
+      const result = await hooks(oa, safe.value, cfg.import, library, {
+        ...(cfg.split !== undefined && { split: cfg.split }),
+        ...(cfg.client !== undefined && { clientName: cfg.client }),
+      })
       if (!result.ok) return result
     }
   }

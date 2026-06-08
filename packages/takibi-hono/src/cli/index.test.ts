@@ -258,10 +258,9 @@ describe('takibiHono CLI integration', () => {
           {
             input: 'petstore.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              handlers: { output: 'src/handlers' },
-              components: { schemas: { output: 'src/schemas.ts' } },
-            },
+
+            output: 'src/handlers',
+            components: { schemas: { output: 'src/schemas.ts' } },
           },
           'petstore.yaml',
           PETSTORE_YAML,
@@ -324,10 +323,9 @@ export default app
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -366,10 +364,9 @@ export type CreatePetSchema = typeof CreatePetSchema.Type
         {
           input: 'petstore.yaml',
           schema: 'valibot',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -403,10 +400,9 @@ export const CreatePetSchema = v.pipe(
         {
           input: 'petstore.yaml',
           schema: 'typebox',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -440,10 +436,9 @@ export const CreatePetSchema = Type.Object(
         {
           input: 'petstore.yaml',
           schema: 'arktype',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -477,10 +472,9 @@ export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).descri
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -531,10 +525,9 @@ export const petsHandler = new Hono()
             input: 'components.yaml',
             schema: 'zod',
             openapi: true,
-            'takibi-hono': {
-              handlers: { output: 'src/handlers' },
-              components: { output: 'src/openapi' },
-            },
+
+            output: 'src/handlers',
+            components: { output: 'src/openapi' },
           },
           'components.yaml',
           COMPONENTS_YAML,
@@ -676,11 +669,10 @@ export const usersHandler = new Hono()
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-            exportSchemasTypes: true,
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
+          exportSchemasTypes: true,
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -706,30 +698,31 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
     })
 
-    it('individual schemas config overrides components.output', { timeout: 30000 }, async () => {
-      const d = tmpDir('cli_co_override')
-      await setupProject(
-        d,
-        {
-          input: 'petstore.yaml',
-          schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
+    it(
+      'components.output (.ts) aggregates schemas into a single file',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('cli_co_single')
+        await setupProject(
+          d,
+          {
+            input: 'petstore.yaml',
+            schema: 'zod',
+
+            output: 'src/handlers',
             components: {
-              output: 'src/openapi',
-              schemas: { output: 'src/custom/schemas.ts' },
+              output: 'src/openapi.ts',
             },
           },
-        },
-        'petstore.yaml',
-        PETSTORE_YAML,
-      )
+          'petstore.yaml',
+          PETSTORE_YAML,
+        )
 
-      const result = await runCli(d)
-      expect(result.ok).toBe(true)
+        const result = await runCli(d)
+        expect(result.ok).toBe(true)
 
-      const schemas = await fsp.readFile(path.join(d, 'src/custom/schemas.ts'), 'utf-8')
-      expect(schemas).toBe(`import * as z from 'zod'
+        const aggregated = await fsp.readFile(path.join(d, 'src/openapi.ts'), 'utf-8')
+        expect(aggregated).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
@@ -740,8 +733,9 @@ export const CreatePetSchema = z
   .meta({ description: 'Data for creating a new pet' })
 `)
 
-      expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(false)
-    })
+        expect(fs.existsSync(path.join(d, 'src/components/index.ts'))).toBe(false)
+      },
+    )
   })
 
   describe('readonly via CLI', () => {
@@ -752,11 +746,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -787,11 +780,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: false,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: false,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -820,11 +812,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -855,11 +846,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -894,11 +884,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -937,10 +926,9 @@ export type CreatePetSchema = typeof CreatePetSchema.Type
           input: 'petstore.yaml',
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -997,10 +985,9 @@ export const petsHandler = new Hono()
           input: 'petstore.yaml',
           schema: 'zod',
           basePath: '/api/v1',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,

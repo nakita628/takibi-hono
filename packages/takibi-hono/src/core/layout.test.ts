@@ -9,6 +9,8 @@ describe('resolveLayout: defaults', () => {
       schemasDir: 'src/components',
       handlersDir: 'src/handlers',
       componentsBaseOutput: undefined,
+      componentsSingleFile: undefined,
+      pathAlias: undefined,
       appDir: 'src',
       componentPaths: { schemas: '../components' },
     })
@@ -17,13 +19,13 @@ describe('resolveLayout: defaults', () => {
 
 describe('resolveLayout: handlers / schemas overrides', () => {
   it.concurrent('handlers.output as a directory leaves it as handlersDir', () => {
-    const layout = resolveLayout({ handlers: { output: 'src/routes' } })
+    const layout = resolveLayout({ output: 'src/routes' })
     expect(layout.handlersDir).toBe('src/routes')
     expect(layout.appDir).toBe('src')
   })
 
   it.concurrent('handlers.output ending with .ts uses its directory', () => {
-    const layout = resolveLayout({ handlers: { output: 'src/handlers.ts' } })
+    const layout = resolveLayout({ output: 'src/handlers.ts' })
     expect(layout.handlersDir).toBe('src')
     expect(layout.appDir).toBe('.')
   })
@@ -60,7 +62,7 @@ describe('resolveLayout: components.output base directory', () => {
 describe('resolveLayout: componentPaths', () => {
   it.concurrent('emits relative path from handlersDir to schemasFile by default', () => {
     const layout = resolveLayout({
-      handlers: { output: 'src/handlers' },
+      output: 'src/handlers',
       components: { schemas: { output: 'src/schemas.ts' } },
     })
     expect(layout.componentPaths.schemas).toBe('../schemas')
@@ -68,7 +70,7 @@ describe('resolveLayout: componentPaths', () => {
 
   it.concurrent('honors components.schemas.import override over relative path', () => {
     const layout = resolveLayout({
-      handlers: { output: 'src/handlers' },
+      output: 'src/handlers',
       components: {
         schemas: { output: 'src/schemas.ts', import: '@app/schemas' },
       },
@@ -78,7 +80,7 @@ describe('resolveLayout: componentPaths', () => {
 
   it.concurrent('derives per-component paths from componentsBaseOutput when no individual config', () => {
     const layout = resolveLayout({
-      handlers: { output: 'src/handlers' },
+      output: 'src/handlers',
       components: { output: 'src/openapi' },
     })
     expect(layout.componentPaths.parameters).toBe('../openapi/parameters')
@@ -88,10 +90,61 @@ describe('resolveLayout: componentPaths', () => {
 
   it.concurrent('honors per-component import override', () => {
     const layout = resolveLayout({
-      handlers: { output: 'src/handlers' },
+      output: 'src/handlers',
       components: {
         responses: { output: 'src/responses.ts', import: '@app/responses' },
       },
+    })
+    expect(layout.componentPaths.responses).toBe('@app/responses')
+  })
+})
+
+describe('resolveLayout: pathAlias', () => {
+  it.concurrent('resolves schemas import via the alias relative to appDir', () => {
+    const layout = resolveLayout({
+      pathAlias: '@',
+      output: 'src/handlers',
+      components: { schemas: { output: 'src/components/index.ts' } },
+    })
+    expect(layout.pathAlias).toBe('@')
+    expect(layout.componentPaths.schemas).toBe('@/components')
+  })
+
+  it.concurrent('resolves componentsBaseOutput per-type paths via the alias', () => {
+    const layout = resolveLayout({
+      pathAlias: '@',
+      output: 'src/handlers',
+      components: { output: 'src/openapi' },
+    })
+    expect(layout.componentPaths.parameters).toBe('@/openapi/parameters')
+    expect(layout.componentPaths.responses).toBe('@/openapi/responses')
+  })
+
+  it.concurrent('alias single-file mode points every key at the aggregate file', () => {
+    const layout = resolveLayout({
+      pathAlias: '@',
+      output: 'src/handlers',
+      components: { output: 'src/openapi.ts' },
+    })
+    expect(layout.componentsSingleFile).toBe('src/openapi.ts')
+    expect(layout.componentPaths.schemas).toBe('@/openapi')
+    expect(layout.componentPaths.responses).toBe('@/openapi')
+  })
+
+  it.concurrent('a trailing slash in the alias is normalized away', () => {
+    const layout = resolveLayout({
+      pathAlias: '@/',
+      output: 'src/handlers',
+      components: { schemas: { output: 'src/components/index.ts' } },
+    })
+    expect(layout.componentPaths.schemas).toBe('@/components')
+  })
+
+  it.concurrent('per-component import override still wins over the alias', () => {
+    const layout = resolveLayout({
+      pathAlias: '@',
+      output: 'src/handlers',
+      components: { responses: { output: 'src/responses.ts', import: '@app/responses' } },
     })
     expect(layout.componentPaths.responses).toBe('@app/responses')
   })

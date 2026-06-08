@@ -343,10 +343,9 @@ describe('hono', () => {
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -375,10 +374,9 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -406,10 +404,9 @@ export const petsHandler = new Hono()
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -425,10 +422,9 @@ export const rootHandler = new Hono().get('/', (c) => {})
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -443,10 +439,9 @@ export * from './pets'
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -467,10 +462,9 @@ export default app
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -485,10 +479,9 @@ export default app
       const result = await hono({
         input: petstoreYaml,
         schema: 'valibot',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -520,10 +513,9 @@ export type CreatePet = v.InferOutput<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'valibot',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -558,10 +550,9 @@ export const petsHandler = new Hono()
       const result = await hono({
         input: petstoreYaml,
         schema: 'typebox',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -593,10 +584,9 @@ export type CreatePet = Static<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'typebox',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -635,10 +625,9 @@ export const petsHandler = new Hono()
       const result = await hono({
         input: petstoreYaml,
         schema: 'arktype',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -667,10 +656,9 @@ export type CreatePet = typeof CreatePetSchema.infer
         const result = await hono({
           input: petstoreYaml,
           schema: 'arktype',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -700,10 +688,9 @@ export const petsHandler = new Hono()
       const result = await hono({
         input: petstoreYaml,
         schema: 'effect',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -738,10 +725,9 @@ export type CreatePetSchema = typeof CreatePetSchema.Type
         const result = await hono({
           input: petstoreYaml,
           schema: 'effect',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -779,10 +765,9 @@ export const petsHandler = new Hono()
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -816,10 +801,9 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -888,10 +872,9 @@ export const petsHandler = new Hono()
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -908,10 +891,9 @@ export const petsHandler = new Hono()
         schema: 'zod',
         openapi: true,
         basePath: '/api',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts') } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts') } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -936,11 +918,10 @@ export default app
         const result = await hono({
           input: nonexistentYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(os.tmpdir(), '__test_error/handlers') },
-            components: {
-              schemas: { output: path.join(os.tmpdir(), '__test_error/schemas.ts') },
-            },
+
+          output: path.join(os.tmpdir(), '__test_error/handlers'),
+          components: {
+            schemas: { output: path.join(os.tmpdir(), '__test_error/schemas.ts') },
           },
         })
         expect(result.ok).toBe(false)
@@ -965,11 +946,10 @@ export default app
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              schemas: { output: path.join(d, 'blocker', 'schemas.ts') },
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            schemas: { output: path.join(d, 'blocker', 'schemas.ts') },
           },
         })
         expect(result.ok).toBe(false)
@@ -992,11 +972,10 @@ export default app
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              schemas: { output: path.join(d, 'src/components/index.ts') },
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            schemas: { output: path.join(d, 'src/components/index.ts') },
           },
         })
         expect(result.ok).toBe(false)
@@ -1015,11 +994,10 @@ export default app
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1045,11 +1023,10 @@ export type Pet = z.infer<typeof PetSchema>
         input: petstoreYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1074,11 +1051,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1099,11 +1075,10 @@ export * from './pet'
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1120,10 +1095,9 @@ export * from './pet'
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1138,10 +1112,9 @@ export * from './pets'
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1162,10 +1135,9 @@ export default app
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1184,18 +1156,17 @@ export default app
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-              responses: { output: path.join(d, 'responses.ts') },
-              parameters: { output: path.join(d, 'parameters.ts') },
-              headers: { output: path.join(d, 'headers.ts') },
-              examples: { output: path.join(d, 'examples.ts') },
-              securitySchemes: { output: path.join(d, 'security-schemes.ts') },
-              requestBodies: { output: path.join(d, 'request-bodies.ts') },
-              links: { output: path.join(d, 'links.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+            responses: { output: path.join(d, 'responses.ts') },
+            parameters: { output: path.join(d, 'parameters.ts') },
+            headers: { output: path.join(d, 'headers.ts') },
+            examples: { output: path.join(d, 'examples.ts') },
+            securitySchemes: { output: path.join(d, 'security-schemes.ts') },
+            requestBodies: { output: path.join(d, 'request-bodies.ts') },
+            links: { output: path.join(d, 'links.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1227,12 +1198,11 @@ export const UnauthorizedResponseResponse = {
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            parameters: { output: path.join(d, 'parameters.ts') },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          parameters: { output: path.join(d, 'parameters.ts') },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1252,12 +1222,11 @@ export const LimitParamParamsSchema = z.int().exactOptional()
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            headers: { output: path.join(d, 'headers.ts') },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          headers: { output: path.join(d, 'headers.ts') },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1277,12 +1246,11 @@ export const XRateLimitHeaderSchema = z.int().exactOptional()
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            examples: { output: path.join(d, 'examples.ts') },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          examples: { output: path.join(d, 'examples.ts') },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1306,12 +1274,11 @@ export const ErrorExampleExample = {
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            securitySchemes: { output: path.join(d, 'security-schemes.ts') },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          securitySchemes: { output: path.join(d, 'security-schemes.ts') },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1342,12 +1309,11 @@ export const ApiKeySecurityScheme = {
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-              requestBodies: { output: path.join(d, 'request-bodies.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+            requestBodies: { output: path.join(d, 'request-bodies.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1370,12 +1336,11 @@ export const CreateUserBodyRequestBody = {
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            links: { output: path.join(d, 'links.ts') },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          links: { output: path.join(d, 'links.ts') },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1398,11 +1363,10 @@ export const CreateUserBodyRequestBody = {
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1451,13 +1415,12 @@ export type Error = z.infer<typeof ErrorSchema>
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-              responses: { output: path.join(d, 'responses.ts') },
-              headers: { output: path.join(d, 'headers.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+            responses: { output: path.join(d, 'responses.ts') },
+            headers: { output: path.join(d, 'headers.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1537,10 +1500,9 @@ export const rootHandler = new Hono().get('/', (c) => {})
           const result = await hono({
             input: petstoreYaml,
             schema,
-            'takibi-hono': {
-              handlers: { output: path.join(d, 'handlers') },
-              components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-            },
+
+            output: path.join(d, 'handlers'),
+            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
           })
           expect(result).toStrictEqual({ ok: true, value: undefined })
           const root = await fsp.readFile(path.join(d, 'handlers/__root.ts'), 'utf-8')
@@ -1561,10 +1523,9 @@ export * from './pets'
           const result = await hono({
             input: petstoreYaml,
             schema,
-            'takibi-hono': {
-              handlers: { output: path.join(d, 'handlers') },
-              components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-            },
+
+            output: path.join(d, 'handlers'),
+            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
           })
           expect(result).toStrictEqual({ ok: true, value: undefined })
           const barrel = await fsp.readFile(path.join(d, 'handlers/index.ts'), 'utf-8')
@@ -1591,10 +1552,9 @@ export default app
           const result = await hono({
             input: petstoreYaml,
             schema,
-            'takibi-hono': {
-              handlers: { output: path.join(d, 'handlers') },
-              components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-            },
+
+            output: path.join(d, 'handlers'),
+            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
           })
           expect(result).toStrictEqual({ ok: true, value: undefined })
           const app = await fsp.readFile(path.join(d, 'index.ts'), 'utf-8')
@@ -1614,11 +1574,10 @@ export default app
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1646,11 +1605,10 @@ export type Pet = v.InferOutput<typeof PetSchema>
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1678,11 +1636,10 @@ export type CreatePet = v.InferOutput<typeof CreatePetSchema>
           input: petstoreYaml,
           schema: 'valibot',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1705,11 +1662,10 @@ export * from './pet'
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1741,11 +1697,10 @@ export type PetSchema = typeof PetSchema.Type
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1772,11 +1727,10 @@ export type CreatePetSchema = typeof CreatePetSchema.Type
           input: petstoreYaml,
           schema: 'effect',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas'), split: true, exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1795,10 +1749,9 @@ export * from './pet'
       const result = await hono({
         input: petstoreYaml,
         schema: 'valibot',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1813,10 +1766,9 @@ export * from './pets'
       const result = await hono({
         input: petstoreYaml,
         schema: 'valibot',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1837,10 +1789,9 @@ export default app
       const result = await hono({
         input: petstoreYaml,
         schema: 'valibot',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-        },
+
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -1856,12 +1807,11 @@ export default app
         input: componentsYaml,
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'handlers') },
-          components: {
-            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            responses: { output: path.join(d, 'responses'), split: true },
-          },
+
+        output: path.join(d, 'handlers'),
+        components: {
+          schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+          responses: { output: path.join(d, 'responses'), split: true },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -1920,14 +1870,13 @@ export * from './userListResponse'
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-              parameters: { output: path.join(d, 'parameters.ts') },
-              responses: { output: path.join(d, 'responses.ts') },
-              headers: { output: path.join(d, 'headers.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
+            parameters: { output: path.join(d, 'parameters.ts') },
+            responses: { output: path.join(d, 'responses.ts') },
+            headers: { output: path.join(d, 'headers.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2134,11 +2083,10 @@ components:
           input: webhookSpec,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2184,11 +2132,10 @@ export const webhooksHandler = new Hono().post(
         const result1 = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts') },
           },
         })
         expect(result1).toStrictEqual({ ok: true, value: undefined })
@@ -2214,11 +2161,10 @@ export const webhooksHandler = new Hono().post(
         const result2 = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts') },
           },
         })
         expect(result2).toStrictEqual({ ok: true, value: undefined })
@@ -2244,11 +2190,10 @@ export const webhooksHandler = new Hono().post(
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            exportSchemasTypes: true,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          exportSchemasTypes: true,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2278,10 +2223,9 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2307,11 +2251,10 @@ export const CreatePetSchema = z
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            exportSchemasTypes: true,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: false } },
-          },
+
+          exportSchemasTypes: true,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: false } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2337,11 +2280,10 @@ export const CreatePetSchema = z
         const result = await hono({
           input: petstoreYaml,
           schema: 'effect',
-          'takibi-hono': {
-            exportSchemasTypes: true,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          exportSchemasTypes: true,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2379,11 +2321,10 @@ export type CreatePetSchema = typeof CreatePetSchema.Type
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2410,12 +2351,11 @@ export const CreatePetSchema = z
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-              schemas: { output: path.join(d, 'src/custom/schemas.ts') },
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
+            schemas: { output: path.join(d, 'src/custom/schemas.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2443,11 +2383,10 @@ export const CreatePetSchema = z
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2579,13 +2518,12 @@ export const CreateUserBodyRequestBody = {
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'src/handlers') },
-          components: {
-            output: path.join(d, 'src/openapi'),
-          },
-          exportSchemasTypes: true,
+
+        output: path.join(d, 'src/handlers'),
+        components: {
+          output: path.join(d, 'src/openapi'),
         },
+        exportSchemasTypes: true,
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2614,11 +2552,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2651,11 +2588,10 @@ export const petsHandler = new Hono()
           input: petstoreYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2680,12 +2616,11 @@ export const petsHandler = new Hono()
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'src/handlers') },
-            components: {
-              output: path.join(d, 'src/openapi'),
-              responses: { output: path.join(d, 'src/custom/responses.ts') },
-            },
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
+            responses: { output: path.join(d, 'src/custom/responses.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2703,12 +2638,11 @@ export const petsHandler = new Hono()
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: path.join(d, 'src/handlers') },
-          components: {
-            output: path.join(d, 'src/openapi'),
-            schemas: { output: path.join(d, 'src/openapi/schemas'), split: true },
-          },
+
+        output: path.join(d, 'src/handlers'),
+        components: {
+          output: path.join(d, 'src/openapi'),
+          schemas: { output: path.join(d, 'src/openapi/schemas'), split: true },
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2722,6 +2656,108 @@ export const petsHandler = new Hono()
 export * from './pet'
 `)
     })
+
+    it.concurrent(
+      'components.output (.ts) aggregates schemas into one local file (no relative imports)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_single_file')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi.ts'),
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        expect(fs.existsSync(path.join(d, 'src/openapi.ts'))).toBe(true)
+        expect(fs.existsSync(path.join(d, 'src/components/index.ts'))).toBe(false)
+        const aggregated = await fsp.readFile(path.join(d, 'src/openapi.ts'), 'utf-8')
+        expect(aggregated).toBe(`import * as z from 'zod'
+
+export const PetSchema = z
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
+
+export const CreatePetSchema = z
+  .object({ name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'Data for creating a new pet' })
+`)
+      },
+    )
+  })
+
+  describe('pathAlias', () => {
+    it.concurrent(
+      'handler imports schemas via the configured alias',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('path_alias_schemas')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+
+          pathAlias: '@',
+          output: path.join(d, 'src/handlers'),
+          components: { schemas: { output: path.join(d, 'src/components/index.ts') } },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const handlers = await fsp.readFile(path.join(d, 'src/handlers/pets.ts'), 'utf-8')
+        expect(handlers).toBe(`import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '@/components'
+
+export const petsHandler = new Hono()
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`)
+      },
+    )
+
+    it.concurrent(
+      'handler imports componentsBaseOutput schemas via the alias with a custom handlers dir',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('path_alias_base')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+
+          pathAlias: '@',
+          output: path.join(d, 'src/routes'),
+          components: { output: path.join(d, 'src/openapi') },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const handlers = await fsp.readFile(path.join(d, 'src/routes/pets.ts'), 'utf-8')
+        expect(handlers).toBe(`import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '@/openapi'
+
+export const petsHandler = new Hono()
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`)
+      },
+    )
   })
 
   describe('readonly flag', () => {
@@ -2733,11 +2769,10 @@ export * from './pet'
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          readonly: true,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2765,11 +2800,10 @@ export const CreatePetSchema = z
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            readonly: false,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          readonly: false,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2792,12 +2826,11 @@ export const CreatePetSchema = z
       const result = await hono({
         input: petstoreYaml,
         schema: 'zod',
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: path.join(d, 'src/handlers') },
-          components: {
-            output: path.join(d, 'src/openapi'),
-          },
+
+        readonly: true,
+        output: path.join(d, 'src/handlers'),
+        components: {
+          output: path.join(d, 'src/openapi'),
         },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2825,11 +2858,10 @@ export const CreatePetSchema = z
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
-          },
+
+          readonly: true,
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2861,10 +2893,9 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2887,11 +2918,10 @@ export const CreatePetSchema = z
       const result = await hono({
         input: petstoreYaml,
         schema: 'effect',
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: path.join(d, 'handlers') },
-          components: { schemas: { output: path.join(d, 'schemas.ts') } },
-        },
+
+        readonly: true,
+        output: path.join(d, 'handlers'),
+        components: { schemas: { output: path.join(d, 'schemas.ts') } },
       })
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2950,10 +2980,9 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { output: path.join(d, 'openapi') },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { output: path.join(d, 'openapi') },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
         const pathItems = await fsp.readFile(path.join(d, 'openapi/pathItems/index.ts'), 'utf-8')
@@ -2983,10 +3012,9 @@ paths: {}
         const result = await hono({
           input: yamlPath,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
         expect(fs.existsSync(path.join(d, 'handlers'))).toBe(false)
@@ -3037,14 +3065,13 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'schemas.ts'), import: '@app/schemas' },
-              responses: {
-                output: path.join(d, 'responses.ts'),
-                import: '@app/responses',
-              },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'schemas.ts'), import: '@app/schemas' },
+            responses: {
+              output: path.join(d, 'responses.ts'),
+              import: '@app/responses',
             },
           },
         })
@@ -3158,19 +3185,18 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: {
-                output: path.join(d, 'components/schemas'),
-                split: true,
-                import: '~/components/schemas',
-              },
-              callbacks: {
-                output: path.join(d, 'components/callbacks'),
-                split: true,
-                import: '~/components/callbacks',
-              },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: {
+              output: path.join(d, 'components/schemas'),
+              split: true,
+              import: '~/components/schemas',
+            },
+            callbacks: {
+              output: path.join(d, 'components/callbacks'),
+              split: true,
+              import: '~/components/callbacks',
             },
           },
         })
@@ -3199,19 +3225,18 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: {
-                output: path.join(d, 'components/schemas'),
-                split: true,
-                import: '@/components/schemas',
-              },
-              pathItems: {
-                output: path.join(d, 'components/pathItems'),
-                split: true,
-                import: '@/components/pathItems',
-              },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: {
+              output: path.join(d, 'components/schemas'),
+              split: true,
+              import: '@/components/schemas',
+            },
+            pathItems: {
+              output: path.join(d, 'components/pathItems'),
+              split: true,
+              import: '@/components/pathItems',
             },
           },
         })
@@ -3235,19 +3260,18 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: {
-                output: path.join(d, 'components/schemas'),
-                split: true,
-                import: '~/components/schemas',
-              },
-              mediaTypes: {
-                output: path.join(d, 'components/mediaTypes'),
-                split: true,
-                import: '~/components/mediaTypes',
-              },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: {
+              output: path.join(d, 'components/schemas'),
+              split: true,
+              import: '~/components/schemas',
+            },
+            mediaTypes: {
+              output: path.join(d, 'components/mediaTypes'),
+              split: true,
+              import: '~/components/mediaTypes',
             },
           },
         })
@@ -3271,24 +3295,23 @@ components:
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: {
-                output: path.join(d, 'components/schemas'),
-                split: true,
-                import: '~/components/schemas',
-              },
-              callbacks: {
-                output: path.join(d, 'components/callbacks'),
-                split: true,
-                import: '@/components/callbacks',
-              },
-              mediaTypes: {
-                output: path.join(d, 'components/mediaTypes'),
-                split: true,
-                import: '~/components/mediaTypes',
-              },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: {
+              output: path.join(d, 'components/schemas'),
+              split: true,
+              import: '~/components/schemas',
+            },
+            callbacks: {
+              output: path.join(d, 'components/callbacks'),
+              split: true,
+              import: '@/components/callbacks',
+            },
+            mediaTypes: {
+              output: path.join(d, 'components/mediaTypes'),
+              split: true,
+              import: '~/components/mediaTypes',
             },
           },
         })
@@ -3322,18 +3345,17 @@ components:
           input: componentsYaml,
           schema: 'zod',
           openapi: false,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'components/schemas.ts') },
-              responses: { output: path.join(d, 'components/responses.ts') },
-              parameters: { output: path.join(d, 'components/parameters.ts') },
-              headers: { output: path.join(d, 'components/headers.ts') },
-              requestBodies: { output: path.join(d, 'components/requestBodies.ts') },
-              examples: { output: path.join(d, 'components/examples.ts') },
-              securitySchemes: { output: path.join(d, 'components/securitySchemes.ts') },
-              links: { output: path.join(d, 'components/links.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'components/schemas.ts') },
+            responses: { output: path.join(d, 'components/responses.ts') },
+            parameters: { output: path.join(d, 'components/parameters.ts') },
+            headers: { output: path.join(d, 'components/headers.ts') },
+            requestBodies: { output: path.join(d, 'components/requestBodies.ts') },
+            examples: { output: path.join(d, 'components/examples.ts') },
+            securitySchemes: { output: path.join(d, 'components/securitySchemes.ts') },
+            links: { output: path.join(d, 'components/links.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -3363,12 +3385,11 @@ components:
           input: componentsYaml,
           schema: 'zod',
           openapi: false,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'components/schemas.ts') },
-              responses: { output: path.join(d, 'components/responses.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'components/schemas.ts') },
+            responses: { output: path.join(d, 'components/responses.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -3402,12 +3423,11 @@ export const UnauthorizedResponseResponse = {
           input: componentsYaml,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: {
-              schemas: { output: path.join(d, 'components/schemas.ts') },
-              responses: { output: path.join(d, 'components/responses.ts') },
-            },
+
+          output: path.join(d, 'handlers'),
+          components: {
+            schemas: { output: path.join(d, 'components/schemas.ts') },
+            responses: { output: path.join(d, 'components/responses.ts') },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -3428,10 +3448,9 @@ export const UnauthorizedResponseResponse = {
           input: componentsYaml,
           schema: 'zod',
           openapi: false,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'components/schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'components/schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -3471,10 +3490,9 @@ export default app
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -3524,10 +3542,9 @@ webhooks: {}
           input: yamlPath,
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
         expect(fs.existsSync(path.join(d, 'handlers/webhooks.ts'))).toBe(false)
@@ -3545,10 +3562,9 @@ webhooks: {}
           input: petstoreYaml,
           schema: 'zod',
           format: { printWidth: 200 },
-          'takibi-hono': {
-            handlers: { output: path.join(d, 'handlers') },
-            components: { schemas: { output: path.join(d, 'schemas.ts') } },
-          },
+
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 

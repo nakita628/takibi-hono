@@ -101,11 +101,7 @@ describe('makeClients', () => {
     )
     expect(result.ok).toBe(true)
     expect(fs.readdirSync(path.join(d, 'rpc')).sort()).toStrictEqual(['getPing.ts', 'index.ts'])
-    expect(fs.readdirSync(path.join(d, 'tq')).sort()).toStrictEqual([
-      '_keys.ts',
-      'getPing.ts',
-      'index.ts',
-    ])
+    expect(fs.readdirSync(path.join(d, 'tq')).sort()).toStrictEqual(['getPing.ts', 'index.ts'])
   })
 
   it.concurrent('writes nothing and returns ok when no client target is configured', async () => {

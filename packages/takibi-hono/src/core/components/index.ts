@@ -10,6 +10,7 @@ import { makeParametersCode } from '../../generator/hono-openapi/components/para
 import { makePathItemsCode } from '../../generator/hono-openapi/components/path-items.js'
 import { makeRequestBodiesCode } from '../../generator/hono-openapi/components/request-bodies.js'
 import { makeResponsesCode } from '../../generator/hono-openapi/components/responses.js'
+import { makeSchemasCode } from '../../generator/hono-openapi/components/schemas.js'
 import { makeSecuritySchemesCode } from '../../generator/hono-openapi/components/security-schemes.js'
 import { makeBarrelCode } from '../../helper/barrel.js'
 import { makeComponentImports, makeModuleSpec } from '../../helper/imports.js'
@@ -113,6 +114,35 @@ export async function makeComponents(
     readonly suffix: string
     readonly make: () => string | Promise<string>
   }[]
+  // Single-file aggregate mode: schemas + every component in one file (imports are local, so only
+  // the schema-library import is needed).
+  if (layout.componentsSingleFile) {
+    const schemasExportTypes =
+      ohConfig?.components?.schemas?.exportTypes ?? ohConfig?.exportSchemasTypes ?? false
+    const parts = await Promise.all([
+      components.schemas
+        ? makeSchemasCode(components.schemas, schemaLib, {
+            exportTypes: schemasExportTypes,
+            readonly: isReadonly,
+            registerRef: useOpenAPI,
+          })
+        : Promise.resolve(''),
+      ...generators.map((gen) => (gen.data ? gen.make() : Promise.resolve(''))),
+    ])
+    const body = parts
+      .map((code) =>
+        code
+          .split('\n')
+          .filter((line) => !line.startsWith('import'))
+          .join('\n')
+          .trim(),
+      )
+      .filter(Boolean)
+      .join('\n\n')
+    const importLines = makeComponentImports(body, schemaLib, {})
+    const fullCode = importLines.length > 0 ? [...importLines, '', body].join('\n') : body
+    return emit(fullCode, path.dirname(layout.componentsSingleFile), layout.componentsSingleFile)
+  }
   const componentFiles = makeComponentFileMap(components, ohConfig, layout)
   for (const gen of generators) {
     if (!gen.data) continue
