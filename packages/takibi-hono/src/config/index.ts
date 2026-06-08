@@ -125,6 +125,9 @@ const ConfigSchema = v.pipe(
         typeof v === 'string' && (v.endsWith('.yaml') || v.endsWith('.json') || v.endsWith('.tsp')),
       'input must be .yaml | .json | .tsp',
     ),
+    output: v.exactOptional(
+      v.pipe(v.string(), v.regex(/^(?!.*\.ts$).+/, 'output must be a directory, not a .ts file')),
+    ),
     basePath: v.exactOptional(v.string()),
     schema: v.picklist(
       ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const,
@@ -139,9 +142,6 @@ const ConfigSchema = v.pipe(
     exportMediaTypesTypes: v.exactOptional(v.boolean()),
     client: v.exactOptional(ClientSchema),
     pathAlias: v.exactOptional(v.string()),
-    output: v.exactOptional(
-      v.pipe(v.string(), v.regex(/^(?!.*\.ts$).+/, 'output must be a directory, not a .ts file')),
-    ),
     components: v.exactOptional(
       v.pipe(
         v.strictObject({
