@@ -114,11 +114,10 @@ export async function makeComponents(
   // Single-file aggregate mode: schemas + every component in one file (imports are local, so only
   // the schema-library import is needed).
   if (layout.componentsSingleFile) {
-    const schemasExportTypes = ohConfig?.components?.schemas?.exportTypes ?? false
     const parts = await Promise.all([
       components.schemas
         ? makeSchemasCode(components.schemas, schemaLib, {
-            exportTypes: schemasExportTypes,
+            exportTypes: true,
             readonly: isReadonly,
             registerRef: useOpenAPI,
           })

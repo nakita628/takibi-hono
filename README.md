@@ -61,9 +61,6 @@ export default defineConfig({
   // Code generation options
   readonly: true, // Add 'as const' to generated schemas
 
-  // Export type inference from schemas
-  exportSchemasTypes: true,
-
   // Handler stub output directory (any directory you like)
   output: 'src/handlers',
 

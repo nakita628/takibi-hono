@@ -490,9 +490,13 @@ export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
 
       const handlersDir = await fsp.readdir(path.join(d, 'src/handlers'))
@@ -552,7 +556,11 @@ export const UserSchema = z
   })
   .meta({ ref: 'User' })
 
+export type User = z.infer<typeof UserSchema>
+
 export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
+
+export type Error = z.infer<typeof ErrorSchema>
 `)
 
         const responses = await fsp.readFile(
@@ -662,7 +670,7 @@ export const usersHandler = new Hono()
       },
     )
 
-    it('components.output with exportSchemasTypes', { timeout: 30000 }, async () => {
+    it('components.output emits the inferred schema types', { timeout: 30000 }, async () => {
       const d = tmpDir('cli_co_export_types')
       await setupProject(
         d,
@@ -672,7 +680,6 @@ export const usersHandler = new Hono()
 
           output: 'src/handlers',
           components: { output: 'src/openapi' },
-          exportSchemasTypes: true,
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -728,9 +735,13 @@ export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
 
         expect(fs.existsSync(path.join(d, 'src/components/index.ts'))).toBe(false)
@@ -832,10 +843,14 @@ export const PetSchema = z
   .meta({ description: 'A pet in the store' })
   .readonly()
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
     })
 

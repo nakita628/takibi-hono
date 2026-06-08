@@ -2181,19 +2181,18 @@ export const webhooksHandler = new Hono().post(
     )
   })
 
-  describe('exportSchemasTypes: top-level flag', () => {
+  describe('components.schemas.exportTypes', () => {
     it.concurrent(
-      'should export types when exportSchemasTypes is true (without components.schemas.exportTypes)',
+      'should export types when components.schemas.exportTypes is true',
       { timeout: 30000 },
       async () => {
-        const d = tmpDir('export_schemas_types_toplevel')
+        const d = tmpDir('export_schemas_types_component')
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
 
-          exportSchemasTypes: true,
           output: path.join(d, 'handlers'),
-          components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2244,15 +2243,14 @@ export const CreatePetSchema = z
     )
 
     it.concurrent(
-      'components.schemas.exportTypes takes priority over exportSchemasTypes',
+      'components.schemas.exportTypes: false suppresses the type export',
       { timeout: 30000 },
       async () => {
-        const d = tmpDir('export_types_priority')
+        const d = tmpDir('export_types_disabled')
         const result = await hono({
           input: petstoreYaml,
           schema: 'zod',
 
-          exportSchemasTypes: true,
           output: path.join(d, 'handlers'),
           components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: false } },
         })
@@ -2273,7 +2271,7 @@ export const CreatePetSchema = z
     )
 
     it.concurrent(
-      'should export Encoded type only for effect with exportSchemasTypes',
+      'should export Encoded type only for effect with components.schemas.exportTypes',
       { timeout: 30000 },
       async () => {
         const d = tmpDir('export_schemas_types_effect')
@@ -2281,9 +2279,8 @@ export const CreatePetSchema = z
           input: petstoreYaml,
           schema: 'effect',
 
-          exportSchemasTypes: true,
           output: path.join(d, 'handlers'),
-          components: { schemas: { output: path.join(d, 'schemas.ts') } },
+          components: { schemas: { output: path.join(d, 'schemas.ts'), exportTypes: true } },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
@@ -2336,9 +2333,13 @@ export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
       },
     )
@@ -2356,6 +2357,72 @@ export const CreatePetSchema = z
           components: {
             output: path.join(d, 'src/openapi'),
             schemas: { output: path.join(d, 'src/custom/schemas.ts') },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const schemas = await fsp.readFile(path.join(d, 'src/custom/schemas.ts'), 'utf-8')
+        expect(schemas).toBe(`import * as z from 'zod'
+
+export const PetSchema = z
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
+
+export const CreatePetSchema = z
+  .object({ name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'Data for creating a new pet' })
+`)
+      },
+    )
+
+    it.concurrent(
+      'override schemas.exportTypes: true emits types even when components.output is set',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_override_types')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
+            schemas: { output: path.join(d, 'src/custom/schemas.ts'), exportTypes: true },
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const schemas = await fsp.readFile(path.join(d, 'src/custom/schemas.ts'), 'utf-8')
+        expect(schemas).toBe(`import * as z from 'zod'
+
+export const PetSchema = z
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
+
+export type Pet = z.infer<typeof PetSchema>
+
+export const CreatePetSchema = z
+  .object({ name: z.string(), tag: z.string().exactOptional() })
+  .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
+`)
+      },
+    )
+
+    it.concurrent(
+      'override schemas.exportTypes: false suppresses types even when components.output is set',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_override_no_types')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
+
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
+            schemas: { output: path.join(d, 'src/custom/schemas.ts'), exportTypes: false },
           },
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
@@ -2407,6 +2474,8 @@ export const UserSchema = z
   })
   .meta({ ref: 'User' })
 
+export type User = z.infer<typeof UserSchema>
+
 export const CreateUserSchema = z
   .object({
     name: z.string(),
@@ -2415,7 +2484,11 @@ export const CreateUserSchema = z
   })
   .meta({ ref: 'CreateUser' })
 
+export type CreateUser = z.infer<typeof CreateUserSchema>
+
 export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
+
+export type Error = z.infer<typeof ErrorSchema>
 `)
 
         const responses = await fsp.readFile(
@@ -2513,22 +2586,24 @@ export const CreateUserBodyRequestBody = {
       },
     )
 
-    it.concurrent('components.output with exportSchemasTypes', { timeout: 30000 }, async () => {
-      const d = tmpDir('components_output_export_types')
-      const result = await hono({
-        input: petstoreYaml,
-        schema: 'zod',
+    it.concurrent(
+      'components.output emits the inferred schema types',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_export_types')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'zod',
 
-        output: path.join(d, 'src/handlers'),
-        components: {
-          output: path.join(d, 'src/openapi'),
-        },
-        exportSchemasTypes: true,
-      })
-      expect(result).toStrictEqual({ ok: true, value: undefined })
+          output: path.join(d, 'src/handlers'),
+          components: {
+            output: path.join(d, 'src/openapi'),
+          },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
 
-      const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
-      expect(schemas).toBe(`import * as z from 'zod'
+        const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+        expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
@@ -2541,6 +2616,101 @@ export const CreatePetSchema = z
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
+`)
+      },
+    )
+
+    it.concurrent(
+      'components.output emits valibot InferOutput types',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_types_valibot')
+        const result = await hono({
+          input: petstoreYaml,
+          schema: 'valibot',
+
+          output: path.join(d, 'src/handlers'),
+          components: { output: path.join(d, 'src/openapi') },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+        expect(schemas).toBe(`import * as v from 'valibot'
+
+export const PetSchema = v.pipe(
+  v.object({ id: v.pipe(v.number(), v.integer()), name: v.string(), tag: v.optional(v.string()) }),
+  v.description('A pet in the store'),
+  v.metadata({ examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] }),
+)
+
+export type Pet = v.InferOutput<typeof PetSchema>
+
+export const CreatePetSchema = v.pipe(
+  v.object({ name: v.string(), tag: v.optional(v.string()) }),
+  v.description('Data for creating a new pet'),
+)
+
+export type CreatePet = v.InferOutput<typeof CreatePetSchema>
+`)
+      },
+    )
+
+    it.concurrent('components.output emits typebox Static types', { timeout: 30000 }, async () => {
+      const d = tmpDir('components_output_types_typebox')
+      const result = await hono({
+        input: petstoreYaml,
+        schema: 'typebox',
+
+        output: path.join(d, 'src/handlers'),
+        components: { output: path.join(d, 'src/openapi') },
+      })
+      expect(result).toStrictEqual({ ok: true, value: undefined })
+
+      const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+      expect(schemas).toBe(`import Type from 'typebox'
+import type { Static } from 'typebox'
+
+export const PetSchema = Type.Object(
+  { id: Type.Integer(), name: Type.String(), tag: Type.Optional(Type.String()) },
+  { description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] },
+)
+
+export type Pet = Static<typeof PetSchema>
+
+export const CreatePetSchema = Type.Object(
+  { name: Type.String(), tag: Type.Optional(Type.String()) },
+  { description: 'Data for creating a new pet' },
+)
+
+export type CreatePet = Static<typeof CreatePetSchema>
+`)
+    })
+
+    it.concurrent('components.output emits arktype infer types', { timeout: 30000 }, async () => {
+      const d = tmpDir('components_output_types_arktype')
+      const result = await hono({
+        input: petstoreYaml,
+        schema: 'arktype',
+
+        output: path.join(d, 'src/handlers'),
+        components: { output: path.join(d, 'src/openapi') },
+      })
+      expect(result).toStrictEqual({ ok: true, value: undefined })
+
+      const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+      expect(schemas).toBe(`import { type } from 'arktype'
+
+export const PetSchema = type({ id: 'number.integer', name: 'string', 'tag?': 'string' }).describe(
+  'A pet in the store',
+)
+
+export type Pet = typeof PetSchema.infer
+
+export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).describe(
+  'Data for creating a new pet',
+)
+
+export type CreatePet = typeof CreatePetSchema.infer
 `)
     })
 
@@ -2682,9 +2852,121 @@ export const PetSchema = z
   .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
+`)
+      },
+    )
+
+    it.concurrent(
+      'single-file aggregate exports schema types but leaves parameters/headers untyped',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('components_output_single_file_mixed')
+        const result = await hono({
+          input: componentsYaml,
+          schema: 'zod',
+          openapi: true,
+
+          output: path.join(d, 'src/handlers'),
+          components: { output: path.join(d, 'src/openapi.ts') },
+        })
+        expect(result).toStrictEqual({ ok: true, value: undefined })
+
+        const aggregated = await fsp.readFile(path.join(d, 'src/openapi.ts'), 'utf-8')
+        expect(aggregated).toBe(`import { resolver } from 'hono-openapi'
+import * as z from 'zod'
+
+export const UserSchema = z
+  .object({
+    id: z.int(),
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
+  })
+  .meta({ ref: 'User' })
+
+export type User = z.infer<typeof UserSchema>
+
+export const CreateUserSchema = z
+  .object({
+    name: z.string(),
+    email: z.string(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+  })
+  .meta({ ref: 'CreateUser' })
+
+export type CreateUser = z.infer<typeof CreateUserSchema>
+
+export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
+
+export type Error = z.infer<typeof ErrorSchema>
+
+export const UserListResponseResponse = {
+  description: 'A list of users',
+  content: { 'application/json': { schema: resolver(z.array(UserSchema)) } },
+  headers: {
+    'X-Total-Count': { description: 'Total number of users', schema: { type: 'integer' } as const },
+  },
+}
+
+export const UnauthorizedResponseResponse = {
+  description: 'Authentication required',
+  content: { 'application/json': { schema: resolver(ErrorSchema) } },
+}
+
+export const PageParamParamsSchema = z.int().exactOptional()
+
+export const LimitParamParamsSchema = z.int().exactOptional()
+
+export const CreateUserBodyRequestBody = {
+  description: 'User to create',
+  required: true,
+  content: { 'application/json': { schema: CreateUserSchema } },
+}
+
+export const XRequestIdHeaderSchema = z.string()
+
+export const XRateLimitHeaderSchema = z.int().exactOptional()
+
+export const UserExampleExample = {
+  summary: 'A sample user',
+  value: { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin' },
+}
+
+export const ErrorExampleExample = {
+  summary: 'A sample error',
+  value: { code: 404, message: 'Not found' },
+}
+
+export const BearerAuthSecurityScheme = {
+  type: 'http',
+  description: 'JWT Bearer token',
+  scheme: 'bearer',
+  bearerFormat: 'JWT',
+}
+
+export const ApiKeySecurityScheme = {
+  type: 'apiKey',
+  description: 'API key authentication',
+  name: 'X-API-Key',
+  in: 'header',
+}
+
+export const GetUserByIdLink = {
+  operationId: 'getUserById',
+  parameters: { userId: '$response.body#/id' },
+  description: 'Get user by the ID returned in the response',
+}
 `)
       },
     )
@@ -2843,10 +3125,14 @@ export const PetSchema = z
   .meta({ description: 'A pet in the store', examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] })
   .readonly()
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
   .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
     })
 

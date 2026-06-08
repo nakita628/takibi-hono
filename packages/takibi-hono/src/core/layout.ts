@@ -71,6 +71,15 @@ export type TakibiHonoOptions = {
     | undefined
 }
 
+/**
+ * Schemas join the aggregate barrel (and therefore export their inferred type) when
+ * `components.output` is set and no per-type `schemas` config overrides it. A per-type
+ * `schemas` config opts in via its own `exportTypes` instead, so it is excluded here.
+ */
+export function isSchemasAggregate(ohConfig: TakibiHonoOptions | undefined) {
+  return ohConfig?.components?.output !== undefined && ohConfig?.components?.schemas === undefined
+}
+
 /** Computed once per run from config; every generator consumes this instead of re-deriving paths. */
 export type Layout = {
   readonly schemasFile: string

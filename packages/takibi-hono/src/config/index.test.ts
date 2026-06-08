@@ -522,9 +522,6 @@ describe('parseConfig', () => {
         },
 
         readonly: true,
-        exportSchemasTypes: true,
-        exportParametersTypes: true,
-        exportHeadersTypes: true,
         output: 'src/routes',
         components: {
           schemas: { output: 'src/schemas.ts', exportTypes: true },
@@ -560,9 +557,6 @@ describe('parseConfig', () => {
         },
 
         readonly: true,
-        exportSchemasTypes: true,
-        exportParametersTypes: true,
-        exportHeadersTypes: true,
         output: 'src/routes',
         components: {
           schemas: { output: 'src/schemas.ts', exportTypes: true },
@@ -1039,7 +1033,6 @@ describe('parseConfig - components.output base directory', () => {
         components: {
           output: 'src/openapi',
         },
-        exportSchemasTypes: true,
       }),
     ).toStrictEqual({
       ok: true,
@@ -1051,7 +1044,6 @@ describe('parseConfig - components.output base directory', () => {
         components: {
           output: 'src/openapi',
         },
-        exportSchemasTypes: true,
       },
     })
   })
@@ -1081,7 +1073,6 @@ describe('parseConfig - components.output base directory', () => {
         components: {
           output: 'src/openapi',
         },
-        exportSchemasTypes: true,
       }),
     ).toStrictEqual({
       ok: true,
@@ -1094,7 +1085,6 @@ describe('parseConfig - components.output base directory', () => {
         components: {
           output: 'src/openapi',
         },
-        exportSchemasTypes: true,
       },
     })
   })
@@ -1373,60 +1363,18 @@ describe('defineConfig', () => {
     })
   })
 
-  it.concurrent('should accept exportSchemasTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportSchemasTypes: true,
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportSchemasTypes: true,
-      },
-    })
-  })
-
-  it.concurrent('should accept exportParametersTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportParametersTypes: true,
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportParametersTypes: true,
-      },
-    })
-  })
-
-  it.concurrent('should accept exportHeadersTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportHeadersTypes: true,
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-
-        exportHeadersTypes: true,
-      },
-    })
+  it.concurrent('rejects the retired top-level export*Types flags (use components.X.exportTypes)', () => {
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportSchemasTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportParametersTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportHeadersTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportMediaTypesTypes: true }).ok).toBe(
+      false,
+    )
   })
 })

@@ -4,7 +4,7 @@ import {
   makeSplitSchemas,
 } from '../../generator/hono-openapi/components/schemas.js'
 import type { OpenAPI } from '../../openapi/index.js'
-import type { Layout, TakibiHonoOptions } from '../layout.js'
+import { isSchemasAggregate, type Layout, type TakibiHonoOptions } from '../layout.js'
 
 /** `useOpenAPI` adds a per-lib `ref` key for `$ref` registration; `split: true` writes one file per schema + barrel. */
 export async function makeSchemas(
@@ -16,7 +16,7 @@ export async function makeSchemas(
 ) {
   if (!openapi.components?.schemas) return { ok: true, value: undefined } as const
   const schemasConfig = ohConfig?.components?.schemas
-  const exportTypes = schemasConfig?.exportTypes ?? false
+  const exportTypes = schemasConfig?.exportTypes ?? isSchemasAggregate(ohConfig)
   const isReadonly = ohConfig?.readonly ?? false
   const split = schemasConfig?.split ?? false
   const registerRef = useOpenAPI

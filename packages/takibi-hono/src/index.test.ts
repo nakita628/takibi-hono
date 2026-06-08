@@ -285,7 +285,6 @@ export const CreatePetSchema = z
 
           output: 'src/handlers',
           components: { output: 'src/openapi' },
-          exportSchemasTypes: true,
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -347,39 +346,35 @@ export const CreatePetSchema = z
 `)
     })
 
-    it(
-      'readonly + components.output + exportSchemasTypes + effect',
-      { timeout: 30000 },
-      async () => {
-        const d = tmpDir('idx_ro_co_et')
-        await setupProject(
-          d,
-          {
-            input: 'petstore.yaml',
-            schema: 'effect',
-            openapi: true,
+    it('readonly + components.output emits schema types + effect', { timeout: 30000 }, async () => {
+      const d = tmpDir('idx_ro_co_et')
+      await setupProject(
+        d,
+        {
+          input: 'petstore.yaml',
+          schema: 'effect',
+          openapi: true,
 
-            readonly: true,
-            output: 'src/handlers',
-            components: { output: 'src/openapi' },
-            exportSchemasTypes: true,
-          },
-          'petstore.yaml',
-          PETSTORE_YAML,
-        )
+          readonly: true,
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
+        },
+        'petstore.yaml',
+        PETSTORE_YAML,
+      )
 
-        const result = await runEntryPoint(d)
-        expect(result).toStrictEqual({
-          ok: true,
-          value: '🔥 takibi-hono: petstore.yaml (effect) ✅',
-        })
+      const result = await runEntryPoint(d)
+      expect(result).toStrictEqual({
+        ok: true,
+        value: '🔥 takibi-hono: petstore.yaml (effect) ✅',
+      })
 
-        expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(true)
-        expect(fs.existsSync(path.join(d, 'src/handlers/pets.ts'))).toBe(true)
-        expect(fs.existsSync(path.join(d, 'src/index.ts'))).toBe(true)
+      expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(true)
+      expect(fs.existsSync(path.join(d, 'src/handlers/pets.ts'))).toBe(true)
+      expect(fs.existsSync(path.join(d, 'src/index.ts'))).toBe(true)
 
-        const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
-        expect(schemas).toBe(`import { Schema } from 'effect'
+      const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+      expect(schemas).toBe(`import { Schema } from 'effect'
 
 export const PetSchema = Schema.Struct({
   id: Schema.Number.pipe(Schema.int()),
@@ -396,7 +391,6 @@ export const CreatePetSchema = Schema.Struct({
 
 export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
-      },
-    )
+    })
   })
 })

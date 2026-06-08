@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { resolveLayout } from './layout.js'
+import { isSchemasAggregate, resolveLayout } from './layout.js'
 
 describe('resolveLayout: defaults', () => {
   it.concurrent('uses src/handlers and src/components/index.ts when no config', () => {
@@ -147,5 +147,34 @@ describe('resolveLayout: pathAlias', () => {
       components: { responses: { output: 'src/responses.ts', import: '@app/responses' } },
     })
     expect(layout.componentPaths.responses).toBe('@app/responses')
+  })
+})
+
+describe('isSchemasAggregate', () => {
+  it.concurrent('false when there is no components config', () => {
+    expect(isSchemasAggregate(undefined)).toBe(false)
+    expect(isSchemasAggregate({})).toBe(false)
+  })
+
+  it.concurrent('true for dir aggregate (components.output, no schemas override)', () => {
+    expect(isSchemasAggregate({ components: { output: 'src/openapi' } })).toBe(true)
+  })
+
+  it.concurrent('true for single-file aggregate (components.output ending in .ts)', () => {
+    expect(isSchemasAggregate({ components: { output: 'src/openapi.ts' } })).toBe(true)
+  })
+
+  it.concurrent('false for per-type schemas config without an aggregate output', () => {
+    expect(isSchemasAggregate({ components: { schemas: { output: 'src/schemas.ts' } } })).toBe(
+      false,
+    )
+  })
+
+  it.concurrent('false when a per-type schemas config overrides components.output', () => {
+    expect(
+      isSchemasAggregate({
+        components: { output: 'src/openapi', schemas: { output: 'src/custom/schemas.ts' } },
+      }),
+    ).toBe(false)
   })
 })
