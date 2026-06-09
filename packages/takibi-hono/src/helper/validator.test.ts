@@ -246,25 +246,25 @@ describe('makeStandardValidators', () => {
     ])
   })
 
-  it.concurrent('typebox: path integer uses Transform.Decode (wire-coerce via schema-to-library)', () => {
+  it.concurrent('typebox: path integer uses Codec.Decode (wire-coerce via schema-to-library)', () => {
     const operation: Operation = {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'typebox')
     expect(result).toStrictEqual([
-      "tbValidator('param',Type.Object({id:Type.Transform(Type.String()).Decode((v)=>Number.parseInt(v,10)).Encode((v)=>String(v))}))",
+      "tbValidator('param',Type.Object({id:Codec(Type.String()).Decode((v)=>Number.parseInt(v,10)).Encode((v)=>String(v))}))",
     ])
   })
 
-  it.concurrent('typebox: query boolean uses Transform.Decode (wire-coerce via schema-to-library)', () => {
+  it.concurrent('typebox: query boolean uses Codec.Decode (wire-coerce via schema-to-library)', () => {
     const operation: Operation = {
       parameters: [{ name: 'flag', in: 'query', required: true, schema: { type: 'boolean' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'typebox')
     expect(result).toStrictEqual([
-      "tbValidator('query',Type.Object({flag:Type.Transform(Type.Union([Type.Literal('true'),Type.Literal('false')])).Decode((v)=>v==='true').Encode((v)=>v?'true':'false')}))",
+      "tbValidator('query',Type.Object({flag:Codec(Type.Union([Type.Literal('true'),Type.Literal('false')])).Decode((v)=>v==='true').Encode((v)=>v?'true':'false')}))",
     ])
   })
 

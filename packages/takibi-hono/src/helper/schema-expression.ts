@@ -42,6 +42,31 @@ function postProcess(
   return renamed
 }
 
+/**
+ * The arktype `scope({...})` first argument for a circular SCC group. arktype
+ * cannot resolve cross-schema references between standalone `type(...)` calls; a
+ * cyclic group must share one `scope`, where members reference each other by their
+ * scope key (a DSL keyword). Built by handing the group to schema-to-library as
+ * `definitions` (its scope path) and extracting the produced `scope({...})`.
+ */
+export function makeArktypeScopeBody(
+  group: readonly string[],
+  schemas: { readonly [k: string]: Schema },
+  readonly: boolean,
+): string {
+  const root = group[0]
+  if (root === undefined) return ''
+  // Keys = PascalCase names (matching how `$ref` tails resolve in scope mode);
+  // `title` makes the root one of those definitions so it is not duplicated as a
+  // stray `Schema` entry.
+  const definitions = Object.fromEntries(group.map((name) => [toPascalCase(name), schemas[name]]))
+  const code = schemaToArktype(
+    { ...schemas[root], title: toPascalCase(root), definitions },
+    { readonly, exportType: false },
+  )
+  return code.match(/scope\((\{[\s\S]*\})\)\.export\(\)/)?.[1] ?? ''
+}
+
 export function extractSchemaExports(
   name: string,
   schema: Schema,

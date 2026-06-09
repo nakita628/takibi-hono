@@ -114,6 +114,8 @@ export function makeComponentImports(
   return [
     ...(code.includes('resolver(') ? ["import{resolver}from'hono-openapi'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
     ...(schemaLib === 'typebox' && code.includes('Static<typeof ')
@@ -150,6 +152,8 @@ export function makeImports(
     "import{Hono}from'hono'",
     ...(honoOpenApiImport ? [honoOpenApiImport] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
@@ -171,6 +175,8 @@ export function makeStandardImports(
     "import{Hono}from'hono'",
     ...(code.includes(`${svConfig.validatorFn}(`) ? [svConfig.validatorImport] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const
 }

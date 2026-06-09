@@ -594,6 +594,7 @@ export type CreatePet = Static<typeof CreatePetSchema>
         expect(pets).toBe(`import { Hono } from 'hono'
 import { tbValidator } from '@hono/typebox-validator'
 import Type from 'typebox'
+import { Codec } from 'typebox'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
@@ -603,7 +604,7 @@ export const petsHandler = new Hono()
       'query',
       Type.Object({
         limit: Type.Optional(
-          Type.Transform(Type.String())
+          Codec(Type.String())
             .Decode((v) => Number.parseInt(v, 10))
             .Encode((v) => String(v)),
         ),
@@ -703,7 +704,7 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({
   description: 'A pet in the store',
-  examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  jsonSchema: { examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] },
 })
 
 export type PetSchema = typeof PetSchema.Type
@@ -1232,11 +1233,9 @@ export const LimitParamParamsSchema = z.int().exactOptional()
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
       const headers = await fsp.readFile(path.join(d, 'headers.ts'), 'utf-8')
-      expect(headers).toBe(`import * as z from 'zod'
+      expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
 
-export const XRequestIdHeaderSchema = z.string()
-
-export const XRateLimitHeaderSchema = z.int().exactOptional()
+export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
     })
 
@@ -1680,7 +1679,7 @@ export const PetSchema = Schema.Struct({
 }).annotations({
   identifier: 'Pet',
   description: 'A pet in the store',
-  examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  jsonSchema: { examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] },
 })
 
 export type PetSchema = typeof PetSchema.Type
@@ -1946,11 +1945,9 @@ export const UnauthorizedResponseResponse = {
 
         // headers.ts
         const headers = await fsp.readFile(path.join(d, 'headers.ts'), 'utf-8')
-        expect(headers).toBe(`import * as z from 'zod'
+        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
 
-export const XRequestIdHeaderSchema = z.string()
-
-export const XRateLimitHeaderSchema = z.int().exactOptional()
+export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
 
         // handler should import from all components
@@ -2293,7 +2290,7 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({
   description: 'A pet in the store',
-  examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  jsonSchema: { examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] },
 })
 
 export type PetSchema = typeof PetSchema.Type
@@ -2525,11 +2522,9 @@ export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
-        expect(headers).toBe(`import * as z from 'zod'
+        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
 
-export const XRequestIdHeaderSchema = z.string()
-
-export const XRateLimitHeaderSchema = z.int().exactOptional()
+export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
 
         const examples = await fsp.readFile(path.join(d, 'src/openapi/examples/index.ts'), 'utf-8')
@@ -2911,32 +2906,13 @@ export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta
 
 export type Error = z.infer<typeof ErrorSchema>
 
-export const UserListResponseResponse = {
-  description: 'A list of users',
-  content: { 'application/json': { schema: resolver(z.array(UserSchema)) } },
-  headers: {
-    'X-Total-Count': { description: 'Total number of users', schema: { type: 'integer' } as const },
-  },
-}
-
-export const UnauthorizedResponseResponse = {
-  description: 'Authentication required',
-  content: { 'application/json': { schema: resolver(ErrorSchema) } },
-}
-
 export const PageParamParamsSchema = z.int().exactOptional()
 
 export const LimitParamParamsSchema = z.int().exactOptional()
 
-export const CreateUserBodyRequestBody = {
-  description: 'User to create',
-  required: true,
-  content: { 'application/json': { schema: CreateUserSchema } },
-}
+export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
 
-export const XRequestIdHeaderSchema = z.string()
-
-export const XRateLimitHeaderSchema = z.int().exactOptional()
+export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 
 export const UserExampleExample = {
   summary: 'A sample user',
@@ -2966,6 +2942,25 @@ export const GetUserByIdLink = {
   operationId: 'getUserById',
   parameters: { userId: '$response.body#/id' },
   description: 'Get user by the ID returned in the response',
+}
+
+export const CreateUserBodyRequestBody = {
+  description: 'User to create',
+  required: true,
+  content: { 'application/json': { schema: CreateUserSchema } },
+}
+
+export const UserListResponseResponse = {
+  description: 'A list of users',
+  content: { 'application/json': { schema: resolver(z.array(UserSchema)) } },
+  headers: {
+    'X-Total-Count': { description: 'Total number of users', schema: { type: 'integer' } as const },
+  },
+}
+
+export const UnauthorizedResponseResponse = {
+  description: 'Authentication required',
+  content: { 'application/json': { schema: resolver(ErrorSchema) } },
 }
 `)
       },
@@ -3220,7 +3215,7 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({
   description: 'A pet in the store',
-  examples: [{ id: 1, name: 'Buddy', tag: 'dog' }],
+  jsonSchema: { examples: [{ id: 1, name: 'Buddy', tag: 'dog' }] },
 })
 
 export const CreatePetSchema = Schema.Struct({

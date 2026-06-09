@@ -71,6 +71,10 @@ function inlineViaSchemaLibrary(
   const code = extractSchemaExports('Inline', schema, schemaLib, false, false, paramIn)
   const expr = code
     .trim()
+    // Drop any leading file-level marker comments (e.g. TypeBox's `not`-keyword
+    // FIXME notice) so the `export const ... =` prefix strip reaches the
+    // expression instead of leaving a comment + statement in an expression slot.
+    .replace(/^(?:\/\/[^\n]*\n+)+/, '')
     .replace(/^export\s+const\s+[A-Za-z_$][\w$]*Schema\s*=\s*/, '')
     .trim()
   return unwrapLazyRefs(expr, schemaLib)
@@ -377,9 +381,15 @@ function arktypeInline(schema: Schema) {
         if (!schema.properties) return 'type({})'
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
-          const propStr = extractArktypeString(arktypeInline(prop))
           const keyStr = isRequired ? `'${key}'` : `'${key}?'`
-          return `${keyStr}:${JSON.stringify(propStr)}`
+          const propExpr = arktypeInline(prop)
+          // A string-DSL keyword (`type('string')`) becomes a quoted member; a
+          // value expression (a `$ref` → `XSchema`, `XSchema.array()`, a nested
+          // `type({...})`) is embedded by value, not quoted into an unresolvable
+          // string literal.
+          return isArktypeStringForm(propExpr)
+            ? `${keyStr}:${JSON.stringify(extractArktypeString(propExpr))}`
+            : `${keyStr}:${propExpr}`
         })
         return `type({${props.join(',')}})`
       }

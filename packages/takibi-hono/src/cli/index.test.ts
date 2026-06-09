@@ -589,9 +589,7 @@ export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
-        expect(headers).toBe(`import * as z from 'zod'
-
-export const XRequestIdHeaderSchema = z.string()
+        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
 `)
 
         const examples = await fsp.readFile(path.join(d, 'src/openapi/examples/index.ts'), 'utf-8')

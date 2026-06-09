@@ -41,6 +41,12 @@ describe('makeOptional', () => {
     expect(makeOptional('Schema.String', 'effect')).toBe('Schema.optional(Schema.String)')
   })
 
+  test('effect: already-optionalWith expr is passed through (no double wrap)', () => {
+    expect(
+      makeOptional('Schema.optionalWith(Schema.NumberFromString,{default:() => 1})', 'effect'),
+    ).toBe('Schema.optionalWith(Schema.NumberFromString,{default:() => 1})')
+  })
+
   test('all libs return a string', () => {
     for (const lib of ALL_LIBS) {
       expect(typeof makeOptional('expr', lib)).toBe('string')

@@ -298,6 +298,30 @@ export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): R
   )
 }
 
+/**
+ * Circular strongly-connected component groups: a mutual-recursion cluster
+ * (`length > 1`) or a self-referential schema (`length === 1` with a self-loop).
+ * Used to aggregate cyclic schemas into a single container (TypeBox `Type.Module`
+ * / arktype `scope`) where cross-member references resolve.
+ */
+export function detectCircularSCCGroups(schemas: {
+  readonly [k: string]: Schema
+}): readonly (readonly string[])[] {
+  const graph = new Map<string, readonly string[]>(
+    Object.entries(schemas).map(([name, schema]) => [name, collectRefs(schema)]),
+  )
+  const names = [...graph.keys()]
+  const finalState = names.reduce(
+    (state, n) => (state.indices.has(n) ? state : tarjanConnect(n, graph, state)),
+    createInitialState(),
+  )
+  return finalState.sccs.filter((scc) => {
+    if (scc.length > 1) return true
+    const single = scc[0]
+    return single !== undefined && (graph.get(single) ?? []).includes(single)
+  })
+}
+
 const LAZY_WRAPPERS: Record<string, { readonly open: string; readonly close: string }> = {
   zod: { open: 'z.lazy(() => ', close: ')' },
   valibot: { open: 'v.lazy(() => ', close: ')' },

@@ -179,6 +179,33 @@ export type User = typeof UserSchema.infer`,
     )
   })
 
+  it.concurrent(
+    'should emit the ArkEnv ref augmentation when registerRef is true (arktype)',
+    async () => {
+      const result = await makeSchemasCode(
+        {
+          User: {
+            type: 'object',
+            properties: { name: { type: 'string' } },
+            required: ['name'],
+          },
+        },
+        'arktype',
+        { registerRef: true },
+      )
+      expect(result).toBe(
+        `import{type}from'arktype'
+declare global {
+  interface ArkEnv {
+    meta(): { ref?: string }
+  }
+}
+
+export const UserSchema = type({name:"string"}).configure({ref:"User"})`,
+      )
+    },
+  )
+
   it.concurrent('should export Encoded type only when exportTypes is true (effect)', async () => {
     const result = await makeSchemasCode(
       {
@@ -247,7 +274,7 @@ export type Todo = z.infer<typeof TodoSchema>`,
     expect(result).toBe(
       `import{Schema}from'effect'
 
-export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})
+export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",jsonSchema:{examples:[{name:"Buddy"}]}})
 
 export type PetSchema = typeof PetSchema.Type`,
     )
@@ -517,7 +544,7 @@ export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Stru
   })
 
   // --- typebox self-referencing ---
-  it.concurrent('should apply Type.Recursive wrapper for circular self-referencing schemas with typebox', async () => {
+  it.concurrent('should wrap a self-referencing schema in a single-member Type.Module (typebox)', async () => {
     const result = await makeSchemasCode(
       {
         Category: {
@@ -537,7 +564,7 @@ export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Stru
     expect(result).toBe(
       `import Type from'typebox'
 
-export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.String(),children:Type.Optional(Type.Array(This))}))`,
+export const CategorySchema = Type.Module({Category:Type.Object({name:Type.String(),children:Type.Optional(Type.Array(Type.Ref('Category')))})}).Category`,
     )
   })
 
@@ -561,8 +588,9 @@ export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.Stri
     )
     expect(result).toBe(
       `import{type}from'arktype'
+import{scope}from'arktype'
 
-export const CategorySchema = type({name:"string","children?":"CategorySchema[]"})`,
+export const CategorySchema = scope({Category:{name:"string","children?":"Category[]"}}).export().Category`,
     )
   })
 

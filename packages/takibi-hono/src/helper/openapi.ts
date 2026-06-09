@@ -64,7 +64,10 @@ export function makeOptional(
     case 'arktype':
       return `${expr}.optional()`
     case 'effect':
-      return `Schema.optional(${expr})`
+      // A defaulted param already emits `Schema.optionalWith(..., { default })`,
+      // which is a PropertySignature — wrapping it again in `Schema.optional`
+      // is a type error. It is already optional, so pass it through.
+      return expr.startsWith('Schema.optionalWith(') ? expr : `Schema.optional(${expr})`
   }
 }
 
@@ -189,12 +192,19 @@ export function makeContent(
     )
 }
 
-export function makeHeader(headerName: string, header: Header | Reference) {
+/**
+ * The OpenAPI Header Object value (single source for both inline route headers and
+ * `components.headers` exports). A `$ref` header resolves to its component
+ * identifier; otherwise an object literal whose `schema` is a JSON Schema literal
+ * (`as const`) — a response header's `schema` is documentation (SchemaObject), not
+ * a runtime validator.
+ */
+export function makeHeaderValue(header: Header | Reference): string {
   if (isRefObject(header) && header.$ref) {
-    return `${JSON.stringify(headerName)}:${resolveRef(header.$ref)}`
+    return resolveRef(header.$ref)
   }
   if (!isHeader(header)) {
-    return `${JSON.stringify(headerName)}:{}`
+    return '{}'
   }
   const parts = [
     ...(header.description ? [`description:${JSON.stringify(header.description)}`] : []),
@@ -202,7 +212,11 @@ export function makeHeader(headerName: string, header: Header | Reference) {
     ...(header.required === true ? ['required:true'] : []),
     ...(header.deprecated === true ? ['deprecated:true'] : []),
   ]
-  return `${JSON.stringify(headerName)}:{${parts.join(',')}}`
+  return `{${parts.join(',')}}`
+}
+
+export function makeHeader(headerName: string, header: Header | Reference) {
+  return `${JSON.stringify(headerName)}:${makeHeaderValue(header)}`
 }
 
 export function makeResponse(

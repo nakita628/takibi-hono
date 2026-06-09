@@ -745,7 +745,7 @@ describe('schemaToInlineExpression', () => {
         required: ['meta'],
       }
       expect(schemaToInlineExpression(schema, 'arktype')).toBe(
-        'type({\'meta\':"type({\'version\':\\"number\\"})"})',
+        'type({\'meta\':type({\'version\':"number"})})',
       )
     })
     it.concurrent('effect: nested object', () => {
@@ -1333,7 +1333,7 @@ describe('schemaToInlineExpression', () => {
 
     it.concurrent('effect: description + example → .annotations({description,examples})', () => {
       expect(schemaToInlineExpression(userWithExample, 'effect')).toBe(
-        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user",examples:[{id:1,name:"Alice"}]})',
+        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user",jsonSchema:{examples:[{id:1,name:"Alice"}]}})',
       )
     })
 

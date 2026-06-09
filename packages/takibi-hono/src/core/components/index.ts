@@ -42,15 +42,15 @@ export async function makeComponents(
   if (!components) return { ok: true, value: undefined } as const
   const isReadonly = ohConfig?.readonly ?? false
   const parametersExportTypes = ohConfig?.components?.parameters?.exportTypes ?? false
-  const headersExportTypes = ohConfig?.components?.headers?.exportTypes ?? false
   const mediaTypesExportTypes = ohConfig?.components?.mediaTypes?.exportTypes ?? false
+  // Single-file aggregate mode concatenates every generator's output into one
+  // module, so a component that references another by identifier must be emitted
+  // AFTER its dependency (else `used before declaration`). OpenAPI components form
+  // a non-cyclic DAG; this order is one valid leaf→composite topological order:
+  // leaves (parameters, headers, examples, securitySchemes, links) first, then the
+  // composites that reference them (requestBodies → schemas/examples, responses →
+  // schemas/headers/examples/links, callbacks/pathItems last).
   const generators = [
-    {
-      data: components.responses,
-      configKey: 'responses',
-      suffix: 'Response',
-      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly, useOpenAPI),
-    },
     {
       data: components.parameters,
       configKey: 'parameters',
@@ -58,16 +58,10 @@ export async function makeComponents(
       make: () => makeParametersCode(components.parameters!, schemaLib, parametersExportTypes),
     },
     {
-      data: components.requestBodies,
-      configKey: 'requestBodies',
-      suffix: 'RequestBody',
-      make: () => makeRequestBodiesCode(components.requestBodies!, schemaLib, isReadonly),
-    },
-    {
       data: components.headers,
       configKey: 'headers',
       suffix: 'HeaderSchema',
-      make: () => makeHeadersCode(components.headers!, schemaLib, headersExportTypes),
+      make: () => makeHeadersCode(components.headers!),
     },
     {
       data: components.examples,
@@ -86,6 +80,18 @@ export async function makeComponents(
       configKey: 'links',
       suffix: 'Link',
       make: () => makeLinksCode(components.links!, isReadonly),
+    },
+    {
+      data: components.requestBodies,
+      configKey: 'requestBodies',
+      suffix: 'RequestBody',
+      make: () => makeRequestBodiesCode(components.requestBodies!, schemaLib, isReadonly),
+    },
+    {
+      data: components.responses,
+      configKey: 'responses',
+      suffix: 'Response',
+      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly, useOpenAPI),
     },
     {
       data: components.callbacks,

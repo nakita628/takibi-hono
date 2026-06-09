@@ -15,6 +15,15 @@ import type { Schema } from '../openapi/index.js'
  * meta appears earlier in the source and must not be rewritten.
  */
 
+/**
+ * arktype's `TypeMeta` is a closed interface (no `ref` key), so `.configure({ ref })`
+ * fails to typecheck out of the box. arktype's documented extension point is the
+ * global `ArkEnv["meta"]()` return type — augmenting it merges `ref` into `ArkEnv.meta`
+ * → `TypeMeta`. Emitted once at the top of arktype component files that register refs.
+ */
+export const ARKTYPE_REF_AUGMENTATION =
+  'declare global {\n  interface ArkEnv {\n    meta(): { ref?: string }\n  }\n}'
+
 /** Used by typebox to decide whether the generated declaration has a 2nd-arg `opts` object to merge `ref` into. */
 export function hasOuterMeta(schema: Schema): boolean {
   return Boolean(
@@ -72,8 +81,12 @@ export function injectRef(
       }
       case 'typebox':
         // schema-to-library emits Type.X(body, {opts}) only when meta is present.
-        return hasMeta
-          ? (injectAtLast(constPart, '},{', `},{ref:${refStr},`) ?? constPart)
+        if (hasMeta) return injectAtLast(constPart, '},{', `},{ref:${refStr},`) ?? constPart
+        // An argument-less factory (`Type.Any()`, `Type.Null()`) takes the ref as
+        // its first (options) argument; appending `,{ref}` would leave a comma
+        // right after `(`. A factory with arguments appends the options object.
+        return /\(\)(\s*)$/.test(constPart)
+          ? constPart.replace(/\(\)(\s*)$/, `({ref:${refStr}})$1`)
           : constPart.replace(/\)(\s*)$/, `,{ref:${refStr}})$1`)
       case 'arktype':
         return `${constPart}.configure({ref:${refStr}})`

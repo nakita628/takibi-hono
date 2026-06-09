@@ -151,7 +151,7 @@ describe('extractSchemaExports', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})\n\nexport type PetSchema = typeof PetSchema.Type',
+      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",jsonSchema:{examples:[{name:"Buddy"}]}})\n\nexport type PetSchema = typeof PetSchema.Type',
     )
   })
 })
@@ -317,7 +317,7 @@ describe('extractSchemaExports: example metadata', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({examples:[{name:"test"}]})\n\nexport type ItemSchema = typeof ItemSchema.Type',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({jsonSchema:{examples:[{name:"test"}]}})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -457,7 +457,7 @@ describe('extractSchemaExports: appendMeta with description and example', () => 
   it.concurrent('effect: annotations with description and examples', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",examples:[{name:"test"}]})\n\nexport type ItemSchema = typeof ItemSchema.Type',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",jsonSchema:{examples:[{name:"test"}]}})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -1172,10 +1172,10 @@ describe('extractSchemaExports: x-* vendor extension transparency', () => {
     )
   })
 
-  it.concurrent('x-trim: typebox emits Type.Transform with .trim()', () => {
+  it.concurrent('x-trim: typebox emits Codec with .trim()', () => {
     const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'typebox')
     expect(result).toBe(
-      'export const ASchema = Type.Transform(Type.String()).Decode((val: string) => val.trim()).Encode((val: string) => val)\n\nexport type A = Static<typeof ASchema>',
+      'export const ASchema = Codec(Type.String()).Decode((val: string) => val.trim()).Encode((val: string) => val)\n\nexport type A = Static<typeof ASchema>',
     )
   })
 
