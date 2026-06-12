@@ -17,7 +17,7 @@ describe('makeRequestBodiesCode', () => {
       },
     }
     expect(await makeRequestBodiesCode(requestBodies, 'zod')).toBe(
-      'export const CreateUserBodyRequestBody = {description:"User to create",required:true,content:{\'application/json\':{schema:CreateUserSchema}}}',
+      'export const CreateUserBodyRequestBody = {description:"User to create",content:{\'application/json\':{schema:CreateUserSchema}},required:true}',
     )
   })
 
@@ -40,7 +40,7 @@ describe('makeRequestBodiesCode', () => {
       },
     }
     expect(await makeRequestBodiesCode(requestBodies, 'typebox')).toBe(
-      "export const LoginBodyRequestBody = {required:true,content:{'application/json':{schema:Type.Object({username:Type.String(),password:Type.String()})}}}",
+      "export const LoginBodyRequestBody = {content:{'application/json':{schema:Type.Object({username:Type.String(),password:Type.String()})}},required:true}",
     )
   })
 
@@ -72,7 +72,7 @@ describe('makeRequestBodiesCode', () => {
       },
     }
     expect(await makeRequestBodiesCode(requestBodies, 'zod', true)).toBe(
-      "export const CreateBodyRequestBody = {required:true,content:{'application/json':{schema:ItemSchema}}} as const",
+      "export const CreateBodyRequestBody = {content:{'application/json':{schema:ItemSchema}},required:true} as const",
     )
   })
 

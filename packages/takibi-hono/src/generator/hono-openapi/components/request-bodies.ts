@@ -13,11 +13,11 @@ export async function makeRequestBodiesCode(
   return Object.entries(requestBodies)
     .filter(([, body]) => !('$ref' in body && body.$ref))
     .map(([name, body]) => {
+      // Property order mirrors the `RequestBody` type declaration in openapi/index.ts.
       const parts = [
         ...('description' in body && body.description
           ? [`description:${JSON.stringify(body.description)}`]
           : []),
-        ...(body.required === true ? [`required:true`] : []),
         ...('content' in body && body.content
           ? (() => {
               const contentEntries = Object.entries(body.content)
@@ -38,6 +38,7 @@ export async function makeRequestBodiesCode(
               return contentEntries.length > 0 ? [`content:{${contentEntries.join(',')}}`] : []
             })()
           : []),
+        ...(body.required === true ? [`required:true`] : []),
       ]
 
       const varName = `${toPascalCase(name)}RequestBody`

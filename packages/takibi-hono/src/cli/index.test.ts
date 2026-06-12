@@ -589,7 +589,8 @@ export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
-        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
+        expect(headers)
+          .toBe(`export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 `)
 
         const examples = await fsp.readFile(path.join(d, 'src/openapi/examples/index.ts'), 'utf-8')
@@ -619,8 +620,8 @@ export const LimitParamParamsSchema = z.int().exactOptional()
 
 export const CreateUserBodyRequestBody = {
   description: 'User to create',
-  required: true,
   content: { 'application/json': { schema: UserSchema } },
+  required: true,
 }
 `)
 
@@ -642,8 +643,8 @@ export const usersHandler = new Hono()
   .get(
     '/users',
     describeRoute({
-      summary: 'List users',
       tags: ['users'],
+      summary: 'List users',
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse },
     }),
@@ -652,8 +653,8 @@ export const usersHandler = new Hono()
   .post(
     '/users',
     describeRoute({
-      summary: 'Create user',
       tags: ['users'],
+      summary: 'Create user',
       operationId: 'createUser',
       responses: {
         201: {

@@ -86,6 +86,36 @@ describe('makeResponsesCode', () => {
     expect(result).toBe('export const NoContentResponse = {description:"Deleted"}')
   })
 
+  it.concurrent('should omit description key when response has no description', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      ContentOnly: {
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/User' } },
+        },
+      },
+    }
+    const result = await makeResponsesCode(responses, 'zod')
+    expect(result).toBe(
+      "export const ContentOnlyResponse = {content:{'application/json':{schema:resolver(UserSchema)}}}",
+    )
+  })
+
+  it.concurrent('should omit content key when content object is empty', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      EmptyContent: { description: 'OK', content: {} },
+    }
+    const result = await makeResponsesCode(responses, 'zod')
+    expect(result).toBe('export const EmptyContentResponse = {description:"OK"}')
+  })
+
+  it.concurrent('should omit headers key when headers object is empty', async () => {
+    const responses: NonNullable<Components['responses']> = {
+      EmptyHeaders: { description: 'OK', headers: {} },
+    }
+    const result = await makeResponsesCode(responses, 'zod')
+    expect(result).toBe('export const EmptyHeadersResponse = {description:"OK"}')
+  })
+
   // ============================================================
   // Regression: `resolver(...)` requires a StandardSchemaV1-compatible
   // value. effect schemas need `standardSchemaV1(...)` wrap; typebox

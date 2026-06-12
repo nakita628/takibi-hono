@@ -14,6 +14,46 @@ import { zodType } from '../../../helper/type.js'
 import type { Schema } from '../../../openapi/index.js'
 import { toPascalCase } from '../../../utils/index.js'
 
+/**
+ * OpenAPI schema keys are case-sensitive, but `toPascalCase` upper-cases the
+ * first letter, so `user` and `User` both emit `UserSchema` — and the `ast()`
+ * pass then dedupes same-name declarations last-wins, silently dropping one
+ * schema. Re-key colliders to a deterministic suffixed name (`User`, `User2`,
+ * …) before any declaration is built so every schema survives. The first key
+ * to claim an identifier keeps the unsuffixed name; `$ref`s to a later
+ * collider still resolve to that first declaration.
+ */
+function resolveUniqueKeys(
+  schemas: { readonly [k: string]: Schema },
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+) {
+  const findFree = (ident: string, i: number, used: ReadonlySet<string>): string => {
+    const candidate = `${ident}${i}`
+    return used.has(candidate) ? findFree(ident, i + 1, used) : candidate
+  }
+  // The companion alias of a reserved-word key (`export type Type` / `export
+  // type Schema`) would merge with the validator's value import in the same
+  // file; seed those identifiers as already taken so the key gets a suffix.
+  const reserved = schemaLib === 'typebox' ? ['Type'] : schemaLib === 'effect' ? ['Schema'] : []
+  return Object.fromEntries(
+    Object.entries(schemas).reduce<{
+      readonly used: Set<string>
+      readonly entries: readonly (readonly [string, Schema])[]
+    }>(
+      (acc, [key, schema]) => {
+        const ident = toPascalCase(key)
+        const unique = acc.used.has(ident) ? findFree(ident, 2, acc.used) : ident
+        acc.used.add(unique)
+        return {
+          used: acc.used,
+          entries: [...acc.entries, [unique === ident ? key : unique, schema] as const],
+        }
+      },
+      { used: new Set(reserved), entries: [] },
+    ).entries,
+  )
+}
+
 export async function makeSchemasCode(
   schemas: { readonly [k: string]: Schema },
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
@@ -27,11 +67,12 @@ export async function makeSchemasCode(
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const registerRef = options?.registerRef ?? false
-  const circularNames = detectCircularRefs(schemas)
-  const schemaNames = Object.keys(schemas)
+  const named = resolveUniqueKeys(schemas, schemaLib)
+  const circularNames = detectCircularRefs(named)
+  const schemaNames = Object.keys(named)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-  const cyclicMemberExprs = makeCyclicMemberExprs(schemas, schemaLib, readonly)
-  const declarations = Object.entries(schemas).map(([name, schema]) =>
+  const cyclicMemberExprs = makeCyclicMemberExprs(named, schemaLib, readonly)
+  const declarations = Object.entries(named).map(([name, schema]) =>
     processDeclaration(
       extractSchemaExports(name, schema, schemaLib, exportTypes, readonly),
       name,
@@ -66,13 +107,14 @@ export async function makeSplitSchemas(
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const registerRef = options?.registerRef ?? false
-  const schemaNames = Object.keys(schemas)
-  const circularNames = detectCircularRefs(schemas)
+  const named = resolveUniqueKeys(schemas, schemaLib)
+  const schemaNames = Object.keys(named)
+  const circularNames = detectCircularRefs(named)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-  const cyclicMemberExprs = makeCyclicMemberExprs(schemas, schemaLib, readonly)
+  const cyclicMemberExprs = makeCyclicMemberExprs(named, schemaLib, readonly)
   for (const name of schemaNames) {
-    const rawDecl = extractSchemaExports(name, schemas[name], schemaLib, exportTypes, readonly)
-    const decl = processDeclaration(rawDecl, name, schemas[name], schemaLib, {
+    const rawDecl = extractSchemaExports(name, named[name], schemaLib, exportTypes, readonly)
+    const decl = processDeclaration(rawDecl, name, named[name], schemaLib, {
       schemaNames,
       circularNames,
       cyclicGroupPascal,
@@ -80,7 +122,7 @@ export async function makeSplitSchemas(
       registerRef,
       cyclicMemberExprs,
     })
-    const deps = findSchemaRefs(decl, name).filter((d) => d in schemas)
+    const deps = findSchemaRefs(decl, name).filter((d) => d in named)
     const depImports = deps
       .toSorted()
       .map((dep) => `import{${toPascalCase(dep)}Schema}from'./${uncapitalize(dep)}'`)
@@ -184,9 +226,21 @@ function processDeclaration(
   const maybeInjectRef = (decl: string) =>
     ctx.registerRef ? injectRef(decl, name, schemaLib, hasOuterMeta(schema)) : decl
   if (needsLazy && schemaLib === 'zod') {
-    const typeDef = zodType(schema, pascalName, ctx.cyclicGroupPascal, ctx.readonly)
+    // The cyclic helper alias `${pascalName}Type` collides when a sibling schema
+    // key is literally named that (e.g. circular `Event` next to an `EventType`
+    // enum, whose exported alias is also `EventType`). The helper only appears
+    // inside this schema's own declaration, so rename it locally to a free name.
+    const taken = new Set(ctx.schemaNames.map((n) => toPascalCase(n)))
+    const findFree = (i: number): string =>
+      taken.has(`${pascalName}Type${i}`) ? findFree(i + 1) : `${pascalName}Type${i}`
+    const helperName = taken.has(`${pascalName}Type`) ? findFree(2) : `${pascalName}Type`
+    const rawTypeDef = zodType(schema, pascalName, ctx.cyclicGroupPascal, ctx.readonly)
+    const typeDef =
+      helperName === `${pascalName}Type`
+        ? rawTypeDef
+        : rawTypeDef.replace(new RegExp(`\\b${pascalName}Type\\b`, 'g'), helperName)
     const wrapper = getLazyWrapper(schemaLib)
-    const annotated = addTypeAnnotation(rawDecl, varName, `${pascalName}Type`)
+    const annotated = addTypeAnnotation(rawDecl, varName, helperName)
     const wrapped = wrapper.open ? wrapWithLazy(annotated, name, wrapper) : annotated
     const unwrapped = wrapped.replace(
       /z\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,

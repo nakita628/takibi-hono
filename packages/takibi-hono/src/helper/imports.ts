@@ -38,6 +38,11 @@ const SCAN = new RegExp(
     String.raw`\`(?:\\.|[^\`\\])*\``,
     String.raw`//[^\n]*`,
     String.raw`/\*[\s\S]*?\*/`,
+    // A regex literal (e.g. `Schema.pattern(/^https?:\/\//)`) must be consumed
+    // whole — on unformatted single-line code its trailing `\/\//` otherwise
+    // reads as a `//` comment that swallows the rest of the handler. The
+    // lookbehind restricts to argument position so division is never matched.
+    String.raw`(?<=[(,=:]\s*)/(?:\\.|[^/\\\n])+/[a-z]*`,
     `\\b(${JS_IDENT}(?:${COMPONENT_SUFFIXES.map(([, suf]) => suf).join('|')}))\\b`,
   ].join('|'),
   'g',
@@ -76,8 +81,13 @@ function collectComponentImportLines(
   },
   defined: ReadonlySet<string>,
 ): readonly string[] {
-  const grouped = Array.from(code.matchAll(SCAN), (m) => m[1])
-    .filter((name): name is string => Boolean(name) && !defined.has(name))
+  // An identifier directly followed by `:` (allowing `?:`) is an object-literal
+  // or type-literal key (e.g. a form field named `SAMLResponse`), not a
+  // reference — references in a ternary keep oxfmt's ` : ` spacing.
+  const grouped = Array.from(code.matchAll(SCAN), (m) =>
+    /^\??:/.test(code.slice((m.index ?? 0) + m[0].length)) ? undefined : m[1],
+  )
+    .filter((name): name is string => name !== undefined && !defined.has(name))
     .reduce<ReadonlyMap<string, ReadonlySet<string>>>((acc, name) => {
       const kind = classifyRef(name)
       if (!kind) return acc

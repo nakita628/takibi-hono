@@ -21,9 +21,7 @@
     }
   },
   "scripts": {
-    "deps": "rm -rf node_modules && pnpm install",
-    "build": "tsdown",
-    "release": "pnpm build && pnpm publish"
+    "build": "tsdown"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
@@ -31,7 +29,7 @@
     "@typespec/openapi3": "^1.12.0",
     "hono-takibi": "0.9.9997",
     "oxfmt": "^0.51.0",
-    "schema-to-library": "^0.3.2",
+    "schema-to-library": "^0.3.3",
     "ts-morph": "^28.0.0",
     "typescript": "^6.0.3",
     "valibot": "^1.4.0"

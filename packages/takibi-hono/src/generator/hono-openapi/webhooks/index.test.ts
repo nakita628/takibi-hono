@@ -110,7 +110,7 @@ describe('makeWebhooksCode', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import{OrderEventSchema,UserEventSchema}from'../components'",
         '',
-        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
+        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({tags:["webhooks"],summary:"User created event",operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
       ].join('\n'),
     )
   })
@@ -155,7 +155,7 @@ describe('makeWebhooksCode', () => {
         "import{describeRoute,validator}from'hono-openapi'",
         "import{OrderEventSchema,UserEventSchema}from'../custom/schemas'",
         '',
-        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({summary:"User created event",tags:["webhooks"],operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
+        'export const webhooksHandler=new Hono().post(\'/userCreated\',describeRoute({tags:["webhooks"],summary:"User created event",operationId:"onUserCreated",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',UserEventSchema),(c)=>{}).post(\'/orderCompleted\',describeRoute({summary:"Order completed event",operationId:"onOrderCompleted",responses:{200:{description:"Webhook processed"}}}),validator(\'json\',OrderEventSchema),(c)=>{})',
       ].join('\n'),
     )
   })

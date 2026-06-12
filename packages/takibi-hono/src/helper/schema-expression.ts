@@ -60,10 +60,12 @@ export function makeArktypeScopeBody(
   // `title` makes the root one of those definitions so it is not duplicated as a
   // stray `Schema` entry.
   const definitions = Object.fromEntries(group.map((name) => [toPascalCase(name), schemas[name]]))
-  const code = schemaToArktype(
-    { ...schemas[root], title: toPascalCase(root), definitions },
-    { readonly, exportType: false },
-  )
+  const jsonSchema: Record<string, unknown> = {
+    ...schemas[root],
+    title: toPascalCase(root),
+    definitions,
+  }
+  const code = schemaToArktype(jsonSchema, { readonly, exportType: false })
   return code.match(/scope\((\{[\s\S]*\})\)\.export\(\)/)?.[1] ?? ''
 }
 

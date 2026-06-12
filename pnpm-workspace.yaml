@@ -1,5 +1,7 @@
 packages:
   - packages/*
   - fixtures/*
-overrides:
-  schema-to-library: link:../schema-to-libray/packages/schema-to-library
+allowBuilds:
+  esbuild: false
+minimumReleaseAgeExclude:
+  - schema-to-library@0.3.3

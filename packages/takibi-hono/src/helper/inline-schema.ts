@@ -184,10 +184,19 @@ function isArktypeStringForm(expr: string) {
   return /^type\('(.+)'\)$/.test(expr)
 }
 
+/** `z.enum` only accepts strings; non-string members fall back to literal(s). */
+function zodEnumExpr(values: readonly unknown[]) {
+  if (values.length === 0) return 'z.unknown()'
+  if (values.every((v) => typeof v === 'string')) {
+    return `z.enum([${values.map((v) => JSON.stringify(v)).join(',')}])`
+  }
+  const literals = values.map((v) => `z.literal(${JSON.stringify(v)})`)
+  return literals.length === 1 ? literals[0] : `z.union([${literals.join(',')}])`
+}
+
 function zodInlineExpr(schema: Schema): string {
   if (schema.enum) {
-    if (schema.enum.length === 0) return 'z.unknown()'
-    return `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
+    return zodEnumExpr(schema.enum)
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])
@@ -231,8 +240,7 @@ function zodInlineExpr(schema: Schema): string {
 function zodInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
-    return wrapNullable(`z.enum([${values}])`, schema, 'zod')
+    return wrapNullable(zodEnumExpr(schema.enum), schema, 'zod')
   }
   return wrapNullable(zodInlineExpr(schema), schema, 'zod')
 }
@@ -240,8 +248,18 @@ function zodInline(schema: Schema) {
 function valibotInline(schema: Schema): string {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
-    return wrapNullable(`v.picklist([${values}])`, schema, 'valibot')
+    // `v.picklist` options are string | number | bigint — boolean/null members
+    // need the literal/union form instead.
+    const picklistable = schema.enum.every((v) => typeof v === 'string' || typeof v === 'number')
+    if (picklistable) {
+      const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
+      return wrapNullable(`v.picklist([${values}])`, schema, 'valibot')
+    }
+    const literals = schema.enum.map((v) =>
+      v === null ? 'v.null()' : `v.literal(${JSON.stringify(v)})`,
+    )
+    const expr = literals.length === 1 ? `${literals[0]}` : `v.union([${literals.join(',')}])`
+    return wrapNullable(expr, schema, 'valibot')
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])
@@ -287,7 +305,15 @@ function valibotInline(schema: Schema): string {
 function typeboxInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => `Type.Literal(${JSON.stringify(v)})`).join(',')
+    // `TLiteralValue` is scalar-only (and excludes null): null members become
+    // Type.Null(), and an array/object member degrades the enum to Type.Any().
+    const isComposite = (v: unknown): boolean => v !== null && typeof v === 'object'
+    if (schema.enum.some(isComposite)) {
+      return wrapNullable('Type.Any()', schema, 'typebox')
+    }
+    const values = schema.enum
+      .map((v) => (v === null ? 'Type.Null()' : `Type.Literal(${JSON.stringify(v)})`))
+      .join(',')
     const expr = `Type.Union([${values}])`
     return wrapNullable(expr, schema, 'typebox')
   }

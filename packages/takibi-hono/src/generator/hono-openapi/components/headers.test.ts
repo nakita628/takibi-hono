@@ -14,7 +14,7 @@ describe('makeHeadersCode', () => {
     }
     const result = await makeHeadersCode(headers)
     expect(result).toBe(
-      'export const XRequestIdHeaderSchema={description:"Unique request identifier",schema:{"type":"string"} as const,required:true}',
+      'export const XRequestIdHeaderSchema={description:"Unique request identifier",required:true,schema:{"type":"string"} as const}',
     )
   })
 

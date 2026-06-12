@@ -89,6 +89,40 @@ describe('makeClients', () => {
     expect(fs.existsSync(path.join(d, 'docs.md'))).toBe(true)
   })
 
+  it.concurrent('delegated rpc output contains a typed client function per operation', async () => {
+    const d = tmpDir('rpc_content')
+    const result = await makeClients(
+      await openapi(),
+      { rpc: { output: 'rpc.ts', import: './index' } },
+      d,
+    )
+    expect(result).toStrictEqual({ ok: true, value: undefined })
+    const rpcCode = await fsp.readFile(path.join(d, 'rpc.ts'), 'utf-8')
+    expect(rpcCode).toBe(`import type { ClientRequestOptions } from 'hono/client'
+import { client } from './index'
+
+export async function getPing(options?: ClientRequestOptions) {
+  return await client.ping.$get(undefined, options)
+}
+`)
+  })
+
+  it.concurrent('delegated type output declares the app type derived from the spec', async () => {
+    const d = tmpDir('type_content')
+    const result = await makeClients(await openapi(), { type: { output: 'types.ts' } }, d)
+    expect(result).toStrictEqual({ ok: true, value: undefined })
+    const typeCode = await fsp.readFile(path.join(d, 'types.ts'), 'utf-8')
+    expect(typeCode).toBe(`declare const routes: import('@hono/zod-openapi').OpenAPIHono<
+  import('hono/types').Env,
+  {
+    '/ping': { $get: { input: {}; output: { message: string }; outputFormat: 'json'; status: 200 } }
+  },
+  '/'
+>
+export default routes
+`)
+  })
+
   it.concurrent('generates split client output as a directory of per-operation files', async () => {
     const d = tmpDir('split')
     const result = await makeClients(

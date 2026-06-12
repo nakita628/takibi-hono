@@ -609,10 +609,14 @@ describe('schemaToInlineExpression', () => {
   // --- 4. enum values (string, numeric, mixed) ---
   describe('enum values', () => {
     it.concurrent('zod: numeric enum', () => {
-      expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'zod')).toBe('z.enum([1,2,3])')
+      expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'zod')).toBe(
+        'z.union([z.literal(1),z.literal(2),z.literal(3)])',
+      )
     })
     it.concurrent('zod: mixed enum', () => {
-      expect(schemaToInlineExpression({ enum: ['a', 1, true] }, 'zod')).toBe('z.enum(["a",1,true])')
+      expect(schemaToInlineExpression({ enum: ['a', 1, true] }, 'zod')).toBe(
+        'z.union([z.literal("a"),z.literal(1),z.literal(true)])',
+      )
     })
     it.concurrent('valibot: numeric enum', () => {
       expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'valibot')).toBe('v.picklist([1,2,3])')
@@ -745,7 +749,7 @@ describe('schemaToInlineExpression', () => {
         required: ['meta'],
       }
       expect(schemaToInlineExpression(schema, 'arktype')).toBe(
-        'type({\'meta\':type({\'version\':"number"})})',
+        "type({'meta':type({'version':\"number\"})})",
       )
     })
     it.concurrent('effect: nested object', () => {

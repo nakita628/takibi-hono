@@ -14,6 +14,9 @@ export async function makeHeadersCode(
   headers: NonNullable<Components['headers']>,
 ): Promise<string> {
   return Object.entries(headers)
-    .map(([name, header]) => `export const ${toPascalCase(name)}HeaderSchema=${makeHeaderValue(header)}`)
+    .map(
+      ([name, header]) =>
+        `export const ${toPascalCase(name)}HeaderSchema=${makeHeaderValue(header)}`,
+    )
     .join('\n\n')
 }

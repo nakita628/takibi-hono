@@ -206,11 +206,12 @@ export function makeHeaderValue(header: Header | Reference): string {
   if (!isHeader(header)) {
     return '{}'
   }
+  // Property order mirrors the `Header` type declaration in openapi/index.ts.
   const parts = [
     ...(header.description ? [`description:${JSON.stringify(header.description)}`] : []),
-    ...(header.schema ? [`schema:${JSON.stringify(header.schema)} as const`] : []),
     ...(header.required === true ? ['required:true'] : []),
     ...(header.deprecated === true ? ['deprecated:true'] : []),
+    ...(header.schema ? [`schema:${JSON.stringify(header.schema)} as const`] : []),
   ]
   return `{${parts.join(',')}}`
 }
@@ -233,7 +234,12 @@ export function makeResponse(
     return `${makeStatusKey(statusCode)}:${resolveRef(response.$ref)}`
   }
   const parts = [
-    ...(response.description ? [`description:${JSON.stringify(response.description)}`] : []),
+    // OpenAPI requires Response Object `description` (an empty string is valid),
+    // and hono-openapi's ResponseObjectWithResolver types it as required — a
+    // truthiness check would drop `description: ''` and emit an ill-typed `{}`.
+    ...(response.description !== undefined
+      ? [`description:${JSON.stringify(response.description)}`]
+      : []),
     ...(response.content
       ? (() => {
           const contentEntries = Object.entries(response.content)

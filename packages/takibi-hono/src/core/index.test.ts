@@ -1233,7 +1233,8 @@ export const LimitParamParamsSchema = z.int().exactOptional()
       expect(result).toStrictEqual({ ok: true, value: undefined })
 
       const headers = await fsp.readFile(path.join(d, 'headers.ts'), 'utf-8')
-      expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
+      expect(headers)
+        .toBe(`export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 
 export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
@@ -1322,8 +1323,8 @@ export const ApiKeySecurityScheme = {
 
 export const CreateUserBodyRequestBody = {
   description: 'User to create',
-  required: true,
   content: { 'application/json': { schema: CreateUserSchema } },
+  required: true,
 }
 `)
       },
@@ -1436,8 +1437,8 @@ export const usersHandler = new Hono()
   .get(
     '/users',
     describeRoute({
-      summary: 'List users',
       tags: ['users'],
+      summary: 'List users',
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
@@ -1446,8 +1447,8 @@ export const usersHandler = new Hono()
   .post(
     '/users',
     describeRoute({
-      summary: 'Create user',
       tags: ['users'],
+      summary: 'Create user',
       operationId: 'createUser',
       responses: {
         201: {
@@ -1462,12 +1463,10 @@ export const usersHandler = new Hono()
   .get(
     '/users/:userId',
     describeRoute({
-      summary: 'Get user by ID',
       tags: ['users'],
-      operationId: 'getUserById',
-      deprecated: true,
-      security: [{ bearerAuth: [] }],
+      summary: 'Get user by ID',
       externalDocs: { url: 'https://example.com/docs/users', description: 'User documentation' },
+      operationId: 'getUserById',
       responses: {
         200: {
           description: 'User found',
@@ -1476,6 +1475,8 @@ export const usersHandler = new Hono()
         },
         404: { description: 'Not found' },
       },
+      deprecated: true,
+      security: [{ bearerAuth: [] }],
     }),
     validator('param', z.object({ userId: z.string() })),
     (c) => {},
@@ -1945,7 +1946,8 @@ export const UnauthorizedResponseResponse = {
 
         // headers.ts
         const headers = await fsp.readFile(path.join(d, 'headers.ts'), 'utf-8')
-        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
+        expect(headers)
+          .toBe(`export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 
 export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
@@ -1963,8 +1965,8 @@ export const usersHandler = new Hono()
   .get(
     '/users',
     describeRoute({
-      summary: 'List users',
       tags: ['users'],
+      summary: 'List users',
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse, 401: UnauthorizedResponseResponse },
     }),
@@ -1973,8 +1975,8 @@ export const usersHandler = new Hono()
   .post(
     '/users',
     describeRoute({
-      summary: 'Create user',
       tags: ['users'],
+      summary: 'Create user',
       operationId: 'createUser',
       responses: {
         201: {
@@ -1989,12 +1991,10 @@ export const usersHandler = new Hono()
   .get(
     '/users/:userId',
     describeRoute({
-      summary: 'Get user by ID',
       tags: ['users'],
-      operationId: 'getUserById',
-      deprecated: true,
-      security: [{ bearerAuth: [] }],
+      summary: 'Get user by ID',
       externalDocs: { url: 'https://example.com/docs/users', description: 'User documentation' },
+      operationId: 'getUserById',
       responses: {
         200: {
           description: 'User found',
@@ -2003,6 +2003,8 @@ export const usersHandler = new Hono()
         },
         404: { description: 'Not found' },
       },
+      deprecated: true,
+      security: [{ bearerAuth: [] }],
     }),
     validator('param', z.object({ userId: z.string() })),
     (c) => {},
@@ -2096,8 +2098,8 @@ import * as z from 'zod'
 export const webhooksHandler = new Hono().post(
   '/newOrder',
   describeRoute({
-    summary: 'New order webhook',
     tags: ['Webhooks'],
+    summary: 'New order webhook',
     operationId: 'onNewOrder',
     responses: {
       200: {
@@ -2522,7 +2524,8 @@ export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
-        expect(headers).toBe(`export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
+        expect(headers)
+          .toBe(`export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 
 export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 `)
@@ -2566,8 +2569,8 @@ export const ApiKeySecurityScheme = {
 
 export const CreateUserBodyRequestBody = {
   description: 'User to create',
-  required: true,
   content: { 'application/json': { schema: CreateUserSchema } },
+  required: true,
 }
 `)
 
@@ -2910,7 +2913,7 @@ export const PageParamParamsSchema = z.int().exactOptional()
 
 export const LimitParamParamsSchema = z.int().exactOptional()
 
-export const XRequestIdHeaderSchema = { schema: { type: 'string' } as const, required: true }
+export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 
 export const XRateLimitHeaderSchema = { schema: { type: 'integer' } as const }
 
@@ -2946,8 +2949,8 @@ export const GetUserByIdLink = {
 
 export const CreateUserBodyRequestBody = {
   description: 'User to create',
-  required: true,
   content: { 'application/json': { schema: CreateUserSchema } },
+  required: true,
 }
 
 export const UserListResponseResponse = {
@@ -3365,8 +3368,8 @@ import { UserListResponse } from '@app/responses'
 export const usersHandler = new Hono().get(
   '/users',
   describeRoute({
-    summary: 'List users',
     tags: ['users'],
+    summary: 'List users',
     operationId: 'listUsers',
     responses: { 200: UserListResponse },
   }),
@@ -3484,13 +3487,21 @@ components:
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
         const cb = await fsp.readFile(path.join(d, 'components/callbacks/userCreated.ts'), 'utf-8')
-        // Real cross-component import via alias.
-        expect(cb.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
-        // No bogus `userCreatedCallback` import line.
-        const importLines = cb.split('\n').filter((l) => l.startsWith('import'))
-        expect(importLines.some((l) => l.includes('userCreatedCallback'))).toBe(false)
-        // operationId still present in the body as a string.
-        expect(cb.includes("operationId: 'userCreatedCallback'")).toBe(true)
+        // Exactly one alias import for the real cross-component ref; the
+        // `userCreatedCallback` operationId stays a body string and must not
+        // produce a bogus self-import line.
+        expect(cb).toBe(`import { UserSchema } from '~/components/schemas'
+
+export const UserCreatedCallback = {
+  '{$request.body#/callbackUrl}': {
+    post: {
+      operationId: 'userCreatedCallback',
+      requestBody: { content: { 'application/json': { schema: UserSchema } } },
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+}
+`)
       },
     )
 
@@ -3524,8 +3535,20 @@ components:
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
         const pi = await fsp.readFile(path.join(d, 'components/pathItems/products.ts'), 'utf-8')
-        expect(pi.includes("import { ProductSchema } from '@/components/schemas'")).toBe(true)
-        expect(pi.includes('items: ProductSchema')).toBe(true)
+        expect(pi).toBe(`import { ProductSchema } from '@/components/schemas'
+
+export const ProductsPathItem = {
+  get: {
+    operationId: 'listProducts',
+    responses: {
+      '200': {
+        description: 'OK',
+        content: { 'application/json': { schema: { type: 'array', items: ProductSchema } } },
+      },
+    },
+  },
+}
+`)
       },
     )
 
@@ -3559,8 +3582,10 @@ components:
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
         const mt = await fsp.readFile(path.join(d, 'components/mediaTypes/jsonUser.ts'), 'utf-8')
-        expect(mt.includes("import { UserSchema } from '~/components/schemas'")).toBe(true)
-        expect(mt.includes('export const JsonUserMediaTypeSchema = UserSchema')).toBe(true)
+        expect(mt).toBe(`import { UserSchema } from '~/components/schemas'
+
+export const JsonUserMediaTypeSchema = UserSchema
+`)
       },
     )
 
@@ -3598,12 +3623,26 @@ components:
         })
         expect(result).toStrictEqual({ ok: true, value: undefined })
 
-        // The callback file uses `~` alias for schemas (defined under `~`).
+        // Both the callback and mediaType files import schemas via the `~`
+        // alias the schemas component declares, not their own `@`/`~` alias.
         const cb = await fsp.readFile(path.join(d, 'components/callbacks/userCreated.ts'), 'utf-8')
-        expect(cb.includes("from '~/components/schemas'")).toBe(true)
-        // The mediaType file also uses `~` alias for schemas.
+        expect(cb).toBe(`import { UserSchema } from '~/components/schemas'
+
+export const UserCreatedCallback = {
+  '{$request.body#/callbackUrl}': {
+    post: {
+      operationId: 'userCreatedCallback',
+      requestBody: { content: { 'application/json': { schema: UserSchema } } },
+      responses: { '200': { description: 'OK' } },
+    },
+  },
+}
+`)
         const mt = await fsp.readFile(path.join(d, 'components/mediaTypes/jsonUser.ts'), 'utf-8')
-        expect(mt.includes("from '~/components/schemas'")).toBe(true)
+        expect(mt).toBe(`import { UserSchema } from '~/components/schemas'
+
+export const JsonUserMediaTypeSchema = UserSchema
+`)
       },
     )
   })
@@ -3740,6 +3779,168 @@ export const UnauthorizedResponseResponse = {
         expect(fs.existsSync(path.join(d, 'components/responses.ts'))).toBe(false)
         expect(fs.existsSync(path.join(d, 'components/parameters.ts'))).toBe(false)
         expect(fs.existsSync(path.join(d, 'components/headers.ts'))).toBe(false)
+      },
+    )
+  })
+
+  describe('handlers: existing file merge', () => {
+    it.concurrent(
+      'preserves user handler bodies, JSDoc, imports and helpers while route metadata follows the spec',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('handler_body_merge')
+        const config = {
+          input: petstoreYaml,
+          schema: 'zod',
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
+        } as const
+        const result1 = await hono(config)
+        expect(result1).toStrictEqual({ ok: true, value: undefined })
+
+        // Simulate user work: implemented bodies, a JSDoc, a user import and a helper const.
+        await fsp.writeFile(
+          path.join(d, 'handlers/pets.ts'),
+          `import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '../schemas'
+import { HTTPException } from 'hono/http-exception'
+
+const DEFAULT_TAG = 'dog'
+
+export const petsHandler = new Hono()
+  /** Returns every pet in the store. */
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {
+      return c.json([{ id: 1, name: 'Buddy', tag: DEFAULT_TAG }])
+    },
+  )
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new HTTPException(501)
+  })
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`,
+        )
+
+        // Regenerate from a spec where the `limit` query param became required.
+        const requiredLimitYaml = path.join(d, 'petstore-required-limit.yaml')
+        await fsp.writeFile(
+          requiredLimitYaml,
+          PETSTORE_YAML.replace(
+            `        - name: limit
+          in: query
+          required: false`,
+            `        - name: limit
+          in: query
+          required: true`,
+          ),
+        )
+        const result2 = await hono({ ...config, input: requiredLimitYaml })
+        expect(result2).toStrictEqual({ ok: true, value: undefined })
+
+        const merged = await fsp.readFile(path.join(d, 'handlers/pets.ts'), 'utf-8')
+        expect(merged).toBe(`import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '../schemas'
+import { HTTPException } from 'hono/http-exception'
+
+const DEFAULT_TAG = 'dog'
+
+export const petsHandler = new Hono()
+  /** Returns every pet in the store. */
+  .get('/pets', sValidator('query', z.object({ limit: z.coerce.number().int() })), (c) => {
+    return c.json([{ id: 1, name: 'Buddy', tag: DEFAULT_TAG }])
+  })
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new HTTPException(501)
+  })
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`)
+      },
+    )
+
+    it.concurrent(
+      'regeneration is a no-op when the spec is unchanged (user edits fully preserved)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('handler_merge_idempotent')
+        const config = {
+          input: petstoreYaml,
+          schema: 'zod',
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
+        } as const
+        const result1 = await hono(config)
+        expect(result1).toStrictEqual({ ok: true, value: undefined })
+
+        const userEdited = `import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { CreatePetSchema } from '../schemas'
+import { HTTPException } from 'hono/http-exception'
+
+const DEFAULT_TAG = 'dog'
+
+export const petsHandler = new Hono()
+  /** Returns every pet in the store. */
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {
+      return c.json([{ id: 1, name: 'Buddy', tag: DEFAULT_TAG }])
+    },
+  )
+  .post('/pets', sValidator('json', CreatePetSchema), (c) => {
+    throw new HTTPException(501)
+  })
+  .get('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+  .delete('/pets/:petId', sValidator('param', z.object({ petId: z.string() })), (c) => {})
+`
+        await fsp.writeFile(path.join(d, 'handlers/pets.ts'), userEdited)
+
+        const result2 = await hono(config)
+        expect(result2).toStrictEqual({ ok: true, value: undefined })
+
+        const merged = await fsp.readFile(path.join(d, 'handlers/pets.ts'), 'utf-8')
+        expect(merged).toBe(userEdited)
+      },
+    )
+
+    it.concurrent(
+      'barrel index.ts is regenerated to the canonical form (user edits are not preserved)',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('barrel_overwrite')
+        const config = {
+          input: petstoreYaml,
+          schema: 'zod',
+          output: path.join(d, 'handlers'),
+          components: { schemas: { output: path.join(d, 'schemas.ts') } },
+        } as const
+        const result1 = await hono(config)
+        expect(result1).toStrictEqual({ ok: true, value: undefined })
+
+        await fsp.writeFile(
+          path.join(d, 'handlers/index.ts'),
+          `export * from './__root'
+export * from './pets'
+export { petsHandler as petsApi } from './pets'
+`,
+        )
+
+        const result2 = await hono(config)
+        expect(result2).toStrictEqual({ ok: true, value: undefined })
+
+        const barrel = await fsp.readFile(path.join(d, 'handlers/index.ts'), 'utf-8')
+        expect(barrel).toBe(`export * from './__root'
+export * from './pets'
+`)
       },
     )
   })
