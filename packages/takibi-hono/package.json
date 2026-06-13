@@ -6,6 +6,10 @@
     "hono",
     "openapi"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nakita628/takibi-hono.git"
+  },
   "bin": {
     "takibi-hono": "dist/index.js"
   },
