@@ -4,10 +4,8 @@ export default defineConfig({
   input: 'webhooks.yaml',
   schema: 'zod',
   openapi: true,
-  'takibi-hono': {
-    handlers: { output: 'src/handlers' },
-    components: {
-      schemas: { output: 'src/schemas.ts', exportTypes: true },
-    },
+  output: 'src/handlers',
+  components: {
+    schemas: { output: 'src/schemas.ts', exportTypes: true },
   },
 })

@@ -10,7 +10,7 @@ import type {
   Reference,
   Schema,
 } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import { makeStatusKey, resolveRef } from '../utils/index.js'
 import { schemaToInlineExpression } from './inline-schema.js'
 
 /** Returns the local component name when `value` is `{ $ref: '${prefix}<name>' }`. */
@@ -56,7 +56,7 @@ export function makeOptional(
 ) {
   switch (schemaLib) {
     case 'zod':
-      return `${expr}.optional()`
+      return `${expr}.exactOptional()`
     case 'valibot':
       return `v.optional(${expr})`
     case 'typebox':
@@ -64,7 +64,10 @@ export function makeOptional(
     case 'arktype':
       return `${expr}.optional()`
     case 'effect':
-      return `Schema.optional(${expr})`
+      // A defaulted param already emits `Schema.optionalWith(..., { default })`,
+      // which is a PropertySignature — wrapping it again in `Schema.optional`
+      // is a type error. It is already optional, so pass it through.
+      return expr.startsWith('Schema.optionalWith(') ? expr : `Schema.optional(${expr})`
   }
 }
 
@@ -189,20 +192,32 @@ export function makeContent(
     )
 }
 
-export function makeHeader(headerName: string, header: Header | Reference) {
+/**
+ * The OpenAPI Header Object value (single source for both inline route headers and
+ * `components.headers` exports). A `$ref` header resolves to its component
+ * identifier; otherwise an object literal whose `schema` is a JSON Schema literal
+ * (`as const`) — a response header's `schema` is documentation (SchemaObject), not
+ * a runtime validator.
+ */
+export function makeHeaderValue(header: Header | Reference): string {
   if (isRefObject(header) && header.$ref) {
-    return `${JSON.stringify(headerName)}:${resolveRef(header.$ref)}`
+    return resolveRef(header.$ref)
   }
   if (!isHeader(header)) {
-    return `${JSON.stringify(headerName)}:{}`
+    return '{}'
   }
+  // Property order mirrors the `Header` type declaration in openapi/index.ts.
   const parts = [
     ...(header.description ? [`description:${JSON.stringify(header.description)}`] : []),
-    ...(header.schema ? [`schema:${JSON.stringify(header.schema)} as const`] : []),
     ...(header.required === true ? ['required:true'] : []),
     ...(header.deprecated === true ? ['deprecated:true'] : []),
+    ...(header.schema ? [`schema:${JSON.stringify(header.schema)} as const`] : []),
   ]
-  return `${JSON.stringify(headerName)}:{${parts.join(',')}}`
+  return `{${parts.join(',')}}`
+}
+
+export function makeHeader(headerName: string, header: Header | Reference) {
+  return `${JSON.stringify(headerName)}:${makeHeaderValue(header)}`
 }
 
 export function makeResponse(
@@ -216,10 +231,15 @@ export function makeResponse(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
 ) {
   if (response.$ref) {
-    return `${statusCode}:${resolveRef(response.$ref)}`
+    return `${makeStatusKey(statusCode)}:${resolveRef(response.$ref)}`
   }
   const parts = [
-    ...(response.description ? [`description:${JSON.stringify(response.description)}`] : []),
+    // OpenAPI requires Response Object `description` (an empty string is valid),
+    // and hono-openapi's ResponseObjectWithResolver types it as required — a
+    // truthiness check would drop `description: ''` and emit an ill-typed `{}`.
+    ...(response.description !== undefined
+      ? [`description:${JSON.stringify(response.description)}`]
+      : []),
     ...(response.content
       ? (() => {
           const contentEntries = Object.entries(response.content)
@@ -240,5 +260,5 @@ export function makeResponse(
         })()
       : []),
   ]
-  return `${statusCode}:{${parts.join(',')}}`
+  return `${makeStatusKey(statusCode)}:{${parts.join(',')}}`
 }

@@ -132,10 +132,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -201,10 +200,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -224,10 +222,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -249,10 +246,9 @@ describe('src/index.ts entry point', () => {
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -270,11 +266,11 @@ describe('src/index.ts entry point', () => {
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
     })
@@ -286,11 +282,9 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-            exportSchemasTypes: true,
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -305,13 +299,13 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
@@ -325,11 +319,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -342,51 +335,46 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
     })
 
-    it(
-      'readonly + components.output + exportSchemasTypes + effect',
-      { timeout: 30000 },
-      async () => {
-        const d = tmpDir('idx_ro_co_et')
-        await setupProject(
-          d,
-          {
-            input: 'petstore.yaml',
-            schema: 'effect',
-            openapi: true,
-            'takibi-hono': {
-              readonly: true,
-              handlers: { output: 'src/handlers' },
-              components: { output: 'src/openapi' },
-              exportSchemasTypes: true,
-            },
-          },
-          'petstore.yaml',
-          PETSTORE_YAML,
-        )
+    it('readonly + components.output emits schema types + effect', { timeout: 30000 }, async () => {
+      const d = tmpDir('idx_ro_co_et')
+      await setupProject(
+        d,
+        {
+          input: 'petstore.yaml',
+          schema: 'effect',
+          openapi: true,
 
-        const result = await runEntryPoint(d)
-        expect(result).toStrictEqual({
-          ok: true,
-          value: '🔥 takibi-hono: petstore.yaml (effect) ✅',
-        })
+          readonly: true,
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
+        },
+        'petstore.yaml',
+        PETSTORE_YAML,
+      )
 
-        expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(true)
-        expect(fs.existsSync(path.join(d, 'src/handlers/pets.ts'))).toBe(true)
-        expect(fs.existsSync(path.join(d, 'src/index.ts'))).toBe(true)
+      const result = await runEntryPoint(d)
+      expect(result).toStrictEqual({
+        ok: true,
+        value: '🔥 takibi-hono: petstore.yaml (effect) ✅',
+      })
 
-        const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
-        expect(schemas).toBe(`import { Schema } from 'effect'
+      expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(true)
+      expect(fs.existsSync(path.join(d, 'src/handlers/pets.ts'))).toBe(true)
+      expect(fs.existsSync(path.join(d, 'src/index.ts'))).toBe(true)
+
+      const schemas = await fsp.readFile(path.join(d, 'src/openapi/index.ts'), 'utf-8')
+      expect(schemas).toBe(`import { Schema } from 'effect'
 
 export const PetSchema = Schema.Struct({
   id: Schema.Number.pipe(Schema.int()),
@@ -394,16 +382,15 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ identifier: 'Pet', description: 'A pet in the store' })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ identifier: 'CreatePet', description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
-      },
-    )
+    })
   })
 })

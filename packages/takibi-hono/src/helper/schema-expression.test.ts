@@ -15,7 +15,7 @@ describe('extractSchemaExports', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const UserSchema = z.object({name:z.string(),age:z.int().optional()})\n\nexport type User = z.infer<typeof UserSchema>',
+      'export const UserSchema = z.object({name:z.string(),age:z.int().exactOptional()})\n\nexport type User = z.infer<typeof UserSchema>',
     )
   })
 
@@ -49,7 +49,7 @@ describe('extractSchemaExports', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const TodoSchema = z.object({id:z.int(),user:z.lazy(() => UserSchema).optional()})\n\nexport type Todo = z.infer<typeof TodoSchema>',
+      'export const TodoSchema = z.object({id:z.int(),user:z.lazy(() => UserSchema).exactOptional()})\n\nexport type Todo = z.infer<typeof TodoSchema>',
     )
   })
 
@@ -151,7 +151,7 @@ describe('extractSchemaExports', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})\n\nexport type Pet = typeof PetSchema.Encoded',
+      'export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",jsonSchema:{examples:[{name:"Buddy"}]}})\n\nexport type PetSchema = typeof PetSchema.Type',
     )
   })
 })
@@ -197,7 +197,7 @@ describe('extractSchemaExports: simple object per library', () => {
   it.concurrent('effect: simple object', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -280,7 +280,7 @@ describe('extractSchemaExports: description metadata', () => {
   it.concurrent('effect: description', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item"})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item"})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -317,15 +317,36 @@ describe('extractSchemaExports: example metadata', () => {
       'effect',
     )
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({examples:[{name:"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({jsonSchema:{examples:[{name:"test"}]}})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
 
 // ===================================================================
-// 5. postProcess / fixMultiArgCall — allOf with 3+ items
+// 5. allOf with 2+ items — binary fold for zod/effect
 // ===================================================================
-describe('extractSchemaExports: allOf nesting (fixMultiArgCall)', () => {
+describe('extractSchemaExports: allOf nesting (binary fold)', () => {
+  const allOf2Schema = {
+    allOf: [
+      { type: 'object' as const, properties: { a: { type: 'string' as const } }, required: ['a'] },
+      { type: 'object' as const, properties: { b: { type: 'string' as const } }, required: ['b'] },
+    ],
+  }
+
+  it.concurrent('zod: allOf 2 items — no nesting needed', () => {
+    const result = extractSchemaExports('Pair', allOf2Schema as any, 'zod')
+    expect(result).toBe(
+      'export const PairSchema = z.intersection(z.object({a:z.string()}),z.object({b:z.string()}))\n\nexport type Pair = z.infer<typeof PairSchema>',
+    )
+  })
+
+  it.concurrent('effect: allOf 2 items — no nesting needed', () => {
+    const result = extractSchemaExports('Pair', allOf2Schema as any, 'effect')
+    expect(result).toBe(
+      'export const PairSchema = Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String}))\n\nexport type PairSchema = typeof PairSchema.Type',
+    )
+  })
+
   const allOf3Schema = {
     allOf: [
       { type: 'object' as const, properties: { a: { type: 'string' as const } }, required: ['a'] },
@@ -344,7 +365,7 @@ describe('extractSchemaExports: allOf nesting (fixMultiArgCall)', () => {
   it.concurrent('effect: allOf 3 items — Schema.extend nesting', () => {
     const result = extractSchemaExports('Combined', allOf3Schema as any, 'effect')
     expect(result).toBe(
-      'export const CombinedSchema = Schema.extend(Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String})),Schema.Struct({c:Schema.String}))\n\nexport type Combined = typeof CombinedSchema.Encoded',
+      'export const CombinedSchema = Schema.extend(Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String})),Schema.Struct({c:Schema.String}))\n\nexport type CombinedSchema = typeof CombinedSchema.Type',
     )
   })
 
@@ -388,7 +409,7 @@ describe('extractSchemaExports: allOf nesting (fixMultiArgCall)', () => {
   it.concurrent('effect: allOf 4 items — deep Schema.extend nesting', () => {
     const result = extractSchemaExports('Merged', allOf4Schema as any, 'effect')
     expect(result).toBe(
-      'export const MergedSchema = Schema.extend(Schema.extend(Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String})),Schema.Struct({c:Schema.String})),Schema.Struct({d:Schema.String}))\n\nexport type Merged = typeof MergedSchema.Encoded',
+      'export const MergedSchema = Schema.extend(Schema.extend(Schema.extend(Schema.Struct({a:Schema.String}),Schema.Struct({b:Schema.String})),Schema.Struct({c:Schema.String})),Schema.Struct({d:Schema.String}))\n\nexport type MergedSchema = typeof MergedSchema.Type',
     )
   })
 })
@@ -436,7 +457,7 @@ describe('extractSchemaExports: appendMeta with description and example', () => 
   it.concurrent('effect: annotations with description and examples', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",examples:[{name:"test"}]})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item",jsonSchema:{examples:[{name:"test"}]}})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -480,7 +501,7 @@ describe('extractSchemaExports: oneOf schema', () => {
   it.concurrent('effect: oneOf — Schema.Union', () => {
     const result = extractSchemaExports('Shape', schema as any, 'effect')
     expect(result).toBe(
-      'export const ShapeSchema = Schema.Union(Schema.String,Schema.Number.pipe(Schema.int()))\n\nexport type Shape = typeof ShapeSchema.Encoded',
+      'export const ShapeSchema = Schema.Union(Schema.String,Schema.Number.pipe(Schema.int()))\n\nexport type ShapeSchema = typeof ShapeSchema.Type',
     )
   })
 })
@@ -524,7 +545,7 @@ describe('extractSchemaExports: anyOf schema', () => {
   it.concurrent('effect: anyOf — Schema.Union', () => {
     const result = extractSchemaExports('Shape', schema as any, 'effect')
     expect(result).toBe(
-      'export const ShapeSchema = Schema.Union(Schema.Number,Schema.Boolean)\n\nexport type Shape = typeof ShapeSchema.Encoded',
+      'export const ShapeSchema = Schema.Union(Schema.Number,Schema.Boolean)\n\nexport type ShapeSchema = typeof ShapeSchema.Type',
     )
   })
 })
@@ -568,7 +589,7 @@ describe('extractSchemaExports: not schema (typed predicate)', () => {
   it.concurrent('effect: not — Schema.Unknown.pipe(Schema.filter)', () => {
     const result = extractSchemaExports('Shape', schema as any, 'effect')
     expect(result).toBe(
-      "export const ShapeSchema = Schema.Unknown.pipe(Schema.filter((val) => typeof val !== 'string'))\n\nexport type Shape = typeof ShapeSchema.Encoded",
+      "export const ShapeSchema = Schema.Unknown.pipe(Schema.filter((val) => typeof val !== 'string'))\n\nexport type ShapeSchema = typeof ShapeSchema.Type",
     )
   })
 })
@@ -606,7 +627,7 @@ describe('extractSchemaExports: x-error-message', () => {
   it.concurrent('effect: x-error-message on string property', () => {
     const result = extractSchemaExports('Form', schema as any, 'effect')
     expect(result).toBe(
-      'export const FormSchema = Schema.Struct({name:Schema.String.pipe(Schema.minLength(1)).annotations({message:()=>"Name is required"})})\n\nexport type Form = typeof FormSchema.Encoded',
+      'export const FormSchema = Schema.Struct({name:Schema.String.pipe(Schema.minLength(1)).annotations({message:()=>"Name is required"})})\n\nexport type FormSchema = typeof FormSchema.Type',
     )
   })
 })
@@ -677,7 +698,7 @@ describe('extractSchemaExports: x-minimum-message / x-maximum-message', () => {
   it.concurrent('effect: x-minimum-message / x-maximum-message', () => {
     const result = extractSchemaExports('Form', schema as any, 'effect')
     expect(result).toBe(
-      'export const FormSchema = Schema.Struct({score:Schema.Number.pipe(Schema.int(),Schema.greaterThanOrEqualTo(0,{message:()=>"Too small"}),Schema.lessThanOrEqualTo(100,{message:()=>"Too large"}))})\n\nexport type Form = typeof FormSchema.Encoded',
+      'export const FormSchema = Schema.Struct({score:Schema.Number.pipe(Schema.int(),Schema.greaterThanOrEqualTo(0,{message:()=>"Too small"}),Schema.lessThanOrEqualTo(100,{message:()=>"Too large"}))})\n\nexport type FormSchema = typeof FormSchema.Type',
     )
   })
 })
@@ -723,7 +744,7 @@ describe('extractSchemaExports: readonly simple object', () => {
   it.concurrent('effect: readonly simple object (no change)', () => {
     const result = extractSchemaExports('Item', schema, 'effect', true, true)
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -852,7 +873,7 @@ describe('extractSchemaExports: readonly + description', () => {
   it.concurrent('effect: readonly + description (no change)', () => {
     const result = extractSchemaExports('Item', schema, 'effect', true, true)
     expect(result).toBe(
-      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item"})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.Struct({name:Schema.String}).annotations({description:"An item"})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -867,7 +888,7 @@ describe('extractSchemaExports: deprecated metadata', () => {
   it.concurrent('zod: deprecated emits .meta({deprecated:true})', () => {
     const result = extractSchemaExports('Item', schema, 'zod')
     expect(result).toBe(
-      'export const ItemSchema = z.object({id:z.int()}).partial().meta({deprecated:true})\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({id:z.int().exactOptional()}).meta({deprecated:true})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -881,7 +902,7 @@ describe('extractSchemaExports: deprecated metadata', () => {
   it.concurrent('effect: deprecated nests under jsonSchema annotation', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.partial(Schema.Struct({id:Schema.Number.pipe(Schema.int())})).annotations({jsonSchema:{deprecated:true}})\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.partial(Schema.Struct({id:Schema.Number.pipe(Schema.int())})).annotations({jsonSchema:{deprecated:true}})\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -914,7 +935,7 @@ describe('extractSchemaExports: default value', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({age:z.int().default(0)}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({age:z.int().default(0).exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -936,7 +957,7 @@ describe('extractSchemaExports: default value', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({id:z.int()}).partial().default({"id":1})\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({id:z.int().exactOptional()}).default({"id":1})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 })
@@ -958,7 +979,7 @@ describe('extractSchemaExports: string formats', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({email:z.email(),url:z.url(),date:z.iso.date(),dt:z.iso.datetime(),uuid:z.uuid()}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({email:z.email().exactOptional(),url:z.url().exactOptional(),date:z.iso.date().exactOptional(),dt:z.iso.datetime().exactOptional(),uuid:z.uuid().exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 })
@@ -976,7 +997,7 @@ describe('extractSchemaExports: numeric constraints', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({score:z.number().gt(0).lt(100)}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({score:z.number().gt(0).lt(100).exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -987,7 +1008,7 @@ describe('extractSchemaExports: numeric constraints', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({count:z.int().multipleOf(5)}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({count:z.int().multipleOf(5).exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 })
@@ -1026,7 +1047,7 @@ describe('extractSchemaExports: additionalProperties', () => {
 })
 
 describe('extractSchemaExports: field-level metadata', () => {
-  it.concurrent('zod: each property carries its own .meta() before .optional()', () => {
+  it.concurrent('zod: each property carries its own .meta() before .exactOptional()', () => {
     const result = extractSchemaExports(
       'Item',
       {
@@ -1040,7 +1061,7 @@ describe('extractSchemaExports: field-level metadata', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({name:z.string().meta({description:"User name"}),age:z.int().min(0).meta({description:"User age"}).optional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({name:z.string().meta({description:"User name"}),age:z.int().min(0).meta({description:"User age"}).exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -1056,7 +1077,7 @@ describe('extractSchemaExports: field-level metadata', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({status:z.enum(["a","b"]).meta({description:"A status"})}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({status:z.enum(["a","b"]).meta({description:"A status"}).exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -1067,7 +1088,7 @@ describe('extractSchemaExports: field-level metadata', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({tag:z.string().nullable()}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({tag:z.string().nullable().exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 })
@@ -1086,7 +1107,7 @@ describe('extractSchemaExports: edge metadata', () => {
       'zod',
     )
     expect(result).toBe(
-      'export const ItemSchema = z.object({id:z.int()}).partial().meta({description:"X",examples:[]})\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({id:z.int().exactOptional()}).meta({description:"X",examples:[]})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 })
@@ -1103,7 +1124,7 @@ describe('extractSchemaExports: title override', () => {
   it.concurrent('zod: user title is not emitted', () => {
     const result = extractSchemaExports('Item', schema, 'zod')
     expect(result).toBe(
-      'export const ItemSchema = z.object({id:z.int()}).partial()\n\nexport type Item = z.infer<typeof ItemSchema>',
+      'export const ItemSchema = z.object({id:z.int().exactOptional()})\n\nexport type Item = z.infer<typeof ItemSchema>',
     )
   })
 
@@ -1131,7 +1152,7 @@ describe('extractSchemaExports: title override', () => {
   it.concurrent('effect: user title is not emitted', () => {
     const result = extractSchemaExports('Item', schema, 'effect')
     expect(result).toBe(
-      'export const ItemSchema = Schema.partial(Schema.Struct({id:Schema.Number.pipe(Schema.int())}))\n\nexport type Item = typeof ItemSchema.Encoded',
+      'export const ItemSchema = Schema.partial(Schema.Struct({id:Schema.Number.pipe(Schema.int())}))\n\nexport type ItemSchema = typeof ItemSchema.Type',
     )
   })
 })
@@ -1151,10 +1172,10 @@ describe('extractSchemaExports: x-* vendor extension transparency', () => {
     )
   })
 
-  it.concurrent('x-trim: typebox emits Type.Transform with .trim()', () => {
+  it.concurrent('x-trim: typebox emits Codec with .trim()', () => {
     const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'typebox')
     expect(result).toBe(
-      'export const ASchema = Type.Transform(Type.String()).Decode((val: string) => val.trim()).Encode((val: string) => val)\n\nexport type A = Static<typeof ASchema>',
+      'export const ASchema = Codec(Type.String()).Decode((val: string) => val.trim()).Encode((val: string) => val)\n\nexport type A = Static<typeof ASchema>',
     )
   })
 
@@ -1168,7 +1189,7 @@ describe('extractSchemaExports: x-* vendor extension transparency', () => {
   it.concurrent('x-trim: effect emits Schema.Trim', () => {
     const result = extractSchemaExports('A', { type: 'string', 'x-trim': true }, 'effect')
     expect(result).toBe(
-      'export const ASchema = Schema.Trim\n\nexport type A = typeof ASchema.Encoded',
+      'export const ASchema = Schema.Trim\n\nexport type ASchema = typeof ASchema.Type',
     )
   })
 

@@ -22,7 +22,7 @@ describe('makeOptional', () => {
   const ALL_LIBS = ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const
 
   test('zod', () => {
-    expect(makeOptional('z.string()', 'zod')).toBe('z.string().optional()')
+    expect(makeOptional('z.string()', 'zod')).toBe('z.string().exactOptional()')
   })
 
   test('valibot', () => {
@@ -39,6 +39,12 @@ describe('makeOptional', () => {
 
   test('effect', () => {
     expect(makeOptional('Schema.String', 'effect')).toBe('Schema.optional(Schema.String)')
+  })
+
+  test('effect: already-optionalWith expr is passed through (no double wrap)', () => {
+    expect(
+      makeOptional('Schema.optionalWith(Schema.NumberFromString,{default:() => 1})', 'effect'),
+    ).toBe('Schema.optionalWith(Schema.NumberFromString,{default:() => 1})')
   })
 
   test('all libs return a string', () => {
@@ -409,6 +415,18 @@ describe('makeResponse', () => {
     )
     expect(result).toBe(
       '200:{description:"OK",content:{\'application/json\':{schema:resolver(PetSchema)}},headers:{"X-Total":{schema:{"type":"integer"} as const}}}',
+    )
+  })
+
+  test('wildcard status range is quoted', () => {
+    expect(makeResponse('2XX', { description: 'Any 2xx response' }, 'zod')).toBe(
+      '"2XX":{description:"Any 2xx response"}',
+    )
+  })
+
+  test('default status key stays unquoted', () => {
+    expect(makeResponse('default', { description: 'Unexpected response' }, 'zod')).toBe(
+      'default:{description:"Unexpected response"}',
     )
   })
 

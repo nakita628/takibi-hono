@@ -1,13 +1,58 @@
 import path from 'node:path'
 
 import { emit } from '../../../emit/index.js'
-import { ast, detectCircularRefs, getLazyWrapper } from '../../../helper/ast.js'
-import { hasOuterMeta, injectRef } from '../../../helper/inject-ref.js'
+import {
+  ast,
+  detectCircularRefs,
+  detectCircularSCCGroups,
+  getLazyWrapper,
+} from '../../../helper/ast.js'
+import { ARKTYPE_REF_AUGMENTATION, hasOuterMeta, injectRef } from '../../../helper/inject-ref.js'
 import { getLibraryConfig } from '../../../helper/library.js'
-import { extractSchemaExports } from '../../../helper/schema-expression.js'
+import { extractSchemaExports, makeArktypeScopeBody } from '../../../helper/schema-expression.js'
 import { zodType } from '../../../helper/type.js'
 import type { Schema } from '../../../openapi/index.js'
 import { toPascalCase } from '../../../utils/index.js'
+
+/**
+ * OpenAPI schema keys are case-sensitive, but `toPascalCase` upper-cases the
+ * first letter, so `user` and `User` both emit `UserSchema` — and the `ast()`
+ * pass then dedupes same-name declarations last-wins, silently dropping one
+ * schema. Re-key colliders to a deterministic suffixed name (`User`, `User2`,
+ * …) before any declaration is built so every schema survives. The first key
+ * to claim an identifier keeps the unsuffixed name; `$ref`s to a later
+ * collider still resolve to that first declaration.
+ */
+function resolveUniqueKeys(
+  schemas: { readonly [k: string]: Schema },
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+) {
+  const findFree = (ident: string, i: number, used: ReadonlySet<string>): string => {
+    const candidate = `${ident}${i}`
+    return used.has(candidate) ? findFree(ident, i + 1, used) : candidate
+  }
+  // The companion alias of a reserved-word key (`export type Type` / `export
+  // type Schema`) would merge with the validator's value import in the same
+  // file; seed those identifiers as already taken so the key gets a suffix.
+  const reserved = schemaLib === 'typebox' ? ['Type'] : schemaLib === 'effect' ? ['Schema'] : []
+  return Object.fromEntries(
+    Object.entries(schemas).reduce<{
+      readonly used: Set<string>
+      readonly entries: readonly (readonly [string, Schema])[]
+    }>(
+      (acc, [key, schema]) => {
+        const ident = toPascalCase(key)
+        const unique = acc.used.has(ident) ? findFree(ident, 2, acc.used) : ident
+        acc.used.add(unique)
+        return {
+          used: acc.used,
+          entries: [...acc.entries, [unique === ident ? key : unique, schema] as const],
+        }
+      },
+      { used: new Set(reserved), entries: [] },
+    ).entries,
+  )
+}
 
 export async function makeSchemasCode(
   schemas: { readonly [k: string]: Schema },
@@ -22,22 +67,28 @@ export async function makeSchemasCode(
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const registerRef = options?.registerRef ?? false
-  const circularNames = detectCircularRefs(schemas)
-  const schemaNames = Object.keys(schemas)
+  const named = resolveUniqueKeys(schemas, schemaLib)
+  const circularNames = detectCircularRefs(named)
+  const schemaNames = Object.keys(named)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
-  const declarations = Object.entries(schemas).map(([name, schema]) =>
+  const cyclicMemberExprs = makeCyclicMemberExprs(named, schemaLib, readonly)
+  const declarations = Object.entries(named).map(([name, schema]) =>
     processDeclaration(
       extractSchemaExports(name, schema, schemaLib, exportTypes, readonly),
       name,
       schema,
       schemaLib,
-      { schemaNames, circularNames, cyclicGroupPascal, readonly, registerRef },
+      { schemaNames, circularNames, cyclicGroupPascal, readonly, registerRef, cyclicMemberExprs },
     ),
   )
   const sortedDeclarations = ast(declarations.join('\n'))
   const imports = [
     config.schemaImport,
     ...(schemaLib === 'typebox' && exportTypes ? ["import type{Static}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && sortedDeclarations.includes('scope(')
+      ? ["import{scope}from'arktype'"]
+      : []),
+    ...(schemaLib === 'arktype' && registerRef ? [ARKTYPE_REF_AUGMENTATION] : []),
   ]
   return [...imports, '', sortedDeclarations].join('\n')
 }
@@ -56,25 +107,30 @@ export async function makeSplitSchemas(
   const exportTypes = options?.exportTypes ?? false
   const readonly = options?.readonly ?? false
   const registerRef = options?.registerRef ?? false
-  const schemaNames = Object.keys(schemas)
-  const circularNames = detectCircularRefs(schemas)
+  const named = resolveUniqueKeys(schemas, schemaLib)
+  const schemaNames = Object.keys(named)
+  const circularNames = detectCircularRefs(named)
   const cyclicGroupPascal = new Set([...circularNames].map((n) => toPascalCase(n)))
+  const cyclicMemberExprs = makeCyclicMemberExprs(named, schemaLib, readonly)
   for (const name of schemaNames) {
-    const rawDecl = extractSchemaExports(name, schemas[name], schemaLib, exportTypes, readonly)
-    const decl = processDeclaration(rawDecl, name, schemas[name], schemaLib, {
+    const rawDecl = extractSchemaExports(name, named[name], schemaLib, exportTypes, readonly)
+    const decl = processDeclaration(rawDecl, name, named[name], schemaLib, {
       schemaNames,
       circularNames,
       cyclicGroupPascal,
       readonly,
       registerRef,
+      cyclicMemberExprs,
     })
-    const deps = findSchemaRefs(decl, name).filter((d) => d in schemas)
+    const deps = findSchemaRefs(decl, name).filter((d) => d in named)
     const depImports = deps
       .toSorted()
       .map((dep) => `import{${toPascalCase(dep)}Schema}from'./${uncapitalize(dep)}'`)
     const lines = [
       config.schemaImport,
       ...(schemaLib === 'typebox' && exportTypes ? ["import type{Static}from'typebox'"] : []),
+      ...(schemaLib === 'arktype' && decl.includes('scope(') ? ["import{scope}from'arktype'"] : []),
+      ...(schemaLib === 'arktype' && registerRef ? [ARKTYPE_REF_AUGMENTATION] : []),
       ...depImports,
       '',
       decl,
@@ -92,6 +148,64 @@ export async function makeSplitSchemas(
   return emit(barrelCode, outputDir, barrelPath)
 }
 
+/**
+ * Per-member replacement RHS expression for circular SCC groups in libraries that
+ * require a shared container instead of standalone lazy closures: TypeBox v1
+ * (`Type.Module({...}).Member`) and arktype (`scope({...}).export().Member`).
+ * Self-referential and mutually-recursive members of a group share one container;
+ * each member's export selects its entry. Empty for zod/valibot/effect (their
+ * `z.lazy` / `v.lazy` / `Schema.suspend` closures need no aggregation).
+ */
+function makeCyclicMemberExprs(
+  schemas: { readonly [k: string]: Schema },
+  schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
+  readonly: boolean,
+): ReadonlyMap<string, string> {
+  if (schemaLib !== 'typebox' && schemaLib !== 'arktype') return new Map()
+  const result = new Map<string, string>()
+  for (const group of detectCircularSCCGroups(schemas)) {
+    if (schemaLib === 'arktype') {
+      const scopeBody = makeArktypeScopeBody(group, schemas, readonly)
+      // arktype `scope` values must be plain object DSL with string-keyword refs.
+      // A composed member (`type(...).or(...)` from oneOf/anyOf/allOf) embeds a
+      // nested `type()` whose own empty scope cannot resolve sibling keywords, so
+      // skip aggregation for those groups (they fall back to standalone emit).
+      if (scopeBody === '' || scopeBody.includes('type(')) continue
+      for (const member of group) {
+        result.set(member, `scope(${scopeBody}).export().${toPascalCase(member)}`)
+      }
+      continue
+    }
+    const groupPascals = new Set(group.map((n) => toPascalCase(n)))
+    const entries = group.map((member) => {
+      const memberSchema = schemas[member]
+      if (!memberSchema) return ''
+      const decl = extractSchemaExports(member, memberSchema, 'typebox', false, readonly)
+      const pascal = toPascalCase(member)
+      const rhs =
+        decl.match(new RegExp(`^export\\s+const\\s+${pascal}Schema\\s*=\\s*(.+)$`, 'm'))?.[1] ?? ''
+      // Intra-group references resolve through the module via `Type.Ref('Name')`.
+      // They arrive either as a self `Type.Recursive((_Self) => XSchema)` wrapper
+      // or as a bare `XSchema` value reference to another group member; both are
+      // rewritten. Refs outside the group stay value imports.
+      const deRecursed = rhs.replace(
+        /Type\.Recursive\(\(_?Self\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*)Schema\)/g,
+        (whole, refPascal: string) =>
+          groupPascals.has(refPascal) ? `Type.Ref('${refPascal}')` : whole,
+      )
+      const reffed = deRecursed.replace(
+        /\b([A-Za-z_$][A-Za-z0-9_$]*)Schema\b/g,
+        (whole, refPascal: string) =>
+          groupPascals.has(refPascal) ? `Type.Ref('${refPascal}')` : whole,
+      )
+      return `${pascal}:${reffed}`
+    })
+    const body = `{${entries.join(',')}}`
+    for (const member of group) result.set(member, `Type.Module(${body}).${toPascalCase(member)}`)
+  }
+  return result
+}
+
 function processDeclaration(
   rawDecl: string,
   name: string,
@@ -103,6 +217,7 @@ function processDeclaration(
     readonly cyclicGroupPascal: ReadonlySet<string>
     readonly readonly: boolean
     readonly registerRef: boolean
+    readonly cyclicMemberExprs: ReadonlyMap<string, string>
   },
 ) {
   const pascalName = toPascalCase(name)
@@ -111,15 +226,39 @@ function processDeclaration(
   const maybeInjectRef = (decl: string) =>
     ctx.registerRef ? injectRef(decl, name, schemaLib, hasOuterMeta(schema)) : decl
   if (needsLazy && schemaLib === 'zod') {
-    const typeDef = zodType(schema, pascalName, ctx.cyclicGroupPascal, ctx.readonly)
+    // The cyclic helper alias `${pascalName}Type` collides when a sibling schema
+    // key is literally named that (e.g. circular `Event` next to an `EventType`
+    // enum, whose exported alias is also `EventType`). The helper only appears
+    // inside this schema's own declaration, so rename it locally to a free name.
+    const taken = new Set(ctx.schemaNames.map((n) => toPascalCase(n)))
+    const findFree = (i: number): string =>
+      taken.has(`${pascalName}Type${i}`) ? findFree(i + 1) : `${pascalName}Type${i}`
+    const helperName = taken.has(`${pascalName}Type`) ? findFree(2) : `${pascalName}Type`
+    const rawTypeDef = zodType(schema, pascalName, ctx.cyclicGroupPascal, ctx.readonly)
+    const typeDef =
+      helperName === `${pascalName}Type`
+        ? rawTypeDef
+        : rawTypeDef.replace(new RegExp(`\\b${pascalName}Type\\b`, 'g'), helperName)
     const wrapper = getLazyWrapper(schemaLib)
-    const annotated = addTypeAnnotation(rawDecl, varName, `${pascalName}Type`)
+    const annotated = addTypeAnnotation(rawDecl, varName, helperName)
     const wrapped = wrapper.open ? wrapWithLazy(annotated, name, wrapper) : annotated
     const unwrapped = wrapped.replace(
       /z\.lazy\(\(\)\s*=>\s*([A-Za-z_$][A-Za-z0-9_$]*Schema)\)/g,
       '$1',
     )
     return maybeInjectRef(`${typeDef}\n\n${unwrapped}`)
+  }
+
+  const cyclicExpr = ctx.cyclicMemberExprs.get(name)
+  if (needsLazy && cyclicExpr) {
+    // TypeBox / arktype circular members select their entry from a shared
+    // container (`Type.Module(...).Name` / `scope(...).export().Name`) built in
+    // `makeCyclicMemberExprs`; substitute the standalone right-hand side with it.
+    const body = rawDecl.replace(
+      new RegExp(`^(export\\s+const\\s+${varName}\\s*=\\s*)(.+)$`, 'm'),
+      (_m: string, prefix: string) => `${prefix}${cyclicExpr}`,
+    )
+    return maybeInjectRef(body)
   }
 
   if (needsLazy) {

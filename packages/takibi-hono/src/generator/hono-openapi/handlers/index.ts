@@ -1,7 +1,7 @@
 import { makeImports, makeStandardImports } from '../../../helper/imports.js'
 import { makeStandardValidators, makeValidators } from '../../../helper/validator.js'
 import type { Components, Operation, Parameter } from '../../../openapi/index.js'
-import { toHandlerVarName, toHonoPath } from '../../../utils/index.js'
+import { emitRouteCall, toHandlerVarName, toHonoPath } from '../../../utils/index.js'
 import { makeDescribeRoute } from '../routes/index.js'
 
 export function makeHandlerCode(
@@ -30,7 +30,7 @@ export function makeHandlerCode(
           ...makeValidators(operation, pathItemParameters, schemaLib, components),
           '(c)=>{}',
         ]
-        return `.${method}(${[`'${honoPath}'`, ...middlewares].join(',')})`
+        return emitRouteCall(method, [`'${honoPath}'`, ...middlewares])
       })
     : operations.map(({ method, path, operation, pathItemParameters }) => {
         const honoPath = toHonoPath(path)
@@ -41,7 +41,7 @@ export function makeHandlerCode(
           components,
         )
         const args = [`'${honoPath}'`, ...validators, '(c)=>{}']
-        return `.${method}(${args.join(',')})`
+        return emitRouteCall(method, args)
       })
   const handlerCode = `export const ${handlerName}=new Hono()${routeLines.join('')}`
   const componentPaths = options?.componentPaths ?? { schemas: '../components' }

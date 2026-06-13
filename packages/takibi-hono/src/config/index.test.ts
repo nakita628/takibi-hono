@@ -30,13 +30,12 @@ describe('parseConfig', () => {
         schema: 'valibot',
         basePath: '/api/v1',
         format: { semi: false, singleQuote: true },
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: 'src/handlers' },
-          components: {
-            schemas: { output: 'src/schemas', split: true, exportTypes: true },
-            responses: { output: 'src/responses.ts' },
-          },
+
+        readonly: true,
+        output: 'src/handlers',
+        components: {
+          schemas: { output: 'src/schemas', split: true, exportTypes: true },
+          responses: { output: 'src/responses.ts' },
         },
       }),
     ).toStrictEqual({
@@ -46,13 +45,12 @@ describe('parseConfig', () => {
         schema: 'valibot',
         basePath: '/api/v1',
         format: { semi: false, singleQuote: true },
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: 'src/handlers' },
-          components: {
-            schemas: { output: 'src/schemas', split: true, exportTypes: true },
-            responses: { output: 'src/responses.ts' },
-          },
+
+        readonly: true,
+        output: 'src/handlers',
+        components: {
+          schemas: { output: 'src/schemas', split: true, exportTypes: true },
+          responses: { output: 'src/responses.ts' },
         },
       },
     })
@@ -125,11 +123,11 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components },
+        components,
       }),
     ).toStrictEqual({
       ok: true,
-      value: { input: 'a.yaml', schema: 'zod', format: {}, 'takibi-hono': { components } },
+      value: { input: 'a.yaml', schema: 'zod', format: {}, components },
     })
   })
 
@@ -153,12 +151,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { webhooks: { output: 'src/webhooks.ts' } } },
+        components: { webhooks: { output: 'src/webhooks.ts' } },
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.components.webhooks: Invalid key: Expected never but received "webhooks"',
+        'Invalid config: components.webhooks: Invalid key: Expected never but received "webhooks"',
     })
   })
 
@@ -168,7 +166,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { handlers: { output: 'src/handlers' } },
+        output: 'src/handlers',
       }),
     ).toStrictEqual({
       ok: true,
@@ -176,9 +174,29 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { handlers: { output: 'src/handlers' } },
+        output: 'src/handlers',
       },
     })
+  })
+
+  it.concurrent('rejects the retired template key (use output instead)', () => {
+    expect(
+      parseConfig({
+        input: 'a.yaml',
+        schema: 'zod',
+        template: { output: 'src/handlers' },
+      }).ok,
+    ).toBe(false)
+  })
+
+  it.concurrent('rejects output that is a .ts file (must be a directory)', () => {
+    expect(
+      parseConfig({
+        input: 'a.yaml',
+        schema: 'zod',
+        output: 'src/handlers.ts',
+      }).ok,
+    ).toBe(false)
   })
 
   it.concurrent('component with import override', () => {
@@ -186,10 +204,9 @@ describe('parseConfig', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@packages/schemas' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@packages/schemas' },
         },
       }),
     ).toStrictEqual({
@@ -197,10 +214,9 @@ describe('parseConfig', () => {
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@packages/schemas' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@packages/schemas' },
         },
       },
     })
@@ -235,7 +251,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { handlers: { output: 'src/routes' } },
+        output: 'src/routes',
       }),
     ).toStrictEqual({
       ok: true,
@@ -243,7 +259,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { handlers: { output: 'src/routes' } },
+        output: 'src/routes',
       },
     })
   })
@@ -254,7 +270,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { output: 'src/schemas' } } },
+        components: { schemas: { output: 'src/schemas' } },
       }),
     ).toStrictEqual({
       ok: true,
@@ -262,28 +278,19 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { output: 'src/schemas/index.ts' } } },
+        components: { schemas: { output: 'src/schemas/index.ts' } },
       },
     })
   })
 
-  it.concurrent('does not normalize when output ends with .ts', () => {
-    expect(
-      parseConfig({
-        input: 'a.yaml',
-        schema: 'zod',
-        format: {},
-        'takibi-hono': { handlers: { output: 'src/routes.ts' } },
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'a.yaml',
-        schema: 'zod',
-        format: {},
-        'takibi-hono': { handlers: { output: 'src/routes.ts' } },
-      },
+  it.concurrent('rejects output that is a .ts file (must be a directory)', () => {
+    const result = parseConfig({
+      input: 'a.yaml',
+      schema: 'zod',
+      format: {},
+      output: 'src/routes.ts',
     })
+    expect(result.ok).toBe(false)
   })
 
   it.concurrent('does not normalize when split is true', () => {
@@ -292,7 +299,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { output: 'src/schemas', split: true } } },
+        components: { schemas: { output: 'src/schemas', split: true } },
       }),
     ).toStrictEqual({
       ok: true,
@@ -300,7 +307,7 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { output: 'src/schemas', split: true } } },
+        components: { schemas: { output: 'src/schemas', split: true } },
       },
     })
   })
@@ -311,13 +318,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': {
-          handlers: { output: 'src/handlers' },
-          components: {
-            schemas: { output: 'src/schemas' },
-            responses: { output: 'src/responses' },
-            parameters: { output: 'src/parameters', split: true },
-          },
+
+        output: 'src/handlers',
+        components: {
+          schemas: { output: 'src/schemas' },
+          responses: { output: 'src/responses' },
+          parameters: { output: 'src/parameters', split: true },
         },
       }),
     ).toStrictEqual({
@@ -326,13 +332,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': {
-          handlers: { output: 'src/handlers' },
-          components: {
-            schemas: { output: 'src/schemas/index.ts' },
-            responses: { output: 'src/responses/index.ts' },
-            parameters: { output: 'src/parameters', split: true },
-          },
+
+        output: 'src/handlers',
+        components: {
+          schemas: { output: 'src/schemas/index.ts' },
+          responses: { output: 'src/responses/index.ts' },
+          parameters: { output: 'src/parameters', split: true },
         },
       },
     })
@@ -382,11 +387,11 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { bad: true },
+        bad: true,
       }),
     ).toStrictEqual({
       ok: false,
-      error: 'Invalid config: takibi-hono.bad: Invalid key: Expected never but received "bad"',
+      error: 'Invalid config: bad: Invalid key: Expected never but received "bad"',
     })
   })
 
@@ -396,12 +401,11 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { bad: { output: 'x' } } },
+        components: { bad: { output: 'x' } },
       }),
     ).toStrictEqual({
       ok: false,
-      error:
-        'Invalid config: takibi-hono.components.bad: Invalid key: Expected never but received "bad"',
+      error: 'Invalid config: components.bad: Invalid key: Expected never but received "bad"',
     })
   })
 
@@ -411,12 +415,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { split: true } } },
+        components: { schemas: { split: true } },
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.components.schemas.output: Invalid key: Expected "output" but received undefined',
+        'Invalid config: components.schemas.output: Invalid key: Expected "output" but received undefined',
     })
   })
 
@@ -426,12 +430,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { handlers: { output: 'src/routes.ts', split: true } },
+        output: 'src/routes',
+        split: true,
       }),
     ).toStrictEqual({
       ok: false,
-      error:
-        'Invalid config: takibi-hono.handlers.split: Invalid key: Expected never but received "split"',
+      error: 'Invalid config: split: Invalid key: Expected never but received "split"',
     })
   })
 
@@ -441,12 +445,12 @@ describe('parseConfig', () => {
         input: 'a.yaml',
         schema: 'zod',
         format: {},
-        'takibi-hono': { components: { schemas: { output: 'src/schemas.ts', split: true } } },
+        components: { schemas: { output: 'src/schemas.ts', split: true } },
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.components.schemas.output: split mode requires directory, not .ts file',
+        'Invalid config: components.schemas.output: split mode requires directory, not .ts file',
     })
   })
 
@@ -516,15 +520,11 @@ describe('parseConfig', () => {
           vueIndentScriptAndStyle: false,
           embeddedLanguageFormatting: 'auto',
         },
-        'takibi-hono': {
-          readonly: true,
-          exportSchemasTypes: true,
-          exportParametersTypes: true,
-          exportHeadersTypes: true,
-          handlers: { output: 'src/routes' },
-          components: {
-            schemas: { output: 'src/schemas.ts', exportTypes: true },
-          },
+
+        readonly: true,
+        output: 'src/routes',
+        components: {
+          schemas: { output: 'src/schemas.ts', exportTypes: true },
         },
       }),
     ).toStrictEqual({
@@ -555,15 +555,11 @@ describe('parseConfig', () => {
           vueIndentScriptAndStyle: false,
           embeddedLanguageFormatting: 'auto',
         },
-        'takibi-hono': {
-          readonly: true,
-          exportSchemasTypes: true,
-          exportParametersTypes: true,
-          exportHeadersTypes: true,
-          handlers: { output: 'src/routes' },
-          components: {
-            schemas: { output: 'src/schemas.ts', exportTypes: true },
-          },
+
+        readonly: true,
+        output: 'src/routes',
+        components: {
+          schemas: { output: 'src/schemas.ts', exportTypes: true },
         },
       },
     })
@@ -574,12 +570,12 @@ describe('parseConfig', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { handlers: { output: 'src/handlers.ts', split: true } },
+        output: 'src/handlers',
+        split: true,
       }),
     ).toStrictEqual({
       ok: false,
-      error:
-        'Invalid config: takibi-hono.handlers.split: Invalid key: Expected never but received "split"',
+      error: 'Invalid config: split: Invalid key: Expected never but received "split"',
     })
   })
 
@@ -640,14 +636,14 @@ describe('parseConfig', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { handlers: { output: 'dist/routes' } },
+        output: 'dist/routes',
       }),
     ).toStrictEqual({
       ok: true,
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { handlers: { output: 'dist/routes' } },
+        output: 'dist/routes',
       },
     })
   })
@@ -657,14 +653,14 @@ describe('parseConfig', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: true },
+        readonly: true,
       }),
     ).toStrictEqual({
       ok: true,
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: true },
+        readonly: true,
       },
     })
   })
@@ -685,9 +681,8 @@ describe('parseConfig', () => {
       const result = parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: { [componentType]: { output: 'src/out.ts', split: true } },
-        },
+
+        components: { [componentType]: { output: 'src/out.ts', split: true } },
       })
       expect(result.ok).toBe(false)
     }
@@ -811,12 +806,12 @@ describe('parseConfig - handlers strict validation', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': { handlers: { output: 'src/routes.ts', split: true } },
+      output: 'src/routes',
+      split: true,
     })
     expect(result).toStrictEqual({
       ok: false,
-      error:
-        'Invalid config: takibi-hono.handlers.split: Invalid key: Expected never but received "split"',
+      error: 'Invalid config: split: Invalid key: Expected never but received "split"',
     })
   })
 })
@@ -826,11 +821,11 @@ describe('parseConfig - normalize non-split directory output', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': { handlers: { output: 'src/handlers' } },
+      output: 'src/handlers',
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.handlers?.output).toBe('src/handlers')
+      expect(result.value.output).toBe('src/handlers')
     }
   })
 
@@ -838,13 +833,11 @@ describe('parseConfig - normalize non-split directory output', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': { components: { responses: { output: 'src/responses' } } },
+      components: { responses: { output: 'src/responses' } },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.responses?.output).toBe(
-        'src/responses/index.ts',
-      )
+      expect(result.value.components?.responses?.output).toBe('src/responses/index.ts')
     }
   })
 })
@@ -855,10 +848,9 @@ describe('parseConfig - component import field', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@/schemas' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@/schemas' },
         },
       }),
     ).toStrictEqual({
@@ -866,10 +858,9 @@ describe('parseConfig - component import field', () => {
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@/schemas' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@/schemas' },
         },
       },
     })
@@ -879,16 +870,15 @@ describe('parseConfig - component import field', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          schemas: { output: 'src/schemas', import: '@packages/schemas' },
-        },
+
+      components: {
+        schemas: { output: 'src/schemas', import: '@packages/schemas' },
       },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.schemas?.output).toBe('src/schemas/index.ts')
-      expect(result.value['takibi-hono']?.components?.schemas?.import).toBe('@packages/schemas')
+      expect(result.value.components?.schemas?.output).toBe('src/schemas/index.ts')
+      expect(result.value.components?.schemas?.import).toBe('@packages/schemas')
     }
   })
 
@@ -896,17 +886,16 @@ describe('parseConfig - component import field', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          schemas: { output: 'src/schemas', split: true, import: '@/schemas' },
-        },
+
+      components: {
+        schemas: { output: 'src/schemas', split: true, import: '@/schemas' },
       },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.schemas?.output).toBe('src/schemas')
-      expect(result.value['takibi-hono']?.components?.schemas?.split).toBe(true)
-      expect(result.value['takibi-hono']?.components?.schemas?.import).toBe('@/schemas')
+      expect(result.value.components?.schemas?.output).toBe('src/schemas')
+      expect(result.value.components?.schemas?.split).toBe(true)
+      expect(result.value.components?.schemas?.import).toBe('@/schemas')
     }
   })
 
@@ -927,15 +916,14 @@ describe('parseConfig - component import field', () => {
       const result = parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            [componentType]: { output: `src/${componentType}.ts`, import: `@/${componentType}` },
-          },
+
+        components: {
+          [componentType]: { output: `src/${componentType}.ts`, import: `@/${componentType}` },
         },
       })
       expect(result.ok).toBe(true)
       if (result.ok) {
-        const component = result.value['takibi-hono']?.components?.[componentType]
+        const component = result.value.components?.[componentType]
         expect(component?.output).toBe(`src/${componentType}.ts`)
         expect(component?.import).toBe(`@/${componentType}`)
       }
@@ -947,12 +935,11 @@ describe('parseConfig - component import field', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@/schemas' },
-            responses: { output: 'src/responses.ts', import: '@/responses' },
-            parameters: { output: 'src/params', split: true, import: '@/params' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@/schemas' },
+          responses: { output: 'src/responses.ts', import: '@/responses' },
+          parameters: { output: 'src/params', split: true, import: '@/params' },
         },
       }),
     ).toStrictEqual({
@@ -960,12 +947,11 @@ describe('parseConfig - component import field', () => {
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: { output: 'src/schemas.ts', import: '@/schemas' },
-            responses: { output: 'src/responses.ts', import: '@/responses' },
-            parameters: { output: 'src/params', split: true, import: '@/params' },
-          },
+
+        components: {
+          schemas: { output: 'src/schemas.ts', import: '@/schemas' },
+          responses: { output: 'src/responses.ts', import: '@/responses' },
+          parameters: { output: 'src/params', split: true, import: '@/params' },
         },
       },
     })
@@ -975,16 +961,15 @@ describe('parseConfig - component import field', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          schemas: { output: 'src/schemas.ts' },
-        },
+
+      components: {
+        schemas: { output: 'src/schemas.ts' },
       },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.schemas?.import).toBeUndefined()
-      expect(result.value['takibi-hono']?.components?.schemas?.output).toBe('src/schemas.ts')
+      expect(result.value.components?.schemas?.import).toBeUndefined()
+      expect(result.value.components?.schemas?.output).toBe('src/schemas.ts')
     }
   })
 
@@ -993,14 +978,13 @@ describe('parseConfig - component import field', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          handlers: { output: 'src/handlers', import: '@/handlers' },
-        },
+
+        output: 'src/handlers',
+        import: '@/handlers',
       }),
     ).toStrictEqual({
       ok: false,
-      error:
-        'Invalid config: takibi-hono.handlers.import: Invalid key: Expected never but received "import"',
+      error: 'Invalid config: import: Invalid key: Expected never but received "import"',
     })
   })
 
@@ -1009,14 +993,13 @@ describe('parseConfig - component import field', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: {
-              output: 'src/schemas.ts',
-              exportTypes: true,
-              split: false,
-              import: '@packages/schemas',
-            },
+
+        components: {
+          schemas: {
+            output: 'src/schemas.ts',
+            exportTypes: true,
+            split: false,
+            import: '@packages/schemas',
           },
         },
       }),
@@ -1025,14 +1008,13 @@ describe('parseConfig - component import field', () => {
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          components: {
-            schemas: {
-              output: 'src/schemas.ts',
-              exportTypes: true,
-              split: false,
-              import: '@packages/schemas',
-            },
+
+        components: {
+          schemas: {
+            output: 'src/schemas.ts',
+            exportTypes: true,
+            split: false,
+            import: '@packages/schemas',
           },
         },
       },
@@ -1047,11 +1029,9 @@ describe('parseConfig - components.output base directory', () => {
         input: 'main.tsp',
         schema: 'effect',
         openapi: true,
-        'takibi-hono': {
-          components: {
-            output: 'src/openapi',
-          },
-          exportSchemasTypes: true,
+
+        components: {
+          output: 'src/openapi',
         },
       }),
     ).toStrictEqual({
@@ -1060,43 +1040,26 @@ describe('parseConfig - components.output base directory', () => {
         input: 'main.tsp',
         schema: 'effect',
         openapi: true,
-        'takibi-hono': {
-          components: {
-            output: 'src/openapi',
-          },
-          exportSchemasTypes: true,
+
+        components: {
+          output: 'src/openapi',
         },
       },
     })
   })
 
-  it.concurrent('components.output coexists with individual component configs', () => {
-    expect(
-      parseConfig({
-        input: 'a.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          components: {
-            output: 'src/openapi',
-            schemas: { output: 'src/custom/schemas.ts' },
-            responses: { output: 'src/responses' },
-          },
-        },
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'a.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          components: {
-            output: 'src/openapi',
-            schemas: { output: 'src/custom/schemas.ts' },
-            responses: { output: 'src/responses/index.ts' },
-          },
-        },
+  it.concurrent('components.output is mutually exclusive with per-type component configs', () => {
+    const result = parseConfig({
+      input: 'a.yaml',
+      schema: 'zod',
+
+      components: {
+        output: 'src/openapi',
+        schemas: { output: 'src/custom/schemas.ts' },
+        responses: { output: 'src/responses' },
       },
     })
+    expect(result.ok).toBe(false)
   })
 
   it.concurrent('components.output with readonly flag', () => {
@@ -1105,12 +1068,10 @@ describe('parseConfig - components.output base directory', () => {
         input: 'main.tsp',
         schema: 'effect',
         openapi: true,
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            output: 'src/openapi',
-          },
-          exportSchemasTypes: true,
+
+        readonly: true,
+        components: {
+          output: 'src/openapi',
         },
       }),
     ).toStrictEqual({
@@ -1119,36 +1080,27 @@ describe('parseConfig - components.output base directory', () => {
         input: 'main.tsp',
         schema: 'effect',
         openapi: true,
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            output: 'src/openapi',
-          },
-          exportSchemasTypes: true,
+
+        readonly: true,
+        components: {
+          output: 'src/openapi',
         },
       },
     })
   })
 
-  it.concurrent('components.output does not affect normalization of individual components', () => {
+  it.concurrent('components.output (.ts) is accepted alone for single-file aggregation', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          output: 'src/openapi',
-          schemas: { output: 'src/schemas', split: true },
-          parameters: { output: 'src/params' },
-        },
+
+      components: {
+        output: 'src/components/api.ts',
       },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.output).toBe('src/openapi')
-      expect(result.value['takibi-hono']?.components?.schemas?.output).toBe('src/schemas')
-      expect(result.value['takibi-hono']?.components?.parameters?.output).toBe(
-        'src/params/index.ts',
-      )
+      expect(result.value.components?.output).toBe('src/components/api.ts')
     }
   })
 
@@ -1156,15 +1108,14 @@ describe('parseConfig - components.output base directory', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {
-        components: {
-          output: 'src/openapi',
-        },
+
+      components: {
+        output: 'src/openapi',
       },
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.components?.output).toBe('src/openapi')
+      expect(result.value.components?.output).toBe('src/openapi')
     }
   })
 })
@@ -1175,14 +1126,14 @@ describe('parseConfig - readonly flag', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: true },
+        readonly: true,
       }),
     ).toStrictEqual({
       ok: true,
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: true },
+        readonly: true,
       },
     })
   })
@@ -1192,14 +1143,14 @@ describe('parseConfig - readonly flag', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: false },
+        readonly: false,
       }),
     ).toStrictEqual({
       ok: true,
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': { readonly: false },
+        readonly: false,
       },
     })
   })
@@ -1208,11 +1159,10 @@ describe('parseConfig - readonly flag', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': {},
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value['takibi-hono']?.readonly).toBeUndefined()
+      expect(result.value.readonly).toBeUndefined()
     }
   })
 
@@ -1222,11 +1172,10 @@ describe('parseConfig - readonly flag', () => {
         input: 'a.yaml',
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            output: 'src/openapi',
-          },
+
+        readonly: true,
+        components: {
+          output: 'src/openapi',
         },
       }),
     ).toStrictEqual({
@@ -1235,11 +1184,10 @@ describe('parseConfig - readonly flag', () => {
         input: 'a.yaml',
         schema: 'zod',
         openapi: true,
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            output: 'src/openapi',
-          },
+
+        readonly: true,
+        components: {
+          output: 'src/openapi',
         },
       },
     })
@@ -1250,11 +1198,10 @@ describe('parseConfig - readonly flag', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            schemas: { output: 'src/schemas.ts', exportTypes: true },
-          },
+
+        readonly: true,
+        components: {
+          schemas: { output: 'src/schemas.ts', exportTypes: true },
         },
       }),
     ).toStrictEqual({
@@ -1262,11 +1209,10 @@ describe('parseConfig - readonly flag', () => {
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          readonly: true,
-          components: {
-            schemas: { output: 'src/schemas.ts', exportTypes: true },
-          },
+
+        readonly: true,
+        components: {
+          schemas: { output: 'src/schemas.ts', exportTypes: true },
         },
       },
     })
@@ -1277,20 +1223,18 @@ describe('parseConfig - readonly flag', () => {
       parseConfig({
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: 'src/handlers' },
-        },
+
+        readonly: true,
+        output: 'src/handlers',
       }),
     ).toStrictEqual({
       ok: true,
       value: {
         input: 'a.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          readonly: true,
-          handlers: { output: 'src/handlers' },
-        },
+
+        readonly: true,
+        output: 'src/handlers',
       },
     })
   })
@@ -1299,7 +1243,7 @@ describe('parseConfig - readonly flag', () => {
     const result = parseConfig({
       input: 'a.yaml',
       schema: 'zod',
-      'takibi-hono': { readonly: 'yes' },
+      readonly: 'yes',
     })
     expect(result.ok).toBe(false)
   })
@@ -1320,10 +1264,9 @@ describe('defineConfig', () => {
       schema: 'valibot' as const,
       basePath: '/api',
       format: { semi: false },
-      'takibi-hono': {
-        readonly: true,
-        handlers: { output: 'src/routes.ts' },
-      },
+
+      readonly: true,
+      output: 'src/routes.ts',
     }
     const result = defineConfig(config)
     expect(result).toBe(config)
@@ -1335,14 +1278,13 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportSchemas: true,
-        },
+
+        exportSchemas: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportSchemas: Invalid key: Expected never but received "exportSchemas"',
+        'Invalid config: exportSchemas: Invalid key: Expected never but received "exportSchemas"',
     })
   })
 
@@ -1351,14 +1293,13 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportResponses: true,
-        },
+
+        exportResponses: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportResponses: Invalid key: Expected never but received "exportResponses"',
+        'Invalid config: exportResponses: Invalid key: Expected never but received "exportResponses"',
     })
   })
 
@@ -1367,14 +1308,13 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportParameters: true,
-        },
+
+        exportParameters: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportParameters: Invalid key: Expected never but received "exportParameters"',
+        'Invalid config: exportParameters: Invalid key: Expected never but received "exportParameters"',
     })
   })
 
@@ -1383,14 +1323,13 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportExamples: true,
-        },
+
+        exportExamples: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportExamples: Invalid key: Expected never but received "exportExamples"',
+        'Invalid config: exportExamples: Invalid key: Expected never but received "exportExamples"',
     })
   })
 
@@ -1399,14 +1338,13 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportRequestBodies: true,
-        },
+
+        exportRequestBodies: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportRequestBodies: Invalid key: Expected never but received "exportRequestBodies"',
+        'Invalid config: exportRequestBodies: Invalid key: Expected never but received "exportRequestBodies"',
     })
   })
 
@@ -1415,77 +1353,28 @@ describe('defineConfig', () => {
       parseConfig({
         input: 'spec.yaml',
         schema: 'zod',
-        'takibi-hono': {
-          exportHeaders: true,
-        },
+
+        exportHeaders: true,
       }),
     ).toStrictEqual({
       ok: false,
       error:
-        'Invalid config: takibi-hono.exportHeaders: Invalid key: Expected never but received "exportHeaders"',
+        'Invalid config: exportHeaders: Invalid key: Expected never but received "exportHeaders"',
     })
   })
 
-  it.concurrent('should accept exportSchemasTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportSchemasTypes: true,
-        },
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportSchemasTypes: true,
-        },
-      },
-    })
-  })
-
-  it.concurrent('should accept exportParametersTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportParametersTypes: true,
-        },
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportParametersTypes: true,
-        },
-      },
-    })
-  })
-
-  it.concurrent('should accept exportHeadersTypes flag', () => {
-    expect(
-      parseConfig({
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportHeadersTypes: true,
-        },
-      }),
-    ).toStrictEqual({
-      ok: true,
-      value: {
-        input: 'spec.yaml',
-        schema: 'zod',
-        'takibi-hono': {
-          exportHeadersTypes: true,
-        },
-      },
-    })
+  it.concurrent('rejects the retired top-level export*Types flags (use components.X.exportTypes)', () => {
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportSchemasTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportParametersTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportHeadersTypes: true }).ok).toBe(
+      false,
+    )
+    expect(parseConfig({ input: 'spec.yaml', schema: 'zod', exportMediaTypesTypes: true }).ok).toBe(
+      false,
+    )
   })
 })

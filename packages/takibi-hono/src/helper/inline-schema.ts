@@ -1,6 +1,6 @@
 import { isNullable, isSchemaArray } from '../guard/index.js'
 import type { Schema } from '../openapi/index.js'
-import { resolveRef } from '../utils/index.js'
+import { makeSafeKey, resolveRef } from '../utils/index.js'
 import { extractSchemaExports } from './schema-expression.js'
 
 function singleItems(items: Schema | readonly Schema[] | undefined) {
@@ -71,6 +71,10 @@ function inlineViaSchemaLibrary(
   const code = extractSchemaExports('Inline', schema, schemaLib, false, false, paramIn)
   const expr = code
     .trim()
+    // Drop any leading file-level marker comments (e.g. TypeBox's `not`-keyword
+    // FIXME notice) so the `export const ... =` prefix strip reaches the
+    // expression instead of leaving a comment + statement in an expression slot.
+    .replace(/^(?:\/\/[^\n]*\n+)+/, '')
     .replace(/^export\s+const\s+[A-Za-z_$][\w$]*Schema\s*=\s*/, '')
     .trim()
   return unwrapLazyRefs(expr, schemaLib)
@@ -180,10 +184,19 @@ function isArktypeStringForm(expr: string) {
   return /^type\('(.+)'\)$/.test(expr)
 }
 
+/** `z.enum` only accepts strings; non-string members fall back to literal(s). */
+function zodEnumExpr(values: readonly unknown[]) {
+  if (values.length === 0) return 'z.unknown()'
+  if (values.every((v) => typeof v === 'string')) {
+    return `z.enum([${values.map((v) => JSON.stringify(v)).join(',')}])`
+  }
+  const literals = values.map((v) => `z.literal(${JSON.stringify(v)})`)
+  return literals.length === 1 ? literals[0] : `z.union([${literals.join(',')}])`
+}
+
 function zodInlineExpr(schema: Schema): string {
   if (schema.enum) {
-    if (schema.enum.length === 0) return 'z.unknown()'
-    return `z.enum([${schema.enum.map((v) => JSON.stringify(v)).join(',')}])`
+    return zodEnumExpr(schema.enum)
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])
@@ -215,7 +228,7 @@ function zodInlineExpr(schema: Schema): string {
       const props = Object.entries(schema.properties).map(([key, prop]) => {
         const isRequired = schema.required?.includes(key)
         const propExpr = zodInline(prop)
-        return `${key}:${isRequired ? propExpr : `${propExpr}.optional()`}`
+        return `${makeSafeKey(key)}:${isRequired ? propExpr : `${propExpr}.exactOptional()`}`
       })
       return `z.object({${props.join(',')}})`
     }
@@ -227,8 +240,7 @@ function zodInlineExpr(schema: Schema): string {
 function zodInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
-    return wrapNullable(`z.enum([${values}])`, schema, 'zod')
+    return wrapNullable(zodEnumExpr(schema.enum), schema, 'zod')
   }
   return wrapNullable(zodInlineExpr(schema), schema, 'zod')
 }
@@ -236,8 +248,18 @@ function zodInline(schema: Schema) {
 function valibotInline(schema: Schema): string {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
-    return wrapNullable(`v.picklist([${values}])`, schema, 'valibot')
+    // `v.picklist` options are string | number | bigint — boolean/null members
+    // need the literal/union form instead.
+    const picklistable = schema.enum.every((v) => typeof v === 'string' || typeof v === 'number')
+    if (picklistable) {
+      const values = schema.enum.map((v) => JSON.stringify(v)).join(',')
+      return wrapNullable(`v.picklist([${values}])`, schema, 'valibot')
+    }
+    const literals = schema.enum.map((v) =>
+      v === null ? 'v.null()' : `v.literal(${JSON.stringify(v)})`,
+    )
+    const expr = literals.length === 1 ? `${literals[0]}` : `v.union([${literals.join(',')}])`
+    return wrapNullable(expr, schema, 'valibot')
   }
   const type = Array.isArray(schema.type)
     ? (schema.type.find((t) => t !== 'null') ?? schema.type[0])
@@ -269,7 +291,7 @@ function valibotInline(schema: Schema): string {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = valibotInline(prop)
-          return `${key}:${isRequired ? propExpr : `v.optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `v.optional(${propExpr})`}`
         })
         return `v.object({${props.join(',')}})`
       }
@@ -283,7 +305,15 @@ function valibotInline(schema: Schema): string {
 function typeboxInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
-    const values = schema.enum.map((v) => `Type.Literal(${JSON.stringify(v)})`).join(',')
+    // `TLiteralValue` is scalar-only (and excludes null): null members become
+    // Type.Null(), and an array/object member degrades the enum to Type.Any().
+    const isComposite = (v: unknown): boolean => v !== null && typeof v === 'object'
+    if (schema.enum.some(isComposite)) {
+      return wrapNullable('Type.Any()', schema, 'typebox')
+    }
+    const values = schema.enum
+      .map((v) => (v === null ? 'Type.Null()' : `Type.Literal(${JSON.stringify(v)})`))
+      .join(',')
     const expr = `Type.Union([${values}])`
     return wrapNullable(expr, schema, 'typebox')
   }
@@ -319,7 +349,7 @@ function typeboxInline(schema: Schema) {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = typeboxInline(prop)
-          return `${key}:${isRequired ? propExpr : `Type.Optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `Type.Optional(${propExpr})`}`
         })
         return `Type.Object({${props.join(',')}})`
       }
@@ -333,6 +363,12 @@ function typeboxInline(schema: Schema) {
 function arktypeInline(schema: Schema) {
   if (schema.$ref) return resolveRef(schema.$ref)
   if (schema.enum) {
+    // ArkType enums are a `'a | b | c'` string union; array/object members
+    // can't be expressed there (their JSON form breaks the string), so a
+    // pathological mixed enum falls back to `unknown`.
+    if (schema.enum.some((v) => v !== null && typeof v === 'object')) {
+      return wrapNullable("type('unknown')", schema, 'arktype')
+    }
     const values = schema.enum.map((v) => JSON.stringify(v)).join(' | ')
     return wrapNullable(`type('${values}')`, schema, 'arktype')
   }
@@ -371,9 +407,15 @@ function arktypeInline(schema: Schema) {
         if (!schema.properties) return 'type({})'
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
-          const propStr = extractArktypeString(arktypeInline(prop))
           const keyStr = isRequired ? `'${key}'` : `'${key}?'`
-          return `${keyStr}:${JSON.stringify(propStr)}`
+          const propExpr = arktypeInline(prop)
+          // A string-DSL keyword (`type('string')`) becomes a quoted member; a
+          // value expression (a `$ref` → `XSchema`, `XSchema.array()`, a nested
+          // `type({...})`) is embedded by value, not quoted into an unresolvable
+          // string literal.
+          return isArktypeStringForm(propExpr)
+            ? `${keyStr}:${JSON.stringify(extractArktypeString(propExpr))}`
+            : `${keyStr}:${propExpr}`
         })
         return `type({${props.join(',')}})`
       }
@@ -420,7 +462,7 @@ function effectInline(schema: Schema) {
         const props = Object.entries(schema.properties).map(([key, prop]) => {
           const isRequired = schema.required?.includes(key)
           const propExpr = effectInline(prop)
-          return `${key}:${isRequired ? propExpr : `Schema.optional(${propExpr})`}`
+          return `${makeSafeKey(key)}:${isRequired ? propExpr : `Schema.optional(${propExpr})`}`
         })
         return `Schema.Struct({${props.join(',')}})`
       }

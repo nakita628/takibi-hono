@@ -10,6 +10,7 @@ import { makeParametersCode } from '../../generator/hono-openapi/components/para
 import { makePathItemsCode } from '../../generator/hono-openapi/components/path-items.js'
 import { makeRequestBodiesCode } from '../../generator/hono-openapi/components/request-bodies.js'
 import { makeResponsesCode } from '../../generator/hono-openapi/components/responses.js'
+import { makeSchemasCode } from '../../generator/hono-openapi/components/schemas.js'
 import { makeSecuritySchemesCode } from '../../generator/hono-openapi/components/security-schemes.js'
 import { makeBarrelCode } from '../../helper/barrel.js'
 import { makeComponentImports, makeModuleSpec } from '../../helper/imports.js'
@@ -40,68 +41,109 @@ export async function makeComponents(
   const components = openapi.components
   if (!components) return { ok: true, value: undefined } as const
   const isReadonly = ohConfig?.readonly ?? false
-  const parametersExportTypes =
-    ohConfig?.components?.parameters?.exportTypes ?? ohConfig?.exportParametersTypes ?? false
-  const headersExportTypes =
-    ohConfig?.components?.headers?.exportTypes ?? ohConfig?.exportHeadersTypes ?? false
-  const mediaTypesExportTypes =
-    ohConfig?.components?.mediaTypes?.exportTypes ?? ohConfig?.exportMediaTypesTypes ?? false
+  const parametersExportTypes = ohConfig?.components?.parameters?.exportTypes ?? false
+  const mediaTypesExportTypes = ohConfig?.components?.mediaTypes?.exportTypes ?? false
+  // Single-file aggregate mode concatenates every generator's output into one
+  // module, so a component that references another by identifier must be emitted
+  // AFTER its dependency (else `used before declaration`). OpenAPI components form
+  // a non-cyclic DAG; this order is one valid leaf→composite topological order:
+  // leaves (parameters, headers, examples, securitySchemes, links) first, then the
+  // composites that reference them (requestBodies → schemas/examples, responses →
+  // schemas/headers/examples/links, callbacks/pathItems last).
   const generators = [
-    {
-      data: components.responses,
-      configKey: 'responses',
-      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly, useOpenAPI),
-    },
     {
       data: components.parameters,
       configKey: 'parameters',
+      suffix: 'ParamsSchema',
       make: () => makeParametersCode(components.parameters!, schemaLib, parametersExportTypes),
-    },
-    {
-      data: components.requestBodies,
-      configKey: 'requestBodies',
-      make: () => makeRequestBodiesCode(components.requestBodies!, schemaLib, isReadonly),
     },
     {
       data: components.headers,
       configKey: 'headers',
-      make: () => makeHeadersCode(components.headers!, schemaLib, headersExportTypes),
+      suffix: 'HeaderSchema',
+      make: () => makeHeadersCode(components.headers!),
     },
     {
       data: components.examples,
       configKey: 'examples',
+      suffix: 'Example',
       make: () => makeExamplesCode(components.examples!, isReadonly),
     },
     {
       data: components.securitySchemes,
       configKey: 'securitySchemes',
+      suffix: 'SecurityScheme',
       make: () => makeSecuritySchemesCode(components.securitySchemes!, isReadonly),
     },
     {
       data: components.links,
       configKey: 'links',
+      suffix: 'Link',
       make: () => makeLinksCode(components.links!, isReadonly),
+    },
+    {
+      data: components.requestBodies,
+      configKey: 'requestBodies',
+      suffix: 'RequestBody',
+      make: () => makeRequestBodiesCode(components.requestBodies!, schemaLib, isReadonly),
+    },
+    {
+      data: components.responses,
+      configKey: 'responses',
+      suffix: 'Response',
+      make: () => makeResponsesCode(components.responses!, schemaLib, isReadonly, useOpenAPI),
     },
     {
       data: components.callbacks,
       configKey: 'callbacks',
+      suffix: 'Callback',
       make: () => makeCallbacksCode(components.callbacks!, isReadonly),
     },
     {
       data: components.pathItems,
       configKey: 'pathItems',
+      suffix: 'PathItem',
       make: () => makePathItemsCode(components.pathItems!, isReadonly),
     },
     {
       data: components.mediaTypes,
       configKey: 'mediaTypes',
+      suffix: 'MediaTypeSchema',
       make: () => makeMediaTypesCode(components.mediaTypes!, schemaLib, mediaTypesExportTypes),
     },
   ] as const satisfies readonly {
     readonly data: unknown
     readonly configKey: (typeof COMPONENT_KEYS)[number]
+    readonly suffix: string
     readonly make: () => string | Promise<string>
   }[]
+  // Single-file aggregate mode: schemas + every component in one file (imports are local, so only
+  // the schema-library import is needed).
+  if (layout.componentsSingleFile) {
+    const parts = await Promise.all([
+      components.schemas
+        ? makeSchemasCode(components.schemas, schemaLib, {
+            exportTypes: true,
+            readonly: isReadonly,
+            registerRef: useOpenAPI,
+          })
+        : Promise.resolve(''),
+      ...generators.map((gen) => (gen.data ? gen.make() : Promise.resolve(''))),
+    ])
+    const body = parts
+      .map((code) =>
+        code
+          .split('\n')
+          .filter((line) => !line.startsWith('import'))
+          .join('\n')
+          .trim(),
+      )
+      .filter(Boolean)
+      .join('\n\n')
+    const importLines = makeComponentImports(body, schemaLib, {})
+    const fullCode = importLines.length > 0 ? [...importLines, '', body].join('\n') : body
+    return emit(fullCode, path.dirname(layout.componentsSingleFile), layout.componentsSingleFile)
+  }
   const componentFiles = makeComponentFileMap(components, ohConfig, layout)
   for (const gen of generators) {
     if (!gen.data) continue
@@ -116,7 +158,14 @@ export async function makeComponents(
     const bodyCode = await gen.make()
     const result =
       isSplit && !output.endsWith('.ts')
-        ? await splitComponentCode(bodyCode, output, schemaLib, componentFiles, ohConfig)
+        ? await splitComponentCode(
+            bodyCode,
+            output,
+            schemaLib,
+            componentFiles,
+            ohConfig,
+            gen.suffix,
+          )
         : await emitMergedComponent(bodyCode, output, schemaLib, componentFiles, ohConfig)
     if (!result.ok) return result
   }
@@ -195,6 +244,7 @@ async function splitComponentCode(
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
   componentFiles: Record<string, string>,
   ohConfig: TakibiHonoOptions | undefined,
+  suffix?: string,
 ) {
   const declPattern = /export\s+const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/g
   const matches = Array.from(bodyCode.matchAll(declPattern), (m) => ({
@@ -206,7 +256,11 @@ async function splitComponentCode(
     return { name: m.name, code: bodyCode.slice(m.start, end).trim() }
   })
   if (entries.length === 0) return { ok: true, value: undefined } as const
-  const fileNames = entries.map((entry) => entry.name.charAt(0).toLowerCase() + entry.name.slice(1))
+  const fileNames = entries.map((entry) => {
+    const baseName =
+      suffix && entry.name.endsWith(suffix) ? entry.name.slice(0, -suffix.length) : entry.name
+    return baseName.charAt(0).toLowerCase() + baseName.slice(1)
+  })
   for (const [i, entry] of entries.entries()) {
     const fileName = fileNames[i]
     const filePath = path.join(outputDir, `${fileName}.ts`)

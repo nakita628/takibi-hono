@@ -44,96 +44,166 @@ export default defineConfig({
   // OpenAPI spec file (.yaml, .json, or .tsp)
   input: 'openapi.yaml',
 
-  // Schema library for validation
-  schema: 'zod', // "zod" | "valibot" | "typebox" | "arktype" | "effect"
+  // Handler stub output directory (any directory you like; default 'src/handlers')
+  output: 'src/handlers',
 
   // Base path prefix for all routes
   basePath: '/api',
 
-  // Enable hono-openapi style output
-  // @see https://hono.dev/examples/hono-openapi
+  // Schema library for validation
+  schema: 'zod', // 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
+
+  // Enable hono-openapi style output (@see https://hono.dev/examples/hono-openapi)
   openapi: true,
 
-  // oxfmt FormatOptions for generated code output
-  // @see https://www.npmjs.com/package/oxfmt
+  // oxfmt FormatConfig for generated code output
   // format: {},
 
-  // Code generation options
-  'takibi-hono': {
-    readonly: true, // Add 'as const' to generated schemas
+  // Add `.readonly()` to generated schemas
+  readonly: true,
 
-    // Export type inference from schemas
-    exportSchemasTypes: true,
-    exportParametersTypes: true,
-    exportHeadersTypes: true,
+  // Resolve generated imports through a path alias instead of relative paths
+  // (matches the `paths` in your tsconfig, e.g. "@/*": ["src/*"])
+  pathAlias: '@/',
 
-    // Handler stub generation
-    handlers: {
-      output: './src/handlers', // Output directory for handler files
+  // Components (OpenAPI Components Object). `output` (single-file aggregate) and
+  // the per-type fields below are mutually exclusive — pick one mode. `split: true`
+  // makes a per-type `output` a directory (one file per entry + an index.ts
+  // barrel); omit it (default `false`) for a single bundled `.ts` file. `import`
+  // overrides the auto-derived specifier. `exportTypes: true` adds
+  // `export type X = z.infer<typeof XSchema>` aliases on schemas / parameters /
+  // headers / mediaTypes.
+  //
+  // Single-file mode:
+  // components: { output: 'src/components.ts' },
+  components: {
+    schemas: {
+      output: 'src/components/schemas',
+      split: true,
+      import: '../schemas',
+      exportTypes: true,
     },
+    responses: {
+      output: 'src/components/responses',
+      split: true,
+      import: '../responses',
+    },
+    parameters: {
+      output: 'src/components/parameters',
+      split: true,
+      import: '../parameters',
+      exportTypes: true,
+    },
+    examples: {
+      output: 'src/components/examples',
+      split: true,
+      import: '../examples',
+    },
+    requestBodies: {
+      output: 'src/components/requestBodies',
+      split: true,
+      import: '../requestBodies',
+    },
+    headers: {
+      output: 'src/components/headers',
+      split: true,
+      import: '../headers',
+      exportTypes: true,
+    },
+    securitySchemes: {
+      output: 'src/components/securitySchemes',
+      split: true,
+      import: '../securitySchemes',
+    },
+    links: {
+      output: 'src/components/links',
+      split: true,
+      import: '../links',
+    },
+    callbacks: {
+      output: 'src/components/callbacks',
+      split: true,
+      import: '../callbacks',
+    },
+    pathItems: {
+      output: 'src/components/pathItems',
+      split: true,
+      import: '../pathItems',
+    },
+    mediaTypes: {
+      output: 'src/components/mediaTypes',
+      split: true,
+      import: '../mediaTypes',
+      exportTypes: true,
+    },
+  },
 
-    // Split components into separate files (OpenAPI Components Object)
-    components: {
-      output: './src/components', // Single file output for all components
-
-      schemas: {
-        output: './src/schemas',
-        exportTypes: true,
-        split: true,
-        import: '../schemas',
-      },
-      parameters: {
-        output: './src/parameters',
-        exportTypes: true,
-        split: true,
-        import: '../parameters',
-      },
-      headers: {
-        output: './src/headers',
-        exportTypes: true,
-        split: true,
-        import: '../headers',
-      },
-      securitySchemes: {
-        output: './src/securitySchemes',
-        split: true,
-        import: '../securitySchemes',
-      },
-      requestBodies: {
-        output: './src/requestBodies',
-        split: true,
-        import: '../requestBodies',
-      },
-      responses: {
-        output: './src/responses',
-        split: true,
-        import: '../responses',
-      },
-      examples: {
-        output: './src/examples',
-        split: true,
-        import: '../examples',
-      },
-      links: {
-        output: './src/links',
-        split: true,
-        import: '../links',
-      },
-      callbacks: {
-        output: './src/callbacks',
-        split: true,
-        import: '../callbacks',
-      },
-      pathItems: {
-        output: './src/pathItems',
-        split: true,
-        import: '../pathItems',
-      },
-      webhooks: {
-        output: './src/webhooks',
-        split: true,
-        import: '../webhooks',
-      },
+  // Client-code generators (RPC + framework query hooks + types + docs). Each
+  // generator takes `output` + `import`; `client` is the exported client variable
+  // (default 'client'). Query-hook keys are camelCase (`tanstackQuery`, ...).
+  client: {
+    rpc: {
+      output: 'src/rpc',
+      import: '../lib',
+      split: true,
+      client: 'client',
+      parseResponse: true,
+      docs: false, // operation summary/description as JSDoc
+    },
+    swr: {
+      output: 'src/swr',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    tanstackQuery: {
+      output: 'src/tanstack-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    svelteQuery: {
+      output: 'src/svelte-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    vueQuery: {
+      output: 'src/vue-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    preactQuery: {
+      output: 'src/preact-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    solidQuery: {
+      output: 'src/solid-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    angularQuery: {
+      output: 'src/angular-query',
+      import: '../lib',
+      split: true,
+      client: 'client',
+    },
+    // Self-contained `App` type for RPC client distribution
+    type: {
+      output: 'src/types.ts',
+      readonly: true,
+    },
+    // API reference docs
+    docs: {
+      output: 'src/docs',
+      entry: 'src/index.ts',
+      basePath: '/api',
+      curl: true,
+      baseUrl: 'http://localhost:3000',
     },
   },
 })
@@ -222,11 +292,7 @@ export const honoHandler = new Hono().get(
     responses: {
       200: {
         description: 'The request has succeeded.',
-        content: {
-          'application/json': {
-            schema: resolver(v.object({ message: v.string() })),
-          },
-        },
+        content: { 'application/json': { schema: resolver(v.object({ message: v.string() })) } },
       },
     },
   }),
@@ -249,7 +315,7 @@ export default app
 You write your logic in the handler body. On the next regeneration, your code is preserved:
 
 ```ts
-(c) => return c.json({ message: 'Takibi Hono🔥' }),
+;(c) => c.json({ message: 'Takibi Hono🔥' })
 ```
 
 ## License

@@ -236,7 +236,16 @@ describe('schemaToInlineExpression', () => {
         required: ['name'],
       }
       expect(schemaToInlineExpression(schema, 'zod')).toBe(
-        'z.object({name:z.string(),age:z.int().optional()})',
+        'z.object({name:z.string(),age:z.int().exactOptional()})',
+      )
+    })
+    it.concurrent('quotes a non-identifier property key (dotted name)', () => {
+      const schema: Schema = {
+        type: 'object',
+        properties: { 'Parameter1.Name': { type: 'string' } },
+      }
+      expect(schemaToInlineExpression(schema, 'zod')).toBe(
+        'z.object({"Parameter1.Name":z.string().exactOptional()})',
       )
     })
     it.concurrent('enum', () => {
@@ -600,10 +609,14 @@ describe('schemaToInlineExpression', () => {
   // --- 4. enum values (string, numeric, mixed) ---
   describe('enum values', () => {
     it.concurrent('zod: numeric enum', () => {
-      expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'zod')).toBe('z.enum([1,2,3])')
+      expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'zod')).toBe(
+        'z.union([z.literal(1),z.literal(2),z.literal(3)])',
+      )
     })
     it.concurrent('zod: mixed enum', () => {
-      expect(schemaToInlineExpression({ enum: ['a', 1, true] }, 'zod')).toBe('z.enum(["a",1,true])')
+      expect(schemaToInlineExpression({ enum: ['a', 1, true] }, 'zod')).toBe(
+        'z.union([z.literal("a"),z.literal(1),z.literal(true)])',
+      )
     })
     it.concurrent('valibot: numeric enum', () => {
       expect(schemaToInlineExpression({ enum: [1, 2, 3] }, 'valibot')).toBe('v.picklist([1,2,3])')
@@ -688,7 +701,7 @@ describe('schemaToInlineExpression', () => {
         required: ['address'],
       }
       expect(schemaToInlineExpression(schema, 'zod')).toBe(
-        'z.object({address:z.object({city:z.string(),zip:z.string().optional()})})',
+        'z.object({address:z.object({city:z.string(),zip:z.string().exactOptional()})})',
       )
     })
     it.concurrent('valibot: nested object', () => {
@@ -736,7 +749,7 @@ describe('schemaToInlineExpression', () => {
         required: ['meta'],
       }
       expect(schemaToInlineExpression(schema, 'arktype')).toBe(
-        'type({\'meta\':"type({\'version\':\\"number\\"})"})',
+        "type({'meta':type({'version':\"number\"})})",
       )
     })
     it.concurrent('effect: nested object', () => {
@@ -1324,7 +1337,7 @@ describe('schemaToInlineExpression', () => {
 
     it.concurrent('effect: description + example → .annotations({description,examples})', () => {
       expect(schemaToInlineExpression(userWithExample, 'effect')).toBe(
-        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user",examples:[{id:1,name:"Alice"}]})',
+        'Schema.Struct({id:Schema.Number.pipe(Schema.int()),name:Schema.String}).annotations({description:"A user",jsonSchema:{examples:[{id:1,name:"Alice"}]}})',
       )
     })
 

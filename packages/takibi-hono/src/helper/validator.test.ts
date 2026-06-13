@@ -14,7 +14,7 @@ describe('makeValidators', () => {
     }
     const result = makeValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual([
-      "validator('query',z.object({page:z.coerce.int().optional(),limit:z.coerce.int()}))",
+      "validator('query',z.object({page:z.coerce.number().int().exactOptional(),limit:z.coerce.number().int()}))",
     ])
   })
 
@@ -93,6 +93,24 @@ describe('makeValidators', () => {
     const result = makeValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual(["validator('json',z.intersection(BaseSchema,ExtraSchema))"])
   })
+
+  it.concurrent('collapses multiple json content types to a single json validator', () => {
+    const operation: Operation = {
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/CreateUser' },
+          },
+          'text/plain': {
+            schema: { type: 'string' },
+          },
+        },
+      },
+      responses: { '201': { description: 'Created' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual(["validator('json',CreateUserSchema)"])
+  })
 })
 
 describe('makeStandardValidators', () => {
@@ -169,7 +187,7 @@ describe('makeStandardValidators', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["sValidator('query',z.object({page:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["sValidator('query',z.object({page:z.coerce.number().int()}))"])
   })
 
   it.concurrent('zod: query coercion for boolean', () => {
@@ -196,7 +214,7 @@ describe('makeStandardValidators', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["sValidator('param',z.object({id:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["sValidator('param',z.object({id:z.coerce.number().int()}))"])
   })
 
   it.concurrent('zod: path number is coerced', () => {
@@ -228,25 +246,25 @@ describe('makeStandardValidators', () => {
     ])
   })
 
-  it.concurrent('typebox: path integer uses Transform.Decode (wire-coerce via schema-to-library)', () => {
+  it.concurrent('typebox: path integer uses Codec.Decode (wire-coerce via schema-to-library)', () => {
     const operation: Operation = {
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'typebox')
     expect(result).toStrictEqual([
-      "tbValidator('param',Type.Object({id:Type.Transform(Type.String()).Decode((v)=>Number.parseInt(v,10)).Encode((v)=>String(v))}))",
+      "tbValidator('param',Type.Object({id:Codec(Type.String()).Decode((v)=>Number.parseInt(v,10)).Encode((v)=>String(v))}))",
     ])
   })
 
-  it.concurrent('typebox: query boolean uses Transform.Decode (wire-coerce via schema-to-library)', () => {
+  it.concurrent('typebox: query boolean uses Codec.Decode (wire-coerce via schema-to-library)', () => {
     const operation: Operation = {
       parameters: [{ name: 'flag', in: 'query', required: true, schema: { type: 'boolean' } }],
       responses: { '200': { description: 'OK' } },
     }
     const result = makeStandardValidators(operation, undefined, 'typebox')
     expect(result).toStrictEqual([
-      "tbValidator('query',Type.Object({flag:Type.Transform(Type.Union([Type.Literal('true'),Type.Literal('false')])).Decode((v)=>v==='true').Encode((v)=>v?'true':'false')}))",
+      "tbValidator('query',Type.Object({flag:Codec(Type.Union([Type.Literal('true'),Type.Literal('false')])).Decode((v)=>v==='true').Encode((v)=>v?'true':'false')}))",
     ])
   })
 
@@ -314,7 +332,7 @@ describe('makeStandardValidators', () => {
     }
     const result = makeStandardValidators(operation, undefined, 'zod')
     expect(result).toStrictEqual([
-      "sValidator('query',z.object({limit:z.coerce.int().optional()}))",
+      "sValidator('query',z.object({limit:z.coerce.number().int().exactOptional()}))",
     ])
   })
 })
@@ -417,7 +435,7 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('param',z.object({id:z.coerce.int()}))"])
+    expect(result).toStrictEqual(["validator('param',z.object({id:z.coerce.number().int()}))"])
   })
 
   it.concurrent('does NOT emit coerce for header integer (header is not wire-string scope)', () => {
@@ -426,7 +444,9 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('header',z.object({traceId:z.int().optional()}))"])
+    expect(result).toStrictEqual([
+      "validator('header',z.object({traceId:z.int().exactOptional()}))",
+    ])
   })
 
   it.concurrent('does NOT emit coerce for cookie integer (cookie is not wire-string scope)', () => {
@@ -435,7 +455,7 @@ describe('makeValidators — wire-string coerce contract', () => {
       responses: { '200': { description: 'OK' } },
     }
     const result = makeValidators(operation, undefined, 'zod')
-    expect(result).toStrictEqual(["validator('cookie',z.object({sid:z.int().optional()}))"])
+    expect(result).toStrictEqual(["validator('cookie',z.object({sid:z.int().exactOptional()}))"])
   })
 
   it.concurrent('resolves requestBody $ref via components and emits json validator', () => {
@@ -452,5 +472,41 @@ describe('makeValidators — wire-string coerce contract', () => {
       },
     })
     expect(result).toStrictEqual(["validator('json',UserSchema)"])
+  })
+})
+
+// ─── object-key safety: non-identifier parameter names must be quoted ──
+describe('makeValidators — non-identifier parameter names are quoted keys', () => {
+  it.concurrent('quotes a hyphenated header name (X-Request-ID)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'X-Request-ID', in: 'header', schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([
+      `validator('header',z.object({"X-Request-ID":z.string().exactOptional()}))`,
+    ])
+  })
+
+  it.concurrent('quotes a hyphenated query name (page-size)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'page-size', in: 'query', required: true, schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([`validator('query',z.object({"page-size":z.string()}))`])
+  })
+})
+
+describe('makeStandardValidators — non-identifier parameter names are quoted keys', () => {
+  it.concurrent('quotes a hyphenated header name (X-Request-ID)', () => {
+    const operation: Operation = {
+      parameters: [{ name: 'X-Request-ID', in: 'header', schema: { type: 'string' } }],
+      responses: { '200': { description: 'OK' } },
+    }
+    const result = makeStandardValidators(operation, undefined, 'zod')
+    expect(result).toStrictEqual([
+      `sValidator('header',z.object({"X-Request-ID":z.string().exactOptional()}))`,
+    ])
   })
 })

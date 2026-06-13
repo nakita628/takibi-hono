@@ -33,13 +33,27 @@ function* iterateRouteCalls(file: SourceFile) {
   for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const expr = call.getExpression()
     if (!Node.isPropertyAccessExpression(expr)) continue
-    const method = expr.getName()
-    if (!['get', 'post', 'put', 'patch', 'delete', 'options', 'head'].includes(method)) continue
+    const callName = expr.getName()
     const args = call.getArguments()
+    if (callName === 'on') {
+      if (args.length < 3) continue
+      const methodArg = args[0]
+      const pathArg = args[1]
+      if (!Node.isStringLiteral(methodArg) || !Node.isStringLiteral(pathArg)) continue
+      yield {
+        call,
+        propAccess: expr,
+        method: methodArg.getLiteralValue().toLowerCase(),
+        routePath: pathArg.getLiteralValue(),
+        args,
+      }
+      continue
+    }
+    if (!['get', 'post', 'put', 'patch', 'delete', 'options'].includes(callName)) continue
     if (args.length < 2) continue
     const pathArg = args[0]
     if (!Node.isStringLiteral(pathArg)) continue
-    yield { call, propAccess: expr, method, routePath: pathArg.getLiteralValue(), args }
+    yield { call, propAccess: expr, method: callName, routePath: pathArg.getLiteralValue(), args }
   }
 }
 
@@ -180,8 +194,14 @@ function restoreRouteComments(
       const method = key.slice(0, colonIdx)
       const routePath = key.slice(colonIdx + 1)
       const escapedPath = routePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const pattern = new RegExp(`\\.${method}\\('${escapedPath}'`)
-      return result.replace(pattern, `\n  ${info.comment}\n  .${method}('${escapedPath}'`)
+      const isChainMethod = ['get', 'post', 'put', 'patch', 'delete', 'options'].includes(method)
+      const pattern = isChainMethod
+        ? new RegExp(`\\.${method}\\('${escapedPath}'`)
+        : new RegExp(`\\.on\\('${method.toUpperCase()}','${escapedPath}'`)
+      const callLiteral = isChainMethod
+        ? `.${method}('${routePath}'`
+        : `.on('${method.toUpperCase()}','${routePath}'`
+      return result.replace(pattern, `\n  ${info.comment}\n  ${callLiteral}`)
     }, code)
 }
 

@@ -24,7 +24,7 @@ describe('makeSchemasCode', () => {
     expect(result).toBe(
       `import*as z from'zod'
 
-export const UserSchema = z.object({name:z.string(),age:z.int().optional()})`,
+export const UserSchema = z.object({name:z.string(),age:z.int().exactOptional()})`,
     )
   })
 
@@ -179,6 +179,30 @@ export type User = typeof UserSchema.infer`,
     )
   })
 
+  it.concurrent('should emit the ArkEnv ref augmentation when registerRef is true (arktype)', async () => {
+    const result = await makeSchemasCode(
+      {
+        User: {
+          type: 'object',
+          properties: { name: { type: 'string' } },
+          required: ['name'],
+        },
+      },
+      'arktype',
+      { registerRef: true },
+    )
+    expect(result).toBe(
+      `import{type}from'arktype'
+declare global {
+  interface ArkEnv {
+    meta(): { ref?: string }
+  }
+}
+
+export const UserSchema = type({name:"string"}).configure({ref:"User"})`,
+    )
+  })
+
   it.concurrent('should export Encoded type only when exportTypes is true (effect)', async () => {
     const result = await makeSchemasCode(
       {
@@ -196,7 +220,7 @@ export type User = typeof UserSchema.infer`,
 
 export const UserSchema = Schema.Struct({name:Schema.String})
 
-export type User = typeof UserSchema.Encoded`,
+export type UserSchema = typeof UserSchema.Type`,
     )
   })
 
@@ -230,6 +254,124 @@ export type Todo = z.infer<typeof TodoSchema>`,
     )
   })
 
+  it.concurrent('should rename the cyclic helper alias when a sibling schema key claims its name', async () => {
+    const result = await makeSchemasCode(
+      {
+        EventType: { type: 'string', enum: ['created', 'updated'] },
+        Event: {
+          type: 'object',
+          properties: {
+            type: { $ref: '#/components/schemas/EventType' },
+            children: { type: 'array', items: { $ref: '#/components/schemas/Event' } },
+          },
+        },
+      },
+      'zod',
+      { exportTypes: true },
+    )
+    expect(result).toBe(
+      `import*as z from'zod'
+
+export const EventTypeSchema = z.enum(["created","updated"])
+
+export type EventType = z.infer<typeof EventTypeSchema>
+
+type EventType2={type?:z.infer<typeof EventTypeSchema>;children?:EventType2[]}
+
+export const EventSchema:z.ZodType<EventType2>= z.lazy(() => z.object({type:EventTypeSchema.exactOptional(),children:z.array(EventSchema).exactOptional()}))
+
+export type Event = z.infer<typeof EventSchema>`,
+    )
+  })
+
+  it.concurrent('should emit every case-colliding schema key as a distinct suffixed declaration', async () => {
+    const result = await makeSchemasCode(
+      {
+        user: { type: 'object', properties: { id: { type: 'string' } } },
+        User: { type: 'object', properties: { id: { type: 'integer' } } },
+        USER: { type: 'object', properties: { id: { type: 'number' } } },
+      },
+      'zod',
+      { exportTypes: true },
+    )
+    expect(result).toBe(
+      `import*as z from'zod'
+
+export const UserSchema = z.object({id:z.string().exactOptional()})
+
+export type User = z.infer<typeof UserSchema>
+
+export const User2Schema = z.object({id:z.int().exactOptional()})
+
+export type User2 = z.infer<typeof User2Schema>
+
+export const USERSchema = z.object({id:z.number().exactOptional()})
+
+export type USER = z.infer<typeof USERSchema>`,
+    )
+  })
+
+  it.concurrent('should keep each type alias adjacent to its schema when a cross-ref hoists a dependency (zod)', async () => {
+    const result = await makeSchemasCode(
+      {
+        Order: { type: 'object', properties: { id: { type: 'integer' } } },
+        Customer: {
+          type: 'object',
+          properties: { address: { $ref: '#/components/schemas/Address' } },
+        },
+        Address: { type: 'object', properties: { city: { type: 'string' } } },
+      },
+      'zod',
+      { exportTypes: true },
+    )
+    expect(result).toBe(
+      `import*as z from'zod'
+
+export const OrderSchema = z.object({id:z.int().exactOptional()})
+
+export type Order = z.infer<typeof OrderSchema>
+
+export const AddressSchema = z.object({city:z.string().exactOptional()})
+
+export type Address = z.infer<typeof AddressSchema>
+
+export const CustomerSchema = z.object({address:AddressSchema.exactOptional()})
+
+export type Customer = z.infer<typeof CustomerSchema>`,
+    )
+  })
+
+  it.concurrent('should keep each type alias adjacent to its schema when a cross-ref hoists a dependency (typebox)', async () => {
+    const result = await makeSchemasCode(
+      {
+        Order: { type: 'object', properties: { id: { type: 'integer' } } },
+        Customer: {
+          type: 'object',
+          properties: { address: { $ref: '#/components/schemas/Address' } },
+        },
+        Address: { type: 'object', properties: { city: { type: 'string' } } },
+      },
+      'typebox',
+      { exportTypes: true },
+    )
+    expect(result).toBe(
+      `import Type from'typebox'
+import type{Static}from'typebox'
+
+export const OrderSchema = Type.Object({id:Type.Optional(Type.Integer())})
+
+export type Order = Static<typeof OrderSchema>
+
+export const AddressSchema = Type.Object({city:Type.Optional(Type.String())})
+
+export type Address = Static<typeof AddressSchema>
+
+export const CustomerSchema = Type.Object({address:Type.Optional(AddressSchema)})
+
+export type Customer = Static<typeof CustomerSchema>`,
+    )
+  })
+
   it.concurrent('should export Encoded type with description and example (effect)', async () => {
     const result = await makeSchemasCode(
       {
@@ -247,9 +389,9 @@ export type Todo = z.infer<typeof TodoSchema>`,
     expect(result).toBe(
       `import{Schema}from'effect'
 
-export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",examples:[{name:"Buddy"}]})
+export const PetSchema = Schema.Struct({name:Schema.String}).annotations({description:"A pet",jsonSchema:{examples:[{name:"Buddy"}]}})
 
-export type Pet = typeof PetSchema.Encoded`,
+export type PetSchema = typeof PetSchema.Type`,
     )
   })
 
@@ -408,7 +550,7 @@ export const PetSchema = v.pipe(v.object({name:v.string()}),v.description("A pet
 
 type CategoryType={name:string;children?:CategoryType[]}
 
-export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).optional()}))`,
+export const CategorySchema:z.ZodType<CategoryType>= z.lazy(() => z.object({name:z.string(),children:z.array(CategorySchema).exactOptional()}))`,
     )
   })
 
@@ -517,7 +659,7 @@ export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Stru
   })
 
   // --- typebox self-referencing ---
-  it.concurrent('should apply Type.Recursive wrapper for circular self-referencing schemas with typebox', async () => {
+  it.concurrent('should wrap a self-referencing schema in a single-member Type.Module (typebox)', async () => {
     const result = await makeSchemasCode(
       {
         Category: {
@@ -537,7 +679,7 @@ export const CategorySchema:Schema.Schema<any>= Schema.suspend(() => Schema.Stru
     expect(result).toBe(
       `import Type from'typebox'
 
-export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.String(),children:Type.Optional(Type.Array(This))}))`,
+export const CategorySchema = Type.Module({Category:Type.Object({name:Type.String(),children:Type.Optional(Type.Array(Type.Ref('Category')))})}).Category`,
     )
   })
 
@@ -561,8 +703,9 @@ export const CategorySchema = Type.Recursive(This => Type.Object({name:Type.Stri
     )
     expect(result).toBe(
       `import{type}from'arktype'
+import{scope}from'arktype'
 
-export const CategorySchema = type({name:"string","children?":"CategorySchema[]"})`,
+export const CategorySchema = scope({Category:{name:"string","children?":"Category[]"}}).export().Category`,
     )
   })
 
@@ -881,7 +1024,7 @@ export type Pet = z.infer<typeof PetSchema>
 
 export const PetSchema = Schema.Struct({ name: Schema.String })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 `,
     )
   })

@@ -38,6 +38,11 @@ const SCAN = new RegExp(
     String.raw`\`(?:\\.|[^\`\\])*\``,
     String.raw`//[^\n]*`,
     String.raw`/\*[\s\S]*?\*/`,
+    // A regex literal (e.g. `Schema.pattern(/^https?:\/\//)`) must be consumed
+    // whole — on unformatted single-line code its trailing `\/\//` otherwise
+    // reads as a `//` comment that swallows the rest of the handler. The
+    // lookbehind restricts to argument position so division is never matched.
+    String.raw`(?<=[(,=:]\s*)/(?:\\.|[^/\\\n])+/[a-z]*`,
     `\\b(${JS_IDENT}(?:${COMPONENT_SUFFIXES.map(([, suf]) => suf).join('|')}))\\b`,
   ].join('|'),
   'g',
@@ -76,8 +81,13 @@ function collectComponentImportLines(
   },
   defined: ReadonlySet<string>,
 ): readonly string[] {
-  const grouped = Array.from(code.matchAll(SCAN), (m) => m[1])
-    .filter((name): name is string => Boolean(name) && !defined.has(name))
+  // An identifier directly followed by `:` (allowing `?:`) is an object-literal
+  // or type-literal key (e.g. a form field named `SAMLResponse`), not a
+  // reference — references in a ternary keep oxfmt's ` : ` spacing.
+  const grouped = Array.from(code.matchAll(SCAN), (m) =>
+    /^\??:/.test(code.slice((m.index ?? 0) + m[0].length)) ? undefined : m[1],
+  )
+    .filter((name): name is string => name !== undefined && !defined.has(name))
     .reduce<ReadonlyMap<string, ReadonlySet<string>>>((acc, name) => {
       const kind = classifyRef(name)
       if (!kind) return acc
@@ -87,9 +97,18 @@ function collectComponentImportLines(
   // instead of scan-encounter order, which varies with source layout.
   return COMPONENT_SUFFIXES.flatMap(([kind]) => {
     const names = grouped.get(kind)
-    const importPath = componentPaths[kind]
-    if (!names || !importPath) return []
-    return [renderNamedImport([...names].toSorted(), importPath)]
+    if (!names) return []
+    const ownPath = componentPaths[kind]
+    if (ownPath) return [renderNamedImport([...names].toSorted(), ownPath)]
+    // No dedicated path (e.g. basic mode): a `*Schema` export may be a schema
+    // whose suffix made classifyRef pick a non-schemas kind (e.g. a schema named
+    // `searchParams` → `SearchParamsSchema`). Those co-live in the schemas module,
+    // so import them from there; drop the rest (identifiers the scan over-matched,
+    // such as a form field named `StatusCallback`).
+    const schemaPath = componentPaths['schemas']
+    const schemaNames = [...names].filter((n) => n.endsWith('Schema'))
+    if (!schemaPath || schemaNames.length === 0) return []
+    return [renderNamedImport(schemaNames.toSorted(), schemaPath)]
   })
 }
 
@@ -105,6 +124,8 @@ export function makeComponentImports(
   return [
     ...(code.includes('resolver(') ? ["import{resolver}from'hono-openapi'"] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
     ...(schemaLib === 'typebox' && code.includes('Static<typeof ')
@@ -141,6 +162,8 @@ export function makeImports(
     "import{Hono}from'hono'",
     ...(honoOpenApiImport ? [honoOpenApiImport] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...(code.includes('standardSchemaV1(') ? ["import{standardSchemaV1}from'effect/Schema'"] : []),
     ...(code.includes('Compile(') ? ["import{Compile}from'typebox/compile'"] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
@@ -162,6 +185,8 @@ export function makeStandardImports(
     "import{Hono}from'hono'",
     ...(code.includes(`${svConfig.validatorFn}(`) ? [svConfig.validatorImport] : []),
     ...(code.includes(SCHEMA_LIB_PATTERNS[schemaLib]) ? [config.schemaImport] : []),
+    ...(schemaLib === 'typebox' && code.includes('Codec(') ? ["import{Codec}from'typebox'"] : []),
+    ...(schemaLib === 'arktype' && code.includes('scope(') ? ["import{scope}from'arktype'"] : []),
     ...collectComponentImportLines(code, componentPaths, defined),
   ] as const
 }

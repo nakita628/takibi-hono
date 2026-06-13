@@ -345,6 +345,25 @@ describe('detectCircularRefs', () => {
     expect(result.size).toBe(1)
   })
 
+  it.concurrent('should detect self-reference whose $ref is percent-encoded (non-ASCII name)', () => {
+    const schemas: { [k: string]: Schema } = {
+      日本語スキーマ: {
+        type: 'object',
+        properties: {
+          子要素: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%9E',
+            },
+          },
+        },
+      },
+    }
+    const result = detectCircularRefs(schemas)
+    expect(result.has('日本語スキーマ')).toBe(true)
+    expect(result.size).toBe(1)
+  })
+
   it.concurrent('should detect mutual circular references', () => {
     const schemas: { [k: string]: Schema } = {
       A: {

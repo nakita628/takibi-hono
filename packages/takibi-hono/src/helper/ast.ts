@@ -151,7 +151,25 @@ export function ast(code: string): string {
   const sourceFile = makeSourceFile(code)
   const decls = parseStatements(sourceFile)
   if (decls.length === 0) return code
+  // topoSort orders statements by value refs alone, which can pull a referenced
+  // schema const between another const and its inferred type alias. Type aliases
+  // are hoisted, so re-attaching each one directly after its schema const keeps
+  // the `const XSchema` / `type X` pair adjacent without affecting correctness.
+  const companions = new Map(
+    decls.flatMap((d, i) => {
+      const next = decls[i + 1]
+      return d.kind === 'variable' && next?.kind === 'type' && next.refs.includes(d.name)
+        ? [[d, next] as const]
+        : []
+    }),
+  )
+  const companionTypes = new Set(companions.values())
   return topoSort(decls)
+    .filter((d) => !companionTypes.has(d))
+    .flatMap((d) => {
+      const companion = companions.get(d)
+      return companion ? [d, companion] : [d]
+    })
     .map((d) => d.fullText)
     .join('\n\n')
 }
@@ -247,7 +265,11 @@ function tarjanConnect(
 function collectRefs(schema: Schema): readonly string[] {
   const selfRef =
     schema.$ref && schema.$ref.startsWith('#/components/schemas/')
-      ? [schema.$ref.split('/').at(-1) ?? '']
+      ? // $ref tails are percent-encoded by the bundler for non-ASCII names
+        // (`日本語スキーマ` → `%E6%97%A5...`); decode so they match the decoded
+        // schema-map keys, otherwise self/cyclic Unicode refs go undetected and
+        // skip the required `z.lazy(...)` wrapper.
+        [decodeURIComponent(schema.$ref.split('/').at(-1) ?? '')]
       : []
   const itemRefs = schema.items
     ? isSchemaArray(schema.items)
@@ -275,7 +297,9 @@ function collectRefs(schema: Schema): readonly string[] {
   ]
 }
 
-export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): ReadonlySet<string> {
+function computeCircularSCCs(schemas: {
+  readonly [k: string]: Schema
+}): readonly (readonly string[])[] {
   const graph = new Map<string, readonly string[]>(
     Object.entries(schemas).map(([name, schema]) => [name, collectRefs(schema)]),
   )
@@ -284,14 +308,27 @@ export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): R
     (state, n) => (state.indices.has(n) ? state : tarjanConnect(n, graph, state)),
     createInitialState(),
   )
-  return new Set(
-    finalState.sccs.flatMap((scc) => {
-      if (scc.length > 1) return [...scc]
-      const single = scc[0]
-      if (!single) return []
-      return (graph.get(single) ?? []).includes(single) ? [single] : []
-    }),
-  )
+  return finalState.sccs.filter((scc) => {
+    if (scc.length > 1) return true
+    const single = scc[0]
+    return single !== undefined && (graph.get(single) ?? []).includes(single)
+  })
+}
+
+export function detectCircularRefs(schemas: { readonly [k: string]: Schema }): ReadonlySet<string> {
+  return new Set(computeCircularSCCs(schemas).flat())
+}
+
+/**
+ * Circular strongly-connected component groups: a mutual-recursion cluster
+ * (`length > 1`) or a self-referential schema (`length === 1` with a self-loop).
+ * Used to aggregate cyclic schemas into a single container (TypeBox `Type.Module`
+ * / arktype `scope`) where cross-member references resolve.
+ */
+export function detectCircularSCCGroups(schemas: {
+  readonly [k: string]: Schema
+}): readonly (readonly string[])[] {
+  return computeCircularSCCs(schemas)
 }
 
 const LAZY_WRAPPERS: Record<string, { readonly open: string; readonly close: string }> = {

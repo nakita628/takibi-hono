@@ -59,9 +59,7 @@ export type OpenAPI = BaseOpenAPI & {
     readonly [k: string]: PathItem
   }
   readonly components?: Components
-  readonly security?: {
-    readonly name?: readonly string[]
-  }
+  readonly security?: readonly { readonly [k: string]: readonly string[] }[]
   readonly tags?: {
     readonly name: string
     readonly summary?: string

@@ -26,7 +26,7 @@ describe('makeParametersCode', () => {
       },
     }
     const result = await makeParametersCode(parameters, 'zod')
-    expect(result).toBe('export const PageParamParamsSchema=z.int().optional()')
+    expect(result).toBe('export const PageParamParamsSchema=z.int().exactOptional()')
   })
 
   it.concurrent('should generate multiple parameter schemas', async () => {
@@ -45,7 +45,7 @@ describe('makeParametersCode', () => {
     }
     const result = await makeParametersCode(parameters, 'zod')
     expect(result).toBe(
-      'export const PageParamParamsSchema=z.int().optional()\n\nexport const LimitParamParamsSchema=z.int()',
+      'export const PageParamParamsSchema=z.int().exactOptional()\n\nexport const LimitParamParamsSchema=z.int()',
     )
   })
 

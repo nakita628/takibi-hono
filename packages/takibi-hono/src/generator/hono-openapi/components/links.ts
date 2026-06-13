@@ -14,7 +14,7 @@ export function makeLinksCode(links: NonNullable<Components['links']>, readonly?
           ? [`operationRef:${JSON.stringify(link.operationRef)}`]
           : []),
         ...('operationId' in link && link.operationId
-          ? [`operationId:${JSON.stringify(link.operationId)}`]
+          ? [`operationId:${JSON.stringify(String(link.operationId))}`]
           : []),
         ...('parameters' in link && link.parameters
           ? [`parameters:${JSON.stringify(link.parameters)}`]

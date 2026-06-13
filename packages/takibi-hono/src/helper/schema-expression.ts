@@ -39,73 +39,34 @@ function postProcess(
     .replace(new RegExp(`\\n*export\\s+type\\s+${varName}Input\\s*=\\s*[^\\n]+\\n?`), '')
     .replace(new RegExp(`export\\s+type\\s+${varName}Output\\s*=`), `export type ${pascalName} =`)
     .replace(new RegExp(`export\\s+type\\s+${varName}Encoded\\s*=`), `export type ${pascalName} =`)
-  return schemaLib === 'zod'
-    ? fixMultiArgCall(renamed, 'z.intersection')
-    : schemaLib === 'effect'
-      ? fixMultiArgCall(renamed, 'Schema.extend')
-      : renamed
+  return renamed
 }
 
-/** fn(A,B,C) → fn(fn(A,B),C) — `z.intersection` and `Schema.extend` only accept 2 args. */
-function fixMultiArgCall(code: string, fnName: string): string {
-  const escaped = fnName.replace(/\./g, '\\.')
-  const pattern = new RegExp(`${escaped}\\(`, 'g')
-  const matches = Array.from(code.matchAll(pattern), (m) => m.index!).reverse()
-
-  return matches.reduce((result, start) => {
-    const argsStart = start + fnName.length + 1
-    const args = extractTopLevelArgs(result, argsStart)
-    if (args.length <= 2) return result
-
-    const nested = args
-      .slice(2)
-      .reduce((acc, arg) => `${fnName}(${acc},${arg})`, `${fnName}(${args[0]},${args[1]})`)
-
-    const closeIdx = findClosingParen(result, argsStart - 1)
-    if (closeIdx === -1) return result
-
-    return result.slice(0, start) + nested + result.slice(closeIdx + 1)
-  }, code)
-}
-
-function extractTopLevelArgs(code: string, startIdx: number): string[] {
-  const args: string[] = []
-  let depth = 0
-  let current = ''
-
-  for (let i = startIdx; i < code.length; i++) {
-    const ch = code[i]
-    if (ch === '(' || ch === '[' || ch === '{') {
-      depth++
-      current += ch
-    } else if (ch === ')' || ch === ']' || ch === '}') {
-      if (depth === 0) {
-        if (current.trim()) args.push(current.trim())
-        break
-      }
-      depth--
-      current += ch
-    } else if (ch === ',' && depth === 0) {
-      if (current.trim()) args.push(current.trim())
-      current = ''
-    } else {
-      current += ch
-    }
+/**
+ * The arktype `scope({...})` first argument for a circular SCC group. arktype
+ * cannot resolve cross-schema references between standalone `type(...)` calls; a
+ * cyclic group must share one `scope`, where members reference each other by their
+ * scope key (a DSL keyword). Built by handing the group to schema-to-library as
+ * `definitions` (its scope path) and extracting the produced `scope({...})`.
+ */
+export function makeArktypeScopeBody(
+  group: readonly string[],
+  schemas: { readonly [k: string]: Schema },
+  readonly: boolean,
+): string {
+  const root = group[0]
+  if (root === undefined) return ''
+  // Keys = PascalCase names (matching how `$ref` tails resolve in scope mode);
+  // `title` makes the root one of those definitions so it is not duplicated as a
+  // stray `Schema` entry.
+  const definitions = Object.fromEntries(group.map((name) => [toPascalCase(name), schemas[name]]))
+  const jsonSchema: Record<string, unknown> = {
+    ...schemas[root],
+    title: toPascalCase(root),
+    definitions,
   }
-
-  return args
-}
-
-function findClosingParen(code: string, openIdx: number): number {
-  let depth = 0
-  for (let i = openIdx; i < code.length; i++) {
-    if (code[i] === '(') depth++
-    else if (code[i] === ')') {
-      depth--
-      if (depth === 0) return i
-    }
-  }
-  return -1
+  const code = schemaToArktype(jsonSchema, { readonly, exportType: false })
+  return code.match(/scope\((\{[\s\S]*\})\)\.export\(\)/)?.[1] ?? ''
 }
 
 export function extractSchemaExports(

@@ -75,6 +75,27 @@ describe('makeDescribeRoute', () => {
     )
   })
 
+  it.concurrent('should keep an empty-string response description (required by OpenAPI)', () => {
+    const operation: Operation = {
+      responses: {
+        '200': { description: '' },
+      },
+    }
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({responses:{200:{description:""}}})')
+  })
+
+  it.concurrent('should quote an operationId YAML parsed as a boolean (`operationId: true`)', () => {
+    const operation = {
+      operationId: true,
+      responses: {
+        '200': { description: 'OK' },
+      },
+    } as unknown as Operation
+    const result = makeDescribeRoute(operation, 'zod')
+    expect(result).toBe('describeRoute({operationId:"true",responses:{200:{description:"OK"}}})')
+  })
+
   it.concurrent('should include deprecated', () => {
     const operation: Operation = {
       deprecated: true,
@@ -83,7 +104,7 @@ describe('makeDescribeRoute', () => {
       },
     }
     const result = makeDescribeRoute(operation, 'zod')
-    expect(result).toBe('describeRoute({deprecated:true,responses:{200:{description:"OK"}}})')
+    expect(result).toBe('describeRoute({responses:{200:{description:"OK"}},deprecated:true})')
   })
 
   it.concurrent('should not include deprecated when false', () => {
@@ -106,7 +127,7 @@ describe('makeDescribeRoute', () => {
     }
     const result = makeDescribeRoute(operation, 'zod')
     expect(result).toBe(
-      'describeRoute({security:{"name":["bearerAuth"]},responses:{200:{description:"OK"}}})',
+      'describeRoute({responses:{200:{description:"OK"}},security:{"name":["bearerAuth"]}})',
     )
   })
 
@@ -150,7 +171,7 @@ describe('makeDescribeRoute', () => {
     }
     const result = makeDescribeRoute(operation, 'zod')
     expect(result).toBe(
-      'describeRoute({servers:[{url:"https://api.example.com",description:"Production"}],responses:{200:{description:"OK"}}})',
+      'describeRoute({responses:{200:{description:"OK"}},servers:[{url:"https://api.example.com",description:"Production"}]})',
     )
   })
 
@@ -170,7 +191,7 @@ describe('makeDescribeRoute', () => {
     }
     const result = makeDescribeRoute(operation, 'zod')
     expect(result).toBe(
-      'describeRoute({servers:[{url:"https://{env}.example.com",variables:{env:{enum:["prod","staging"],default:"prod",description:"Environment"}}}],responses:{200:{description:"OK"}}})',
+      'describeRoute({responses:{200:{description:"OK"}},servers:[{url:"https://{env}.example.com",variables:{env:{enum:["prod","staging"],default:"prod",description:"Environment"}}}]})',
     )
   })
 
@@ -207,7 +228,7 @@ describe('makeDescribeRoute', () => {
     }
     const result = makeDescribeRoute(operation, 'zod')
     expect(result).toBe(
-      'describeRoute({description:"Get users",summary:"List users",tags:["users"],operationId:"listUsers",deprecated:true,responses:{200:{description:"OK"}}})',
+      'describeRoute({tags:["users"],summary:"List users",description:"Get users",operationId:"listUsers",responses:{200:{description:"OK"}},deprecated:true})',
     )
   })
 
@@ -469,7 +490,7 @@ describe('makeDescribeRoute', () => {
 
   // --- field ordering and edge cases ---
 
-  it.concurrent('emits fields in fixed order: description, summary, tags, operationId, deprecated, security, externalDocs, servers, responses', () => {
+  it.concurrent('emits fields in the Operation type declaration order: tags, summary, description, externalDocs, operationId, responses, deprecated, security, servers', () => {
     // `security` is typed as a single object; we exercise the array form which
     // the impl JSON-stringifies as-is. Cast at the test boundary.
     const result = makeDescribeRoute(
@@ -485,7 +506,7 @@ describe('makeDescribeRoute', () => {
       'zod',
     )
     expect(result).toBe(
-      'describeRoute({description:"d",summary:"s",tags:["t1","t2"],operationId:"op",deprecated:true,security:[{"name":["s1"]}],responses:{200:{description:"OK"}}})',
+      'describeRoute({tags:["t1","t2"],summary:"s",description:"d",operationId:"op",responses:{200:{description:"OK"}},deprecated:true,security:[{"name":["s1"]}]})',
     )
   })
 
@@ -521,7 +542,7 @@ describe('makeDescribeRoute', () => {
         { summary: 'X', security: [], responses: { 200: { description: 'OK' } } } as never,
         'zod',
       ),
-    ).toBe('describeRoute({summary:"X",security:[],responses:{200:{description:"OK"}}})')
+    ).toBe('describeRoute({summary:"X",responses:{200:{description:"OK"}},security:[]})')
   })
 
   it.concurrent('escapes embedded newlines and quotes in description via JSON.stringify', () => {

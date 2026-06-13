@@ -76,13 +76,14 @@ function isComponentConfig(v: unknown): v is { readonly output: string } {
 function extractOutputPaths(
   config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
 ) {
-  const takibiHono = config['takibi-hono']
-  const componentOutputs = Object.entries(takibiHono?.components ?? {})
+  const componentOutputs = Object.entries(config.components ?? {})
     .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
     .map(([, v]) => (isComponentConfig(v) ? v.output : undefined))
-  const baseOutput =
-    typeof takibiHono?.components?.output === 'string' ? [takibiHono.components.output] : []
-  return [takibiHono?.handlers?.output, ...componentOutputs, ...baseOutput]
+  const baseOutput = typeof config.components?.output === 'string' ? [config.components.output] : []
+  const clientOutputs = Object.values(config.client ?? {})
+    .filter((v) => isComponentConfig(v))
+    .map((v) => (isComponentConfig(v) ? v.output : undefined))
+  return [config.output, ...componentOutputs, ...baseOutput, ...clientOutputs]
     .filter((p) => p !== undefined)
     .map(toAbsolutePath)
 }
@@ -134,46 +135,41 @@ async function readConfigWithHotReload(server: ViteDevServer) {
   }
 }
 
+function cleanupSplitDir(name: string, output: string) {
+  return (async () => {
+    const absDir = toAbsolutePath(output)
+    const files = await listTypeScriptFilesShallow(absDir)
+    const deleted = await deleteTypeScriptFiles(files)
+    return deleted.length > 0 ? `🧹 ${name}: cleaned ${deleted.length} files` : null
+  })()
+}
+
 async function runGeneration(
   config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
 ) {
   // Clean up split directories before regeneration
-  const components = config['takibi-hono']?.components ?? {}
+  const components = config.components ?? {}
   const splitCleanups: Promise<string | null>[] = []
   for (const [k, cfg] of Object.entries(components)) {
     if (k === 'output') continue
     if (!isComponentConfig(cfg)) continue
     if (!('split' in cfg) || cfg.split !== true) continue
     if (cfg.output.endsWith('.ts')) continue
-    const name = k
-    const absDir = toAbsolutePath(cfg.output)
-    splitCleanups.push(
-      (async () => {
-        const files = await listTypeScriptFilesShallow(absDir)
-        const deleted = await deleteTypeScriptFiles(files)
-        return deleted.length > 0 ? `🧹 ${name}: cleaned ${deleted.length} files` : null
-      })(),
-    )
+    splitCleanups.push(cleanupSplitDir(k, cfg.output))
   }
-  const handlersCfg = config['takibi-hono']?.handlers
-  if (handlersCfg?.output && !handlersCfg.output.endsWith('.ts')) {
-    splitCleanups.push(
-      (async () => {
-        const absDir = toAbsolutePath(handlersCfg.output)
-        const files = await listTypeScriptFilesShallow(absDir)
-        const deleted = await deleteTypeScriptFiles(files)
-        return deleted.length > 0 ? `🧹 handlers: cleaned ${deleted.length} files` : null
-      })(),
-    )
+  const client = config.client ?? {}
+  for (const [k, cfg] of Object.entries(client)) {
+    if (!isComponentConfig(cfg)) continue
+    if (!('split' in cfg) || cfg.split !== true) continue
+    if (cfg.output.endsWith('.ts')) continue
+    splitCleanups.push(cleanupSplitDir(k, cfg.output))
+  }
+  const handlersOutput = config.output
+  if (handlersOutput && !handlersOutput.endsWith('.ts')) {
+    splitCleanups.push(cleanupSplitDir('handlers', handlersOutput))
   }
   const cleanupLogs = (await Promise.all(splitCleanups)).filter((l) => l !== null)
-  const result = await hono({
-    input: config.input,
-    schema: config.schema,
-    format: config.format,
-    openapi: config.openapi,
-    'takibi-hono': config['takibi-hono'],
-  })
+  const result = await hono(config)
   return {
     logs: [
       ...cleanupLogs,

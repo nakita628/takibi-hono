@@ -198,6 +198,29 @@ describe('makeHandlerCode', () => {
       ].join('\n'),
     )
   })
+
+  it.concurrent('emits head and trace methods via .on, get stays chained', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'Test', version: '1.0.0' },
+      paths: {
+        '/all-methods': {
+          get: { responses: { '200': { description: 'OK' } } },
+          head: { responses: { '200': { description: 'OK' } } },
+          trace: { responses: { '200': { description: 'OK' } } },
+        },
+      },
+    } as unknown as OpenAPI
+    const groups = collectOperations(spec)
+    const code = makeHandlerCode('all-methods', groups.get('all-methods')!, 'zod')
+    expect(code).toBe(
+      [
+        "import{Hono}from'hono'",
+        '',
+        "export const allMethodsHandler=new Hono().get('/all-methods',(c)=>{}).on('HEAD','/all-methods',(c)=>{}).on('TRACE','/all-methods',(c)=>{})",
+      ].join('\n'),
+    )
+  })
 })
 
 describe('collectOperations — exact map entries', () => {

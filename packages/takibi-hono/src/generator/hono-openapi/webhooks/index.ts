@@ -2,6 +2,7 @@ import { makeImports } from '../../../helper/imports.js'
 import { collectWebhookOperations } from '../../../helper/operations.js'
 import { makeValidators } from '../../../helper/validator.js'
 import type { OpenAPI } from '../../../openapi/index.js'
+import { emitRouteCall } from '../../../utils/index.js'
 import { makeDescribeRoute } from '../routes/index.js'
 
 export function makeWebhooksCode(
@@ -21,8 +22,7 @@ export function makeWebhooksCode(
         ...makeValidators(operation, pathItemParameters, schemaLib, components),
         '(c)=>{}',
       ]
-      const args = [`'/${webhookName}'`, ...middlewares].join(',')
-      return `.${method}(${args})`
+      return emitRouteCall(method, [`'/${webhookName}'`, ...middlewares])
     },
   )
   const handlerCode = `export const webhooksHandler=new Hono()${routeLines.join('')}`

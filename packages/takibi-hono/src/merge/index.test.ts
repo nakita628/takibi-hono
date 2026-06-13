@@ -893,14 +893,14 @@ describe('mergeHandlerFile', () => {
     const existing = [
       "import{Hono}from'hono'",
       '',
-      "export const corsHandler=new Hono().options('/cors',(c)=>c.text('')).head('/ping',(c)=>c.body(null))",
+      "export const corsHandler=new Hono().options('/cors',(c)=>c.text('')).on('HEAD','/ping',(c)=>c.body(null))",
       '',
     ].join('\n')
 
     const generated = [
       "import{Hono}from'hono'",
       '',
-      "export const corsHandler=new Hono().options('/cors',(c)=>{}).head('/ping',(c)=>{})",
+      "export const corsHandler=new Hono().options('/cors',(c)=>{}).on('HEAD','/ping',(c)=>{})",
       '',
     ].join('\n')
 
@@ -909,7 +909,7 @@ describe('mergeHandlerFile', () => {
       [
         "import{Hono}from'hono'",
         '',
-        "export const corsHandler=new Hono().options('/cors',(c)=>c.text('')).head('/ping',(c)=>c.body(null))",
+        "export const corsHandler=new Hono().options('/cors',(c)=>c.text('')).on('HEAD','/ping',(c)=>c.body(null))",
         '',
       ].join('\n'),
     )

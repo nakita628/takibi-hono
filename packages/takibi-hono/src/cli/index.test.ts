@@ -258,10 +258,9 @@ describe('takibiHono CLI integration', () => {
           {
             input: 'petstore.yaml',
             schema: 'zod',
-            'takibi-hono': {
-              handlers: { output: 'src/handlers' },
-              components: { schemas: { output: 'src/schemas.ts' } },
-            },
+
+            output: 'src/handlers',
+            components: { schemas: { output: 'src/schemas.ts' } },
           },
           'petstore.yaml',
           PETSTORE_YAML,
@@ -277,11 +276,11 @@ describe('takibiHono CLI integration', () => {
         expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
 
@@ -292,7 +291,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../schemas'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
 
@@ -320,10 +323,9 @@ export default app
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -344,14 +346,14 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'A pet in the store' })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
     })
 
@@ -362,10 +364,9 @@ export type CreatePet = typeof CreatePetSchema.Encoded
         {
           input: 'petstore.yaml',
           schema: 'valibot',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -399,10 +400,9 @@ export const CreatePetSchema = v.pipe(
         {
           input: 'petstore.yaml',
           schema: 'typebox',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -436,10 +436,9 @@ export const CreatePetSchema = Type.Object(
         {
           input: 'petstore.yaml',
           schema: 'arktype',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -473,10 +472,9 @@ export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).descri
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -489,12 +487,16 @@ export const CreatePetSchema = type({ name: 'string', 'tag?': 'string' }).descri
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
 
       const handlersDir = await fsp.readdir(path.join(d, 'src/handlers'))
@@ -507,7 +509,11 @@ import * as z from 'zod'
 import { CreatePetSchema } from '../openapi'
 
 export const petsHandler = new Hono()
-  .get('/pets', sValidator('query', z.object({ limit: z.coerce.int().optional() })), (c) => {})
+  .get(
+    '/pets',
+    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    (c) => {},
+  )
   .post('/pets', sValidator('json', CreatePetSchema), (c) => {})
 `)
     })
@@ -523,10 +529,9 @@ export const petsHandler = new Hono()
             input: 'components.yaml',
             schema: 'zod',
             openapi: true,
-            'takibi-hono': {
-              handlers: { output: 'src/handlers' },
-              components: { output: 'src/openapi' },
-            },
+
+            output: 'src/handlers',
+            components: { output: 'src/openapi' },
           },
           'components.yaml',
           COMPONENTS_YAML,
@@ -543,13 +548,19 @@ export const UserSchema = z
     id: z.int(),
     name: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'user', 'guest']).optional(),
-    tags: z.array(z.string()).optional(),
-    address: z.object({ city: z.string(), country: z.string() }).partial().optional(),
+    role: z.enum(['admin', 'user', 'guest']).exactOptional(),
+    tags: z.array(z.string()).exactOptional(),
+    address: z
+      .object({ city: z.string().exactOptional(), country: z.string().exactOptional() })
+      .exactOptional(),
   })
   .meta({ ref: 'User' })
 
+export type User = z.infer<typeof UserSchema>
+
 export const ErrorSchema = z.object({ code: z.int(), message: z.string() }).meta({ ref: 'Error' })
+
+export type Error = z.infer<typeof ErrorSchema>
 `)
 
         const responses = await fsp.readFile(
@@ -572,15 +583,14 @@ export const UserListResponseResponse = {
         )
         expect(parameters).toBe(`import * as z from 'zod'
 
-export const PageParamParamsSchema = z.int().optional()
+export const PageParamParamsSchema = z.int().exactOptional()
 
-export const LimitParamParamsSchema = z.int().optional()
+export const LimitParamParamsSchema = z.int().exactOptional()
 `)
 
         const headers = await fsp.readFile(path.join(d, 'src/openapi/headers/index.ts'), 'utf-8')
-        expect(headers).toBe(`import * as z from 'zod'
-
-export const XRequestIdHeaderSchema = z.string()
+        expect(headers)
+          .toBe(`export const XRequestIdHeaderSchema = { required: true, schema: { type: 'string' } as const }
 `)
 
         const examples = await fsp.readFile(path.join(d, 'src/openapi/examples/index.ts'), 'utf-8')
@@ -610,8 +620,8 @@ export const XRequestIdHeaderSchema = z.string()
 
 export const CreateUserBodyRequestBody = {
   description: 'User to create',
-  required: true,
   content: { 'application/json': { schema: UserSchema } },
+  required: true,
 }
 `)
 
@@ -633,8 +643,8 @@ export const usersHandler = new Hono()
   .get(
     '/users',
     describeRoute({
-      summary: 'List users',
       tags: ['users'],
+      summary: 'List users',
       operationId: 'listUsers',
       responses: { 200: UserListResponseResponse },
     }),
@@ -643,8 +653,8 @@ export const usersHandler = new Hono()
   .post(
     '/users',
     describeRoute({
-      summary: 'Create user',
       tags: ['users'],
+      summary: 'Create user',
       operationId: 'createUser',
       responses: {
         201: {
@@ -659,18 +669,16 @@ export const usersHandler = new Hono()
       },
     )
 
-    it('components.output with exportSchemasTypes', { timeout: 30000 }, async () => {
+    it('components.output emits the inferred schema types', { timeout: 30000 }, async () => {
       const d = tmpDir('cli_co_export_types')
       await setupProject(
         d,
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-            exportSchemasTypes: true,
-          },
+
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -683,55 +691,61 @@ export const usersHandler = new Hono()
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 
 export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
     })
 
-    it('individual schemas config overrides components.output', { timeout: 30000 }, async () => {
-      const d = tmpDir('cli_co_override')
-      await setupProject(
-        d,
-        {
-          input: 'petstore.yaml',
-          schema: 'zod',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
+    it(
+      'components.output (.ts) aggregates schemas into a single file',
+      { timeout: 30000 },
+      async () => {
+        const d = tmpDir('cli_co_single')
+        await setupProject(
+          d,
+          {
+            input: 'petstore.yaml',
+            schema: 'zod',
+
+            output: 'src/handlers',
             components: {
-              output: 'src/openapi',
-              schemas: { output: 'src/custom/schemas.ts' },
+              output: 'src/openapi.ts',
             },
           },
-        },
-        'petstore.yaml',
-        PETSTORE_YAML,
-      )
+          'petstore.yaml',
+          PETSTORE_YAML,
+        )
 
-      const result = await runCli(d)
-      expect(result.ok).toBe(true)
+        const result = await runCli(d)
+        expect(result.ok).toBe(true)
 
-      const schemas = await fsp.readFile(path.join(d, 'src/custom/schemas.ts'), 'utf-8')
-      expect(schemas).toBe(`import * as z from 'zod'
+        const aggregated = await fsp.readFile(path.join(d, 'src/openapi.ts'), 'utf-8')
+        expect(aggregated).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
 
-      expect(fs.existsSync(path.join(d, 'src/openapi/index.ts'))).toBe(false)
-    })
+        expect(fs.existsSync(path.join(d, 'src/components/index.ts'))).toBe(false)
+      },
+    )
   })
 
   describe('readonly via CLI', () => {
@@ -742,11 +756,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -759,12 +772,12 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 `)
@@ -777,11 +790,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: false,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          readonly: false,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -794,11 +806,11 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
 `)
     })
@@ -810,11 +822,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { output: 'src/openapi' },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { output: 'src/openapi' },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -827,14 +838,18 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
+export type Pet = z.infer<typeof PetSchema>
+
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
+
+export type CreatePet = z.infer<typeof CreatePetSchema>
 `)
     })
 
@@ -845,11 +860,10 @@ export const CreatePetSchema = z
         {
           input: 'petstore.yaml',
           schema: 'zod',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -862,14 +876,14 @@ export const CreatePetSchema = z
       expect(schemas).toBe(`import * as z from 'zod'
 
 export const PetSchema = z
-  .object({ id: z.int(), name: z.string(), tag: z.string().optional() })
+  .object({ id: z.int(), name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'A pet in the store' })
   .readonly()
 
 export type Pet = z.infer<typeof PetSchema>
 
 export const CreatePetSchema = z
-  .object({ name: z.string(), tag: z.string().optional() })
+  .object({ name: z.string(), tag: z.string().exactOptional() })
   .meta({ description: 'Data for creating a new pet' })
   .readonly()
 
@@ -884,11 +898,10 @@ export type CreatePet = z.infer<typeof CreatePetSchema>
         {
           input: 'petstore.yaml',
           schema: 'effect',
-          'takibi-hono': {
-            readonly: true,
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          readonly: true,
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -906,14 +919,14 @@ export const PetSchema = Schema.Struct({
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'A pet in the store' })
 
-export type Pet = typeof PetSchema.Encoded
+export type PetSchema = typeof PetSchema.Type
 
 export const CreatePetSchema = Schema.Struct({
   name: Schema.String,
   tag: Schema.optional(Schema.String),
 }).annotations({ description: 'Data for creating a new pet' })
 
-export type CreatePet = typeof CreatePetSchema.Encoded
+export type CreatePetSchema = typeof CreatePetSchema.Type
 `)
     })
   })
@@ -927,10 +940,9 @@ export type CreatePet = typeof CreatePetSchema.Encoded
           input: 'petstore.yaml',
           schema: 'zod',
           openapi: true,
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts', exportTypes: true } },
         },
         'petstore.yaml',
         PETSTORE_YAML,
@@ -957,7 +969,7 @@ export const petsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ limit: z.coerce.int().optional() })),
+    validator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
     (c) => {},
   )
   .post(
@@ -987,10 +999,9 @@ export const petsHandler = new Hono()
           input: 'petstore.yaml',
           schema: 'zod',
           basePath: '/api/v1',
-          'takibi-hono': {
-            handlers: { output: 'src/handlers' },
-            components: { schemas: { output: 'src/schemas.ts' } },
-          },
+
+          output: 'src/handlers',
+          components: { schemas: { output: 'src/schemas.ts' } },
         },
         'petstore.yaml',
         PETSTORE_YAML,

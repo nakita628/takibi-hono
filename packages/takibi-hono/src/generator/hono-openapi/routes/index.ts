@@ -8,18 +8,19 @@ export function makeDescribeRoute(
   operation: Operation,
   schemaLib: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect',
 ) {
+  // Property order mirrors the `Operation` type declaration in openapi/index.ts
+  // (= the OpenAPI spec field order).
   const result = [
-    ...(operation.description ? [`description:${JSON.stringify(operation.description)}`] : []),
-    ...(operation.summary ? [`summary:${JSON.stringify(operation.summary)}`] : []),
     ...(operation.tags && operation.tags.length > 0
       ? [`tags:${JSON.stringify(operation.tags)}`]
       : []),
-    ...(operation.operationId ? [`operationId:${JSON.stringify(operation.operationId)}`] : []),
-    ...(operation.deprecated === true ? ['deprecated:true'] : []),
-    ...(operation.security ? [`security:${JSON.stringify(operation.security)}`] : []),
+    ...(operation.summary ? [`summary:${JSON.stringify(operation.summary)}`] : []),
+    ...(operation.description ? [`description:${JSON.stringify(operation.description)}`] : []),
     ...(operation.externalDocs ? [makeExternalDocsPart(operation.externalDocs)] : []),
-    ...(operation.servers && operation.servers.length > 0
-      ? [makeServersPart(operation.servers)]
+    // YAML parses an unquoted reserved-word operationId (`operationId: true`) as a
+    // boolean; OpenAPI defines operationId as a string, so coerce before quoting.
+    ...(operation.operationId
+      ? [`operationId:${JSON.stringify(String(operation.operationId))}`]
       : []),
     ...(operation.responses
       ? (() => {
@@ -28,6 +29,11 @@ export function makeDescribeRoute(
           )
           return entries.length > 0 ? [`responses:{${entries.join(',')}}`] : []
         })()
+      : []),
+    ...(operation.deprecated === true ? ['deprecated:true'] : []),
+    ...(operation.security ? [`security:${JSON.stringify(operation.security)}`] : []),
+    ...(operation.servers && operation.servers.length > 0
+      ? [makeServersPart(operation.servers)]
       : []),
   ]
   return `describeRoute({${result.join(',')}})`

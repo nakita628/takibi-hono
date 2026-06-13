@@ -524,6 +524,36 @@ describe('makeComponentImports', () => {
     ])
   })
 
+  it.concurrent('keeps refs after a regex literal on unformatted single-line code', () => {
+    const code =
+      "export const oauthHandler=new Hono().get('/a',effectValidator('query',Schema.Struct({redirect_uri:Schema.String.pipe(Schema.pattern(/^https?:\\/\\//))})),(c)=>{}).post('/b',effectValidator('form',Schema.Union(TokenRequestSchema,RefreshRequestSchema)),(c)=>{})"
+
+    const result = makeStandardImports(code, 'effect', { schemas: '../components' })
+    expect(result).toStrictEqual([
+      "import{Hono}from'hono'",
+      "import{effectValidator}from'@hono/effect-validator'",
+      "import{Schema}from'effect'",
+      "import{RefreshRequestSchema,TokenRequestSchema}from'../components'",
+    ])
+  })
+
+  it.concurrent('skips suffix-shaped object keys (form fields like SAMLResponse:)', () => {
+    const code =
+      'export const samlHandler = z.object({ SAMLResponse: z.string(), AmdStatusCallback: z.string().exactOptional() })\nconst body = resolver(UserSchema)'
+
+    expect(
+      makeComponentImports(code, 'zod', {
+        schemas: './schemas',
+        responses: './responses',
+        callbacks: './callbacks',
+      }),
+    ).toStrictEqual([
+      "import{resolver}from'hono-openapi'",
+      "import*as z from'zod'",
+      "import{UserSchema}from'./schemas'",
+    ])
+  })
+
   it.concurrent('no Hono/describeRoute imports', () => {
     const result = makeComponentImports('resolver(UserSchema)', 'zod', { schemas: './schemas' })
     expect(result.some((l) => l.includes('Hono'))).toBe(false)
@@ -837,6 +867,14 @@ export const X={schema:UserSchema}`
         parameters: './parameters',
       }),
     ).toStrictEqual(["import{UserParamsSchema}from'./parameters'"])
+  })
+
+  it.concurrent('falls back to schemas path when parameters path is undefined', () => {
+    expect(
+      makeComponentImports('SearchParamsSchema', 'zod', {
+        schemas: '../components',
+      }),
+    ).toStrictEqual(["import{SearchParamsSchema}from'../components'"])
   })
 
   it.concurrent('classifies *HeaderSchema as headers not schemas', () => {
