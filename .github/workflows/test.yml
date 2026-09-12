@@ -1,5 +1,14 @@
 name: Test
 
+# Builds, tests and checks the workspace with the same commands a developer runs locally: the root
+# `package.json` scripts are the repository's single definition of "clean", so CI and the working
+# copy can never disagree about what it means. `vp run check` is oxfmt, oxlint and the type check,
+# then `pnpm lint`: markdownlint, textlint, cspell, secretlint, the TypeSpec release check, and
+# actionlint and zizmor over these workflows (downloaded at a pinned, checksummed release).
+#
+# Action versions are tracked by Renovate, which pins each one to its digest
+# (helpers:pinGitHubActionDigests) and keeps the @vX.Y.Z tag as a comment.
+
 on:
   push:
     branches:

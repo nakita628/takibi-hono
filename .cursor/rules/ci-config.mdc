@@ -1,6 +1,6 @@
 ---
-description: Workflows, action pinning, the lint / format / build configuration, dependencies, the published package and releasing
-globs: .github/**,**/package.json,**/vite.config.ts,**/tsconfig.json,pnpm-workspace.yaml,renovate.json
+description: Workflows, action pinning, the lint / format / build configuration, the repository linters and their scripts, dependencies, the published package and releasing
+globs: .github/**,**/package.json,**/vite.config.ts,**/tsconfig.json,pnpm-workspace.yaml,renovate.json,scripts/**,cspell.config.yaml,project-words.txt,.textlintrc.yml,.markdownlint-cli2.jsonc,.secretlintrc.json
 alwaysApply: false
 ---
 
@@ -8,13 +8,11 @@ alwaysApply: false
 
 ## The workflows
 
-The layout mirrors hono-takibi and hekireki.
+The release layout mirrors hono-takibi; the linters mirror asphodelos.
 
 - `test.yml` (Test): `vp install --frozen-lockfile` → `vp run takibi-hono#build` → the package
-  tests → `vp run check`. A new check goes into the root `package.json` scripts **and** here, so
-  local and CI cannot disagree about what "clean" means.
-- `lint.yml` (Lint): installs actionlint (`actionlint-py`) and zizmor with pipx at pinned versions,
-  sets `LINT_ACTIONS_REQUIRED=1` so a missing tool fails, and runs `vp run lint`.
+  tests → `vp run check`, which ends in `pnpm lint` and so runs every linter. A new check goes into
+  the root `package.json` scripts, so local and CI cannot disagree about what "clean" means.
 - `release.yml` runs after Test succeeds on a push to `main`; see Releasing.
 - **Actions are pinned to a commit digest with the tag kept as a comment**:
   `uses: actions/checkout@3d3c42e… # v7.0.1`. A floating tag is a mutable dependency with access to
@@ -25,11 +23,32 @@ The layout mirrors hono-takibi and hekireki.
   `persist-credentials: false`. The one exception is the `tag` job, which pushes with the
   checkout's token and is excused in `.github/zizmor.yml`.
 - A finding is excused next to what it is about, with the reason: an inline
-  `# zizmor: ignore[audit]`, or an entry in `.github/zizmor.yml` pinned to `file:line:col` (move
-  the line number when the file shifts). actionlint ignores only `concurrency.queue`, which it does
-  not know yet. Never drop the check.
-- Verify a workflow change with `pnpm lint` with both tools installed, and in a fresh clone when it
-  depends on files a checkout would not have (`dist`, `coverage`).
+  `# zizmor: ignore[audit]`, an entry in `.github/zizmor.yml` pinned to `file:line:col` (move the
+  line number when the file shifts), or an actionlint message in `.github/actionlint.yml` scoped
+  to one file. Never drop the check.
+- Verify a workflow or script change with `pnpm lint`, and in a fresh clone
+  (`git clone . <tmp> && cd <tmp> && pnpm install --frozen-lockfile`, then the workflow's steps in
+  order) when it depends on files a checkout would not have (`dist`, `coverage`).
+
+## The repository linters
+
+`pnpm lint` runs, in order: markdownlint, textlint, cspell, secretlint, `scripts/typespec.ts`,
+`scripts/actionlint.ts`, `scripts/zizmor.ts`. The docs rule says how to live with the three prose
+linters.
+
+- The npm-based linters are root devDependencies, **pinned exactly**; Renovate moves them.
+- actionlint and zizmor have no npm distribution. Their scripts download the pinned release for
+  the platform, verify its sha256 and cache it under `node_modules/.cache`. Bumping one means
+  changing `VERSION` and **every checksum** together: actionlint's from the release's
+  `*_checksums.txt`, zizmor's from each asset's `digest` in the GitHub releases API. Renovate
+  cannot see them; they are updated by hand.
+- `scripts/*.ts` are TypeScript executed by `node` directly (type stripping), so they use only
+  erasable syntax — no `enum`, no parameter properties — and import only root devDependencies.
+- `scripts/typespec.ts` reads `packages` in `pnpm-lock.yaml`: it fails on two versions of one
+  `@typespec/*` package, on 1.x packages of different releases, and on an unsatisfied peer range
+  between them, and prints the command that realigns them.
+- secretlint scans every tracked file with the recommended preset. There is no allowlist; a
+  finding is a real leak to remove.
 
 ## Editing the lint configuration
 
@@ -66,8 +85,9 @@ itself to, and its comments explain the choices. It mirrors hono-takibi and heki
   `pnpm-workspace.yaml` (its caret range would otherwise resolve a later RC that imports modules
   the pinned `effect` lacks). They move together, in one change.
 - The `@typespec/*` packages move together, to one TypeSpec release: TypeSpec publishes them
-  together (compiler, http, openapi and openapi3 on 1.x, rest and versioning on 0.x) and each
-  declares the others as peers at its own release. Their versions live **only** in the strict
+  together (`compiler`, `http`, `openapi` and `openapi3` on 1.x, `rest` and `versioning` on 0.x)
+  and each declares the others as peers at its own release; `scripts/typespec.ts` fails when
+  `pnpm-lock.yaml` mixes releases. Their versions live **only** in the strict
   `catalog` of `pnpm-workspace.yaml`; a `package.json` says `"catalog:"`, and `pnpm pack` /
   `pnpm publish` write the catalog range into the published manifest. `catalogMode: strict` makes
   `pnpm add` refuse a version outside the catalog. `@typespec/openapi` is a devDependency only so
@@ -79,11 +99,14 @@ itself to, and its comments explain the choices. It mirrors hono-takibi and heki
 - The package's runtime `dependencies` are what every user installs. Adding one is a design
   decision — ask first. Tooling goes in `devDependencies`.
 - Renovate (`renovate.json`, the same settings as hono-takibi) opens update PRs on Saturdays
-  (Asia/Tokyo), after a release has been out 7 days (1 day for a security fix). It automerges pins,
-  lockfile maintenance and minor / patch updates of packages past 0.x — never an action digest. The
-  `typespec` group keeps TypeSpec in one PR; the `effect` group never automerges.
-- Renovate cannot see the pipx-installed actionlint and zizmor; bump their versions in `lint.yml`
-  by hand.
+  (Asia/Tokyo), after a release has been out 7 days (1 day for a security fix). It merges pins,
+  lockfile maintenance and minor / patch updates of packages past 0.x by itself — never an action
+  digest. The `typespec` group keeps TypeSpec in one PR; the `effect` group is always merged by
+  hand. A security update bypasses its group and bumps only the advisory's package, so a
+  `typespec` one fails `scripts/typespec.ts`: finish it by aligning the rest of the release on the
+  same branch.
+- `pnpm add` with `catalogMode: strict` writes a new package into the `catalog`. Only
+  `@typespec/*` belongs there: move anything else back to an exact version in its `package.json`.
 
 ## The published package
 

@@ -21,9 +21,9 @@ Tests run on **Vitest through vite-plus** and live next to what they cover
   string.
 - An equality matcher over `toBe(true)` on a comparison (`vitest/prefer-equality-matcher`);
   `toThrow` names its message (`vitest/require-to-throw-message`).
-- Hooks sit at the top of their `describe`, in order (`prefer-hooks-on-top`,
-  `prefer-hooks-in-order`). `xit` / `fit` prefixes and identical titles fail lint; never commit
-  `it.only` or `it.skip`.
+- Hooks sit at the top of their `describe`, in order
+  (`prefer-hooks-on-top`, `prefer-hooks-in-order`). `xit` / `fit` prefixes and identical titles
+  fail lint; never commit `it.only` or `it.skip`.
 
 ## What tests may do that `src` may not
 
@@ -47,11 +47,11 @@ everything else in the TypeScript rule still applies.
 
 ## Coverage of behavior
 
-- A bug fix ships with a test that fails before it and passes after. Prove it: revert the fix,
+- A bugfix ships with a test that fails before it and passes after. Prove it: revert the fix,
   watch the test fail, restore it.
 - Assert through the observable result — files on disk and their contents, the generated source,
   log lines — rather than internals. A test is not a reason to export a function.
 - The `x-*` transparency tests in `generator/schemas.test.ts` and `helper/library.test.ts` guard
   a security decision (see the architecture rule). Do not weaken them.
-- For a change to the Vite plugin or the generated handlers, also check it end to end in
+- For a change to the Vite plugin or the generated handlers, also check it end-to-end in
   `fixtures/vite-plugin` (see the playbooks).

@@ -101,21 +101,21 @@ function makeCyclicContainer(
   varName: string,
   group: readonly string[],
   schemas: { readonly [k: string]: Schema },
-  idents: ReadonlyMap<string, string>,
+  identifiers: ReadonlyMap<string, string>,
   adapter: ComponentAdapter,
   lib: 'typebox' | 'arktype',
 ) {
-  const groupIdents = new Map(group.map((name) => [name, idents.get(name) ?? name]))
+  const groupIdentifiers = new Map(group.map((name) => [name, identifiers.get(name) ?? name]))
   // `#/$defs/...` is outside oas-truth's `Ref` type, hence the untyped rebuild.
   const localize = (node: Schema): Schema => {
-    const ident = node.$ref ? groupIdents.get(schemaRefToName(node.$ref)) : undefined
+    const ident = node.$ref ? groupIdentifiers.get(schemaRefToName(node.$ref)) : undefined
     if (ident === undefined) return node
     const local = Object.fromEntries([...Object.entries(node), ['$ref', `#/$defs/${ident}Schema`]])
     return isSchema(local) ? local : node
   }
   const $defs = Object.fromEntries(
     group.map((name) => [
-      `${groupIdents.get(name)}Schema`,
+      `${groupIdentifiers.get(name)}Schema`,
       mapSchema(schemas[name] ?? {}, localize),
     ]),
   )
@@ -125,7 +125,10 @@ function makeCyclicContainer(
   if (body === undefined) return undefined
   // A reference leaving the group is a string keyword inside `scope`; alias it to the declared schema.
   const external = [...new Set(group.flatMap((name) => collectSchemaRefs(schemas[name])))].flatMap(
-    (name) => (groupIdents.has(name) || !idents.has(name) ? [] : [`${idents.get(name)}Schema`]),
+    (name) =>
+      groupIdentifiers.has(name) || !identifiers.has(name)
+        ? []
+        : [`${identifiers.get(name)}Schema`],
   )
   return `scope({${[...external.map((ref) => `${ref}:${ref}`), body].join(',')}}).export().${varName}`
 }
@@ -148,14 +151,14 @@ export function makeSchemaDeclarations(
       options.readonly ? markReadonly(schema) : schema,
     ]),
   )
-  const idents = makeSchemaIdentifiers(schemas)
+  const identifiers = makeSchemaIdentifiers(schemas)
   const { order, cycles } = analyzeSchemas(schemas)
-  const taken = new Set([...idents.values(), ...library.reserved])
+  const taken = new Set([...identifiers.values(), ...library.reserved])
   const infer = (varName: string) =>
     adapter.renderTypeInfer(varName).replace(`export type ${varName}=`, '')
   return order.map((name) => {
     const schema = prepared[name] ?? {}
-    const ident = idents.get(name) ?? toIdentifierPascalCase(name)
+    const ident = identifiers.get(name) ?? toIdentifierPascalCase(name)
     const varName = `${ident}Schema`
     const group = cycles.get(name)
     // A readonly arktype node renders as `type(...).readonly()`, which cannot resolve `scope`
@@ -167,7 +170,7 @@ export function makeSchemaDeclarations(
             varName,
             group,
             arktypeReadonly ? schemas : prepared,
-            idents,
+            identifiers,
             adapter,
             options.lib,
           )
@@ -178,7 +181,7 @@ export function makeSchemaDeclarations(
     const body = library.lazy
       ? wrapReferences(
           expression,
-          new Set((group ?? []).map((peer) => `${idents.get(peer)}Schema`)),
+          new Set((group ?? []).map((peer) => `${identifiers.get(peer)}Schema`)),
           library.lazy.wrap,
         )
       : expression
@@ -186,7 +189,7 @@ export function makeSchemaDeclarations(
     const helper = group && library.cyclicAnnotation ? claimName(`${ident}Type`, taken) : undefined
     const typeDef =
       helper && options.lib !== 'effect'
-        ? `${makeCyclicType(name, helper, schema, (ref) => infer(`${idents.get(ref) ?? toIdentifierPascalCase(ref)}Schema`), options.readonly)}\n\n`
+        ? `${makeCyclicType(name, helper, schema, (ref) => infer(`${identifiers.get(ref) ?? toIdentifierPascalCase(ref)}Schema`), options.readonly)}\n\n`
         : ''
     const annotation =
       helper && library.cyclicAnnotation ? `:${library.cyclicAnnotation(helper)}` : ''

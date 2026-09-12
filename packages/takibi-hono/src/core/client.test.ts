@@ -176,7 +176,7 @@ export default routes
   })
 
   it.concurrent('allows a normal name that merely begins with ".." (..foo)', async () => {
-    const d = tmpDir('dotdot_prefix')
+    const d = tmpDir('dot_dot_prefix')
     await runGenerator(makeClients(await openapi(), { docs: { output: '..foo/api.md' } }, d))
     expect(fs.existsSync(path.join(d, '..foo', 'api.md'))).toBe(true)
   })

@@ -6,16 +6,24 @@
   "scripts": {
     "deps": "mkdir -p /tmp/pnpm-store && pnpm config set store-dir /tmp/pnpm-store &&rm -rf node_modules && rm -rf pnpm-lock.yaml && rm -rf ~/.pnpm-store && pnpm store prune && pnpm install --no-prefer-frozen-lockfile",
     "check": "vp fmt --check && vp run -r check && pnpm lint",
-    "fix": "vp fmt && vp run -r check --fix",
-    "lint": "pnpm lint:actions",
-    "lint:actions": "pnpm lint:actions:syntax && pnpm lint:actions:security",
-    "lint:actions:syntax": "sh -c 'if command -v actionlint >/dev/null; then actionlint -ignore \"unexpected key .queue. for .concurrency.\"; elif [ -n \"$LINT_ACTIONS_REQUIRED\" ]; then echo \"actionlint is not installed\"; exit 1; else echo \"actionlint is not installed (pipx install actionlint-py); the Lint workflow runs it\"; fi'",
-    "lint:actions:security": "sh -c 'if command -v zizmor >/dev/null; then zizmor .github/workflows; elif [ -n \"$LINT_ACTIONS_REQUIRED\" ]; then echo \"zizmor is not installed\"; exit 1; else echo \"zizmor is not installed (pipx install zizmor); the Lint workflow runs it\"; fi'",
+    "fix": "vp fmt && vp run -r check --fix && markdownlint-cli2 --fix && textlint --fix --ignore-path .gitignore '**/*.md' '.cursor/rules/*.mdc'",
+    "lint": "markdownlint-cli2 && textlint --ignore-path .gitignore '**/*.md' '.cursor/rules/*.mdc' && cspell --no-progress --dot '**' && secretlint '**/*' && node scripts/typespec.ts && node scripts/actionlint.ts -color && node scripts/zizmor.ts .github/workflows",
     "test": "vp run --filter ./packages/takibi-hono test",
     "coverage": "vp run --filter ./packages/takibi-hono coverage"
   },
   "devDependencies": {
-    "vite-plus": "0.3.0"
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.5",
+    "@textlint-rule/textlint-rule-no-unmatched-pair": "2.0.4",
+    "cspell": "10.2.1",
+    "markdownlint-cli2": "0.23.2",
+    "secretlint": "13.0.5",
+    "semver": "7.8.5",
+    "textlint": "15.8.0",
+    "textlint-filter-rule-comments": "1.3.0",
+    "textlint-rule-no-todo": "2.0.1",
+    "textlint-rule-terminology": "5.2.16",
+    "vite-plus": "0.3.0",
+    "yaml": "2.9.0"
   },
   "packageManager": "pnpm@11.6.0"
 }

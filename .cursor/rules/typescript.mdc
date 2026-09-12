@@ -29,8 +29,9 @@ Effect-specific shapes are in the Effect rule.
 ## Types
 
 - **`type X = {...}` only — no `interface`** (`consistent-type-definitions: 'type'`).
-- **No `any`, no `!` non-null assertion, no type assertions** (`consistent-type-assertions` with
-  `assertionStyle: 'never'`). Take `unknown` and narrow it with a guard. The one sanctioned cast
+- **No `any`, no `!` non-null assertion, no type assertions**
+  (`consistent-type-assertions` with `assertionStyle: 'never'`). Take `unknown` and narrow it with
+  a guard. The one sanctioned cast
   is in `src/core/client.ts`: the OpenAPI document handed to hono-takibi, whose own document type
   is structurally equivalent. It is suppressed on its line with the reason.
 - Every `unsafe-*` rule is an error. `exactOptionalPropertyTypes` is on: an optional property that
@@ -38,8 +39,9 @@ Effect-specific shapes are in the Effect rule.
 - Write a simple union (`'a' | 'b'`) inline in the signature. Name a type only when it is complex
   or repeated, next to its users (`Layout` and `TakibiHonoConfig` in `src/core/layout.ts`). Never a
   `types.ts` dumping ground.
-- Type imports use `import type`, in their own statement (`consistent-type-imports`,
-  `consistent-type-specifier-style`). `@ts-ignore` is banned; `@ts-expect-error` needs a reason.
+- Type imports use `import type`, in their own statement
+  (`consistent-type-imports`, `consistent-type-specifier-style`). `@ts-ignore` is banned;
+  `@ts-expect-error` needs a reason.
 
 ## Imports and exports
 

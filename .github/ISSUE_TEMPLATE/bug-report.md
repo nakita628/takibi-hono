@@ -1,6 +1,7 @@
 ---
 name: Bug Report
 about: The generated code, the CLI or the Vite plugin does something wrong
+title: ''
 labels: bug
 ---
 

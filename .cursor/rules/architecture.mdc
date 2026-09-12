@@ -93,9 +93,9 @@ rewritten wholesale; the Vite plugin empties split component and client director
   schemas stay plain JSON Schema.
 - Query and path parameters are coerced by schema-to-library's `paramIn`
   (`adapter.toExpression(schema, paramIn)`), one synthesized object schema per location. This was
-  once kept here because the five libraries had no symmetric coercion; schema-to-library 0.4
-  covers all of them (zod `z.coerce`, valibot `v.transform(Number)`, typebox `Codec`, arktype
-  `.parse`, effect `NumberFromString`), so it is delegated.
+  once kept here because the five libraries had no symmetric coercion. schema-to-library 0.4
+  covers all of them, so it is delegated: zod `z.coerce`, valibot `v.transform(Number)`, typebox
+  `Codec`, arktype `.parse` and effect `NumberFromString`.
 - **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
   schema-to-library.
 
@@ -114,20 +114,24 @@ With `openapi: true`, every `components.schemas` declaration is registered under
 
 Three layers, decided 2026-05-24:
 
-- **A — messages** (`x-error-message`, `x-pattern-message`, `x-minimum-message`,
-  `x-required-message`, …): supported, always on; emitted as validator error messages.
-- **B — transforms** (`x-trim`, `x-coerce`, `x-readonly`, `x-stringbool`, `x-brand`,
-  `x-normalize`, …): supported, always on; declarative keys schema-to-library emits per lib.
-- **C — code injection** (`x-refine`, `x-superRefine`, `x-preprocess`, `x-codec`, `x-transform`,
-  `x-pipe`, `x-check`, `x-filter`, `x-narrow`, `x-morph`): **unsupported, permanently.**
+- **A — messages**: supported, always on; emitted as validator error messages. `x-error-message`,
+  `x-pattern-message`, `x-minimum-message`, `x-required-message` and the rest of the family.
+- **B — transforms**: supported, always on; declarative keys schema-to-library emits per lib.
+  `x-trim`, `x-coerce`, `x-readonly`, `x-stringbool`, `x-brand`, `x-normalize` and the like.
+- **C — code injection**: **unsupported, permanently.** The ten keys are `x-refine`,
+  `x-superRefine`, `x-preprocess`, `x-codec`, `x-transform`, `x-pipe`, `x-check`, `x-filter`,
+  `x-narrow` and `x-morph`.
   schema-to-library's `unsafeCodeExtensions` is never passed, by takibi-hono or by oas-truth's
   adapter.
 
+<!-- The bypass examples below split a word on purpose. cspell:ignore tructor -->
+
 Why C stays sealed: it pastes spec strings into generated code verbatim, which is remote code
 execution wherever a spec crosses a trust boundary (a SaaS, a playground); schema-to-library's
-denylist is bypassable through built-in prototypes (`String.prototype.concat.call('proc','ess')`,
-`this['cons'+'tructor']`, `(0).constructor`); an opt-in is one config line away from being enabled
-by mistake; and one RCE after opening it would be irreversible. Reopening needs all of: a sandboxed
+denylist can be bypassed through built-in prototypes, such as
+`String.prototype.concat.call('proc','ess')`, `this['cons'+'tructor']` and `(0).constructor`; an
+opt-in is one config line away from being enabled by mistake; and one RCE after opening it would
+be irreversible. Reopening needs all of: a sandboxed
 evaluator in schema-to-library instead of the denylist, a fresh threat-model review, and published
 operating guidance for SaaS / playground use. Until then a proposal to expose it is declined.
 

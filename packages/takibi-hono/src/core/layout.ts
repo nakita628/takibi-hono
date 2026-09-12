@@ -99,7 +99,7 @@ function toTarget(entry: TargetConfig): Target {
 
 /**
  * Two modes. Per-kind: any `components.<kind>` config places that kind (schemas
- * default to `src/components/index.ts`; unconfigured kinds are not generated).
+ * default to `src/components/index.ts`; a kind with no config is not generated).
  * Aggregate: otherwise every kind shares one module — `components.output`, or
  * `src/components/index.ts`.
  */

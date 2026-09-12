@@ -57,7 +57,7 @@ export function readFile(path: string) {
  * Writes a UTF-8 file, leaving it untouched when the contents already match.
  *
  * Skipping the identical write is what keeps the Vite plugin's own watcher from seeing a
- * change it just caused, so it is part of the contract, not an optimisation. An
+ * change it just caused, so it is part of the contract, not an optimization. An
  * unreadable existing file falls through to the write rather than failing here.
  */
 export function writeFile(path: string, data: string) {

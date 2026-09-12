@@ -33,9 +33,17 @@ vite.config.ts                 fmt only: the formatting style every workspace in
 pnpm-workspace.yaml            workspaces, the @typespec catalog, the Effect override, allowBuilds,
                                minimumReleaseAgeExclude
 renovate.json                  dependency updates (Saturdays, Asia/Tokyo); see the CI rule
-.github/workflows/test.yml     Test: build, unit tests, `vp run check`
-.github/workflows/lint.yml     Lint: actionlint and zizmor over the workflows
+.markdownlint-cli2.jsonc       markdownlint: the structure of the Markdown and the Cursor rules
+.textlintrc.yml                textlint: the prose (terminology, balanced pairs, no TODO)
+cspell.config.yaml             cspell: the spelling of every tracked file, code included
+project-words.txt              the words cspell does not know but this project uses on purpose
+.secretlintrc.json             secretlint: no credential is ever committed
+scripts/typespec.ts            fails when the @typespec/* packages in pnpm-lock.yaml mix releases
+scripts/actionlint.ts          downloads a pinned actionlint, verifies its checksum, runs it
+scripts/zizmor.ts              downloads a pinned zizmor (workflow security audit), verifies it, runs it
+.github/workflows/test.yml     Test: build, unit tests, `vp run check` (every linter)
 .github/workflows/release.yml  after Test on main: tag, npm publish, GitHub release
+.github/actionlint.yml         actionlint messages excused per file, each with its reason
 .github/zizmor.yml             zizmor findings excused, each with its reason
 README.md                      user docs; packages/takibi-hono/README.md is an identical copy
 ```
@@ -47,17 +55,18 @@ Run these from the repository root.
 | Goal | Command |
 | --- | --- |
 | Install dependencies | `pnpm install --frozen-lockfile` |
-| Format check, oxlint (type-aware) and type check, workflow lint | `pnpm check` |
-| Autofix formatting and lint | `pnpm fix` |
+| Everything CI checks except the tests: oxfmt, oxlint (type-aware), the type check, then `pnpm lint` | `pnpm check` |
+| Autofix formatting, oxlint, markdownlint and textlint | `pnpm fix` |
+| The repository linters: markdownlint, textlint, cspell, secretlint, the TypeSpec release check, actionlint, zizmor | `pnpm lint` |
 | Unit tests | `pnpm test` |
 | One test file | `pnpm -F takibi-hono test src/<path>.test.ts` |
 | Coverage | `pnpm coverage` |
 | Build `dist` | `vp run takibi-hono#build` |
-| actionlint + zizmor over `.github/workflows` | `pnpm lint` |
 | Run the fixture app (after a build) | `pnpm -F fixture-vite-plugin dev` |
 
-- `pnpm lint` only prints a note when actionlint / zizmor are not installed
-  (`pipx install actionlint-py`, `pipx install zizmor`); the Lint workflow always runs them.
+- `pnpm lint` needs no global tool: the linters are root devDependencies, and actionlint / zizmor
+  are downloaded once at a pinned, checksummed release into `node_modules/.cache` (so the first
+  run needs the network). The scripts are TypeScript run by `node` directly.
 - The fixture and the published entry points run from `dist`: build before using them, never
   judge a change against a stale build.
 
@@ -76,14 +85,18 @@ which part.
 ## Invariants
 
 - **Never relax a linter to get a change through.** Do not set a rule to `'off'`, do not lower
-  `categories`, do not drop `denyWarnings`, do not add an `ignorePatterns` entry to hide a
-  finding. If a rule genuinely does not fit, say so and ask.
+  `categories`, do not drop `denyWarnings`, do not add an `ignorePatterns` / `ignorePaths` /
+  `ignoreWords` entry to hide a finding, do not add a typo to `project-words.txt`. If a rule
+  genuinely does not fit, say so and ask.
 - **Suppressions live next to the code, naming the rule and the reason:**
   `// oxlint-disable-next-line rule-name -- reason`. `reportUnusedDisableDirectives: 'deny'` is
   on, so a suppression that stopped firing must go. Do not add a file-level disable; the one that
   exists (`no-console` in `src/vite-plugin/index.ts`) is there because terminal output is the
   plugin's interface.
-- **No `TODO` / `FIXME`** — `no-warning-comments` rejects them. Parked work belongs in the report.
+- **No `TODO` / `FIXME`** — `no-warning-comments` rejects them in source, textlint's `no-todo` in
+  docs. Parked work belongs in the report.
+- **No credential is ever committed.** secretlint scans every tracked file. When it reports one,
+  remove it and tell the owner so the secret can be rotated; never excuse the finding.
 - **Failures are typed Effect errors, never throws** — see the Effect rule.
 - **The handlers directory and the app entry hold the user's code.** They are merged, never
   deleted, emptied or blindly overwritten — not by a cleanup, not on a config change. See the
@@ -102,8 +115,8 @@ which part.
 
 ## Working order
 
-1. Read the rules in force for the files you are about to touch (`lint` in
-   `packages/takibi-hono/vite.config.ts`, and the matching `.cursor/rules/*.mdc`).
+1. Read the rules in force for the files you are about to touch: the `lint` section of
+   `packages/takibi-hono/vite.config.ts` and the matching `.cursor/rules/*.mdc`.
 2. Implement it the way the surrounding code is written. Do not introduce a second idiom.
 3. `pnpm fix`, then `pnpm check` and `pnpm test`.
 4. Commit and push (see Git policy).

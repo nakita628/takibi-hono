@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { takibiHono } from './index.js'
 
 const ENTRY_URL = new URL('../index.ts', import.meta.url).href
-// oxlint-disable-next-line no-control-regex -- the help renderer colours its output
+// oxlint-disable-next-line no-control-regex -- the help renderer colors its output
 const ANSI = /\u001B\[[0-9;]*m/gu
 
 const SPEC = `openapi: 3.1.0

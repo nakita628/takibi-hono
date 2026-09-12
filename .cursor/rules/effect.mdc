@@ -45,9 +45,9 @@ export function readFile(path: string) {
   converted into one of our tagged errors in the module at that boundary.
 - Every error carries a `message` written for the person who ran the command: what is wrong and,
   where possible, what to do. The CLI renders it as-is.
-- Absorb only the failure you mean: `Effect.catchIf` on the specific reason (`isNotFound` in
-  `src/file`), not a blanket `orElse` — unless the question is genuinely advisory (the Vite
-  plugin's `statOrNull`).
+- Absorb only the failure you mean: `Effect.catchIf` on the specific reason, as `isNotFound` in
+  `src/file` does, not a blanket `orElse`. The exception is a question that is genuinely
+  advisory, such as `statOrNull` in the Vite plugin.
 - `hono()` stops at the first failure. The Vite plugin reports a generation failure as a log line
   (`Effect.result`) so the dev server keeps running.
 

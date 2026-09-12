@@ -1,3 +1,7 @@
+<!-- The pull request title is the page's top-level heading, so the body starts at `##`. -->
+
+<!-- markdownlint-disable MD041 -->
+
 ## Why
 
 <!-- The problem or request behind this change. Link the issue: `Closes #123`. -->
@@ -21,6 +25,8 @@
 ## How
 
 <!-- The approach, and how you verified it. -->
+
+<!-- textlint-disable no-todo -- the boxes are the checklist to tick, not parked work -->
 
 - [ ] `pnpm check`
 - [ ] `pnpm test`

@@ -1,0 +1,31 @@
+# Words cspell does not know but this project uses on purpose. One per line, sorted
+# case-insensitively, lowercase unless the casing itself is the point. Adding a word is a one-line
+# diff; adding a *typo* here is how the check stops working, so keep it to terms that really recur.
+apidevtools
+arktype
+artipacked
+asphodelos
+bsdtar
+codegen
+Elysia
+GOARCH
+hekireki
+Metavar
+msgpackr
+msvc
+nakita
+openssf
+pipefail
+rhysd
+sapegin
+stringbool
+subschema
+subschemas
+takibi
+Tarjan
+textlint
+textlintrc
+typebox
+voidzero
+zizmor
+zizmorcore

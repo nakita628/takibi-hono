@@ -1,6 +1,6 @@
 # Takibi Hono
 
-![](https://github.com/nakita628/takibi-hono/blob/main/assets/takibi-hono.gif)
+![Takibi Hono demo](https://github.com/nakita628/takibi-hono/blob/main/assets/takibi-hono.gif)
 
 ## OpenAPI to Hono Code Generator
 

@@ -1,6 +1,7 @@
 ---
 name: Feature Request
 about: Something takibi-hono should generate or do
+title: ''
 labels: enhancement
 ---
 
