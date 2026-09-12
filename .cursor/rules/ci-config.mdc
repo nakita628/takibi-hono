@@ -8,8 +8,6 @@ alwaysApply: false
 
 ## The workflows
 
-The release layout mirrors hono-takibi; the linters mirror asphodelos.
-
 - `test.yml` (Test): `vp install --frozen-lockfile` → `vp run takibi-hono#build` → the package
   tests → `vp run check`, which ends in `pnpm lint` and so runs every linter. A new check goes into
   the root `package.json` scripts, so local and CI cannot disagree about what "clean" means.
@@ -53,7 +51,7 @@ linters.
 ## Editing the lint configuration
 
 The `lint` section of `packages/takibi-hono/vite.config.ts` is the standard this repository holds
-itself to, and its comments explain the choices. It mirrors hono-takibi and hekireki.
+itself to, and its comments explain the choices.
 
 - Adding a rule: place it in the section it belongs to, with the reason above it if its name does
   not say it. Run `pnpm check` and fix what it reports in the code — the rule is not finished until
@@ -93,12 +91,13 @@ itself to, and its comments explain the choices. It mirrors hono-takibi and heki
   `pnpm add` refuse a version outside the catalog. `@typespec/openapi` is a devDependency only so
   the peer of `@typespec/openapi3` follows the catalog instead of being auto-installed at an older
   release.
-- `oas-truth` and `hono-takibi` are the generator's core; a bump changes generated output, so read
+- `oas-truth` and the client-generation dependency (`src/core/client.ts`) are the generator's
+  core; a bump changes generated output, so read
   the diff of the test expectations rather than updating them blindly. A version newer than pnpm's
   minimum release age goes into `minimumReleaseAgeExclude`, and comes out once it is old enough.
 - The package's runtime `dependencies` are what every user installs. Adding one is a design
   decision — ask first. Tooling goes in `devDependencies`.
-- Renovate (`renovate.json`, the same settings as hono-takibi) opens update PRs on Saturdays
+- Renovate (`renovate.json`) opens update PRs on Saturdays
   (Asia/Tokyo), after a release has been out 7 days (1 day for a security fix). It merges pins,
   lockfile maintenance and minor / patch updates of packages past 0.x by itself — never an action
   digest. The `typespec` group keeps TypeSpec in one PR; the `effect` group is always merged by

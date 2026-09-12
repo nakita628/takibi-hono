@@ -13,8 +13,8 @@ with Vitest, all through vite-plus (`vp`) on pnpm.
 
 It owns only the Hono-specific part. Parsing, the OpenAPI types and every Components kind except
 `schemas` come from [`oas-truth`](https://www.npmjs.com/package/oas-truth); client code (RPC,
-query hooks, the `App` type, docs) is delegated to `hono-takibi`. Its siblings are
-`nakita628/hono-takibi` and `asphodelos` (Elysia), and conventions are shared with them.
+query hooks, the `App` type, docs) is delegated to the client-generation dependency wired in
+`src/core/client.ts`.
 
 This repository is operated **through agent conversation**. The config files are the source of
 truth: when an instruction contradicts one, quote the config and ask before changing it.

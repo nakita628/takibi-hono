@@ -7,7 +7,7 @@ alwaysApply: false
 # Effect
 
 The package is written on Effect v4 (`4.0.0-rc.112`, pinned exactly to the release candidate
-`oas-truth`'s schema-to-library uses), in the same style as hono-takibi.
+`oas-truth`'s schema-to-library uses).
 
 ## One shape for an Effect program
 
@@ -41,8 +41,8 @@ export function readFile(path: string) {
   `ClientError` (`src/core/client.ts`) as `Data.TaggedError`, and `ConfigError` (`src/config`) as
   `Schema.TaggedError` because it comes out of a schema decode. Filesystem failures stay the
   platform's `PlatformError`.
-- An external result or an unexported error type (oas-truth's result, hono-takibi's errors) is
-  converted into one of our tagged errors in the module at that boundary.
+- An external result or an unexported error type (oas-truth's result, the client generator's
+  errors) is converted into one of our tagged errors in the module at that boundary.
 - Every error carries a `message` written for the person who ran the command: what is wrong and,
   where possible, what to do. The CLI renders it as-is.
 - Absorb only the failure you mean: `Effect.catchIf` on the specific reason, as `isNotFound` in

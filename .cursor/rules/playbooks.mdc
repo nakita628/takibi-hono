@@ -1,5 +1,5 @@
 ---
-description: Step-by-step playbooks for the recurring tasks here — adding a config option, fixing a generator bug, porting from hono-takibi, a vendor extension request, checking a change in the fixture, clearing a lint failure, adding a linter rule, bumping actionlint or zizmor, bumping effect, TypeSpec or oas-truth, and releasing. Read this when starting any of those.
+description: Step-by-step playbooks for the recurring tasks here — adding a config option, fixing a generator bug, a vendor extension request, checking a change in the fixture, clearing a lint failure, adding a linter rule, bumping actionlint or zizmor, bumping effect, TypeSpec, oas-truth or the client-generation dependency, and releasing. Read this when starting any of those.
 alwaysApply: false
 ---
 
@@ -28,16 +28,6 @@ commit.
    (`core/`), the merge (`merge/`) — and fix it there, not downstream. A mistake in oas-truth or
    schema-to-library is fixed upstream, never by string-patching its output here.
 3. Check whether the other four schema libraries, and `openapi: false`, have the same mistake.
-
-## Port a feature from hono-takibi
-
-1. Read the hono-takibi implementation and its tests end-to-end before writing anything.
-2. List what differs here: hono-openapi `describeRoute` + validators instead of
-   `@hono/zod-openapi`, five schema libraries through oas-truth, handler files that merge into the
-   user's code. Adapt; do not copy a behavior that would delete or overwrite user code.
-3. Port the tests first and make sure they fail against the current code before the
-   implementation lands.
-4. Say in the commit body what was taken as-is and what changed and why.
 
 ## A request to support a vendor extension (`x-*`)
 
@@ -107,7 +97,7 @@ For a change to the Vite plugin, the handler / app output or the merge:
    `pnpm-lock.yaml` holds one release, and prints the `pnpm update` that re-resolves the stragglers.
 3. `pnpm test`: TypeSpec input is compiled for real, so read any changed expectation.
 
-## Bump oas-truth or hono-takibi
+## Bump oas-truth or the client-generation dependency
 
 1. Change the version; if it is younger than pnpm's minimum release age, add it to
    `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (and drop entries that no longer need it).
