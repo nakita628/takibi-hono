@@ -2,62 +2,50 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
+import { afterEach, describe, expect, it } from 'vite-plus/test'
 
-import { emit } from './index.js'
+import { FormatError } from '../format/index.js'
+import { runGenerator, runGeneratorError } from '../testing/index.js'
+import { emit, emitFiles } from './index.js'
+
+const dirs: string[] = []
+
+function tmpDir() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'takibi-hono-emit-'))
+  dirs.push(dir)
+  return dir
+}
+
+afterEach(() => {
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+})
 
 describe('emit', () => {
-  const testDir = 'tmp-emit-test'
-  beforeEach(() => {
-    fs.rmSync(testDir, { recursive: true, force: true })
-    fs.mkdirSync(testDir, { recursive: true })
-  })
-  afterEach(() => {
-    fs.rmSync(testDir, { recursive: true, force: true })
-  })
-  it('should format, create directory, and write file successfully', async () => {
-    const result = await emit('console.log("Hello, world!")', testDir, `${testDir}/test.ts`)
-    expect(result).toStrictEqual({ ok: true, value: undefined })
-    expect(fs.existsSync(`${testDir}/test.ts`)).toBe(true)
-  })
-  it('should create nested directories', async () => {
-    const nestedDir = `${testDir}/a/b/c`
-    const result = await emit('const x = 1', nestedDir, `${nestedDir}/out.ts`)
-    expect(result).toStrictEqual({ ok: true, value: undefined })
-    expect(fs.existsSync(`${nestedDir}/out.ts`)).toBe(true)
-  })
-  it('should return error when write fails on read-only path', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'emit-readonly-'))
-    const readonlyDir = path.join(tmpDir, 'readonly')
-    fs.mkdirSync(readonlyDir)
-    fs.chmodSync(readonlyDir, 0o444)
-    const result = await emit('const x = 1', readonlyDir, `${readonlyDir}/sub/out.ts`)
-    expect(result.ok).toBe(false)
-
-    // Cleanup
-    fs.chmodSync(readonlyDir, 0o755)
-    fs.rmSync(tmpDir, { recursive: true, force: true })
+  it('formats the code and writes it, creating the directory', async () => {
+    const dir = path.join(tmpDir(), 'a', 'b')
+    await runGenerator(emit('const x = "1";', dir, path.join(dir, 'out.ts')))
+    expect(fs.readFileSync(path.join(dir, 'out.ts'), 'utf8')).toBe("const x = '1'\n")
   })
 
-  it('returns fmt error and writes nothing when input has syntax errors', async () => {
-    const out = `${testDir}/syntax-err.ts`
-    const result = await emit('const = ;)(', testDir, out)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(typeof result.error).toBe('string')
-      expect(result.error.length).toBeGreaterThan(0)
-    }
-    expect(fs.existsSync(out)).toBe(false)
+  it('fails with FormatError and writes nothing for invalid code', async () => {
+    const dir = tmpDir()
+    const error = await runGeneratorError(emit('const = ;', dir, path.join(dir, 'out.ts')))
+    expect(error).toStrictEqual(new FormatError({ message: 'Unexpected token' }))
+    expect(fs.existsSync(path.join(dir, 'out.ts'))).toBe(false)
   })
+})
 
-  it('returns mkdir error when target directory path is occupied by a file', async () => {
-    const filePath = `${testDir}/occupied`
-    fs.writeFileSync(filePath, 'placeholder')
-    const result = await emit('const x = 1', filePath, `${filePath}/out.ts`)
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(typeof result.error).toBe('string')
-      expect(result.error.length).toBeGreaterThan(0)
-    }
+describe('emitFiles', () => {
+  it('writes every file in order and stops at the first failure', async () => {
+    const dir = tmpDir()
+    const error = await runGeneratorError(
+      emitFiles([
+        { path: path.join(dir, 'a.ts'), code: 'const a = 1' },
+        { path: path.join(dir, 'b.ts'), code: 'const = ;' },
+        { path: path.join(dir, 'c.ts'), code: 'const c = 1' },
+      ]),
+    )
+    expect(error._tag).toBe('FormatError')
+    expect(fs.readdirSync(dir)).toStrictEqual(['a.ts'])
   })
 })

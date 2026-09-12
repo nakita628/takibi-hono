@@ -1,31 +1,21 @@
 import { defineConfig } from 'vite-plus'
 
+// oxlint-disable-next-line import/no-default-export -- Vite resolves the config through its default export
 export default defineConfig({
-  build: {
-    sourcemap: true,
-  },
-  test: {
-    include: ['packages/**/*.test.ts'],
-    coverage: {
-      reporter: ['text', 'html'],
-    },
-  },
-  lint: {
-    ignorePatterns: ['dist/**', 'fixtures/**'],
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-  },
+  // Single source of truth for formatting style. Vite+ merges this root config into every
+  // workspace config, so `packages/takibi-hono` inherits these options and only declares what
+  // is specific to it.
+  //
+  // `fmt.ignorePatterns` is inherited too, so keep every pattern here specific enough that it
+  // matches nothing inside a workspace (a broad root-relative pattern such as `packages/**`
+  // makes the workspaces' own `vp check` exclude every file). `fixtures/**` holds generator
+  // output formatted by takibi-hono itself.
   fmt: {
-    ignorePatterns: ['**/node_modules/**', '**/dist/**', 'fixtures/**'],
     printWidth: 100,
     singleQuote: true,
     semi: false,
     sortPackageJson: true,
     experimentalSortImports: {},
-  },
-  staged: {
-    '*.{js,ts,tsx}': 'vp check --fix',
+    ignorePatterns: ['fixtures/**'],
   },
 })

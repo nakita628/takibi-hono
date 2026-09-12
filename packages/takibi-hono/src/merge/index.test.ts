@@ -448,7 +448,7 @@ describe('mergeHandlerFile', () => {
 
     const result = mergeHandlerFile(existing, generated)
     // @/components should appear exactly once, not duplicated
-    const importCount = (result.match(/@\/components/g) ?? []).length
+    const importCount = (result.match(/@\/components/gu) ?? []).length
     expect(importCount).toBe(1)
     expect(result).toBe(
       [

@@ -25,25 +25,27 @@
     }
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "vp pack",
+    "check": "vp check",
+    "fix": "vp check --fix",
+    "test": "vp test",
+    "coverage": "vp test --coverage"
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
+    "@effect/platform-node": "4.0.0-rc.112",
     "@typespec/compiler": "^1.12.0",
     "@typespec/openapi3": "^1.12.0",
-    "hono-takibi": "0.9.9997",
+    "effect": "4.0.0-rc.112",
+    "hono-takibi": "0.11.0",
+    "oas-truth": "^0.0.3",
     "oxfmt": "^0.51.0",
-    "schema-to-library": "^0.3.3",
-    "ts-morph": "^28.0.0",
-    "typescript": "^6.0.3",
-    "valibot": "^1.4.0"
+    "ts-morph": "^28.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
     "@typespec/http": "^1.12.0",
     "@typespec/rest": "^0.82.0",
-    "@typespec/versioning": "^0.82.0",
-    "tsdown": "^0.22.0",
-    "vite": "^8.0.14"
+    "@typespec/versioning": "^0.82.0"
   }
 }

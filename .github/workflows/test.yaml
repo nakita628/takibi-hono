@@ -6,21 +6,26 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: '22'
           cache: true
 
-      - run: vp install
+      - run: vp install --frozen-lockfile
 
-      - run: vp check
+      - run: vp run --filter ./packages/takibi-hono build
 
-      - run: vp run takibi-hono#build
+      - run: vp run --filter ./packages/takibi-hono test
 
-      - run: vp test --coverage
+      - run: vp run check

@@ -1,8 +1,12 @@
-import fsp from 'node:fs/promises'
+// oxlint-disable no-console -- the plugin reports generation progress to the Vite terminal
 import path from 'node:path'
 
-import { parseConfig } from '../config/index.js'
+import { Console, Effect, FileSystem, Result } from 'effect'
+
+import type { Config } from '../config/index.js'
+import { ConfigError, DEFAULT_CONFIG_FILE, parseConfig } from '../config/index.js'
 import { hono } from '../core/index.js'
+import { fileSystemLayer } from '../file/index.js'
 
 type ViteDevServer = {
   watcher: {
@@ -40,142 +44,162 @@ function debounce(delayMs: number, callback: () => void) {
   return wrapped
 }
 
-async function listTypeScriptFilesShallow(directoryPath: string): Promise<string[]> {
-  return fsp
-    .stat(directoryPath)
-    .then((stats) =>
-      stats.isDirectory()
-        ? fsp
-            .readdir(directoryPath, { withFileTypes: true })
-            .then((entries) =>
-              entries
-                .filter((e) => e.isFile() && e.name.endsWith('.ts'))
-                .map((e) => path.join(directoryPath, e.name)),
-            )
-        : [],
+function toConfigError(error: unknown) {
+  return new ConfigError({ message: error instanceof Error ? error.message : String(error) })
+}
+
+/**
+ * Loads the config through Vite's module graph, invalidating the cached copy first so an
+ * edit to the config file is seen.
+ */
+function readConfigWithHotReload(server: ViteDevServer) {
+  return Effect.gen(function* () {
+    const absoluteConfigPath = toAbsolutePath(DEFAULT_CONFIG_FILE)
+    const resolved = yield* Effect.tryPromise({
+      try: () => server.pluginContainer.resolveId(absoluteConfigPath),
+      catch: toConfigError,
+    })
+    const moduleNode = resolved ? server.moduleGraph.getModuleById(resolved.id) : undefined
+    if (moduleNode) server.moduleGraph.invalidateModule(moduleNode)
+    if (!resolved) server.moduleGraph.invalidateAll()
+    const loadedModule = yield* Effect.tryPromise({
+      try: () => server.ssrLoadModule(`${absoluteConfigPath}?t=${String(Date.now())}`),
+      catch: toConfigError,
+    })
+    const defaultExport = loadedModule.default
+    if (typeof defaultExport !== 'object' || defaultExport === null) {
+      return yield* new ConfigError({ message: 'Config must export default object' })
+    }
+    return yield* parseConfig(defaultExport)
+  })
+}
+
+/**
+ * Every filesystem question the plugin asks is advisory — it decides what to clean up,
+ * never whether the build is valid — so a path it cannot read reads as absent and the dev
+ * server keeps running.
+ */
+function statOrNull(target: string) {
+  return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    return yield* fs.stat(target).pipe(Effect.orElseSucceed(() => null))
+  })
+}
+
+/** Removes a path, answering whether it was removed. */
+function removeQuietly(target: string, recursive = false) {
+  return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    return yield* fs.remove(target, { recursive, force: true }).pipe(
+      Effect.as(true),
+      Effect.orElseSucceed(() => false),
     )
-    .catch(() => [])
+  })
 }
 
-async function deleteTypeScriptFiles(filePaths: readonly string[]) {
-  const results = await Promise.all(
-    filePaths.map((fp) =>
-      fsp
-        .unlink(fp)
-        .then(() => fp)
-        .catch(() => null),
-    ),
+/** Deletes the `.ts` files directly inside a split output directory before it is regenerated. */
+function cleanupSplitDir(name: string, output: string) {
+  return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const directory = toAbsolutePath(output)
+    const names = yield* fs
+      .readDirectory(directory)
+      .pipe(Effect.orElseSucceed((): readonly string[] => []))
+    const files = names
+      .filter((entry) => entry.endsWith('.ts'))
+      .map((entry) => path.join(directory, entry))
+    const infos = yield* Effect.all(files.map(statOrNull), { concurrency: 'unbounded' })
+    const removed = yield* Effect.all(
+      files.filter((_, index) => infos[index]?.type === 'File').map((file) => removeQuietly(file)),
+      { concurrency: 'unbounded' },
+    )
+    const count = removed.filter(Boolean).length
+    return count > 0 ? `🧹 ${name}: cleaned ${String(count)} files` : undefined
+  })
+}
+
+function isOutputConfig(value: unknown): value is { readonly output: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'output' in value &&
+    typeof value.output === 'string'
   )
-  return results.filter((r) => r !== null)
 }
 
-function isComponentConfig(v: unknown): v is { readonly output: string } {
-  return typeof v === 'object' && v !== null && 'output' in v && typeof v.output === 'string'
+function isSplitOutput(value: unknown): value is { readonly output: string } {
+  return (
+    isOutputConfig(value) &&
+    'split' in value &&
+    value.split === true &&
+    !value.output.endsWith('.ts')
+  )
 }
 
-function extractOutputPaths(
-  config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
-) {
-  const componentOutputs = Object.entries(config.components ?? {})
-    .filter(([k, v]) => k !== 'output' && isComponentConfig(v))
-    .map(([, v]) => (isComponentConfig(v) ? v.output : undefined))
-  const baseOutput = typeof config.components?.output === 'string' ? [config.components.output] : []
-  const clientOutputs = Object.values(config.client ?? {})
-    .filter((v) => isComponentConfig(v))
-    .map((v) => (isComponentConfig(v) ? v.output : undefined))
+function extractOutputPaths(config: Config) {
+  const componentOutputs = Object.entries(config.components ?? {}).flatMap(([key, value]) =>
+    key !== 'output' && isOutputConfig(value) ? [value.output] : [],
+  )
+  const baseOutput = config.components?.output === undefined ? [] : [config.components.output]
+  const clientOutputs = Object.values(config.client ?? {}).flatMap((value) =>
+    isOutputConfig(value) ? [value.output] : [],
+  )
   return [config.output, ...componentOutputs, ...baseOutput, ...clientOutputs]
-    .filter((p) => p !== undefined)
+    .filter((output) => output !== undefined)
     .map(toAbsolutePath)
 }
 
-async function cleanupStaleOutputs(
-  previousConfig: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
-  currentConfig: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
-) {
-  const previousPaths = new Set(extractOutputPaths(previousConfig))
-  const currentPaths = new Set(extractOutputPaths(currentConfig))
-  const stalePaths = [...previousPaths].filter((p) => !currentPaths.has(p))
-  const results = await Promise.all(
-    stalePaths.map(async (stalePath) => {
-      const stats = await fsp.stat(stalePath).catch(() => null)
-      if (!stats) return null
-      if (stats.isDirectory()) {
-        await fsp.rm(stalePath, { recursive: true, force: true }).catch(() => {})
-        return stalePath
-      }
-      if (stats.isFile() && stalePath.endsWith('.ts')) {
-        await fsp.unlink(stalePath).catch(() => {})
-        return stalePath
-      }
-      return null
-    }),
-  )
-  return results.filter((r) => r !== null)
+/** Removes outputs the previous config wrote and the current one no longer names. */
+function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
+  return Effect.gen(function* () {
+    const current = new Set(extractOutputPaths(currentConfig))
+    const stalePaths = [...new Set(extractOutputPaths(previousConfig))].filter(
+      (stale) => !current.has(stale),
+    )
+    const infos = yield* Effect.all(stalePaths.map(statOrNull), { concurrency: 'unbounded' })
+    const removed = yield* Effect.all(
+      stalePaths.map((stale, index) => {
+        const type = infos[index]?.type
+        if (type === 'Directory') return removeQuietly(stale, true)
+        if (type === 'File' && stale.endsWith('.ts')) return removeQuietly(stale)
+        return Effect.succeed(false)
+      }),
+      { concurrency: 'unbounded' },
+    )
+    return stalePaths.filter((_, index) => removed[index])
+  })
 }
 
-async function readConfigWithHotReload(server: ViteDevServer) {
-  const absoluteConfigPath = toAbsolutePath('takibi-hono.config.ts')
-  try {
-    const resolved = await server.pluginContainer.resolveId(absoluteConfigPath)
-    const moduleId = resolved?.id
-    if (moduleId) {
-      const moduleNode = server.moduleGraph.getModuleById(moduleId)
-      if (moduleNode) server.moduleGraph.invalidateModule(moduleNode)
-    } else {
-      server.moduleGraph.invalidateAll()
-    }
-    const loadedModule = await server.ssrLoadModule(`${absoluteConfigPath}?t=${Date.now()}`)
-    const defaultExport = loadedModule?.default
-    if (typeof defaultExport !== 'object' || defaultExport === null) {
-      return { ok: false, error: 'Config must export default object' } as const
-    }
-    return parseConfig(defaultExport)
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) } as const
-  }
-}
-
-function cleanupSplitDir(name: string, output: string) {
-  return (async () => {
-    const absDir = toAbsolutePath(output)
-    const files = await listTypeScriptFilesShallow(absDir)
-    const deleted = await deleteTypeScriptFiles(files)
-    return deleted.length > 0 ? `🧹 ${name}: cleaned ${deleted.length} files` : null
-  })()
-}
-
-async function runGeneration(
-  config: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'],
-) {
-  // Clean up split directories before regeneration
-  const components = config.components ?? {}
-  const splitCleanups: Promise<string | null>[] = []
-  for (const [k, cfg] of Object.entries(components)) {
-    if (k === 'output') continue
-    if (!isComponentConfig(cfg)) continue
-    if (!('split' in cfg) || cfg.split !== true) continue
-    if (cfg.output.endsWith('.ts')) continue
-    splitCleanups.push(cleanupSplitDir(k, cfg.output))
-  }
-  const client = config.client ?? {}
-  for (const [k, cfg] of Object.entries(client)) {
-    if (!isComponentConfig(cfg)) continue
-    if (!('split' in cfg) || cfg.split !== true) continue
-    if (cfg.output.endsWith('.ts')) continue
-    splitCleanups.push(cleanupSplitDir(k, cfg.output))
-  }
-  const handlersOutput = config.output
-  if (handlersOutput && !handlersOutput.endsWith('.ts')) {
-    splitCleanups.push(cleanupSplitDir('handlers', handlersOutput))
-  }
-  const cleanupLogs = (await Promise.all(splitCleanups)).filter((l) => l !== null)
-  const result = await hono(config)
-  return {
-    logs: [
-      ...cleanupLogs,
-      result.ok ? '✅ takibi-hono: generated successfully' : `❌ takibi-hono: ${result.error}`,
-    ],
-  }
+/**
+ * Empties the split directories (handlers, split components and clients) so an entry the
+ * spec no longer names does not survive, then runs the generators. A failure is reported
+ * as a log line rather than raised, so the dev server keeps running.
+ */
+function runGeneration(config: Config) {
+  return Effect.gen(function* () {
+    const splitDirs = [
+      ...Object.entries(config.components ?? {}).flatMap(([key, value]) =>
+        key !== 'output' && isSplitOutput(value) ? [[key, value.output] as const] : [],
+      ),
+      ...Object.entries(config.client ?? {}).flatMap(([key, value]) =>
+        isSplitOutput(value) ? [[key, value.output] as const] : [],
+      ),
+      ...(config.output && !config.output.endsWith('.ts')
+        ? [['handlers', config.output] as const]
+        : []),
+    ]
+    const cleaned = yield* Effect.all(
+      splitDirs.map(([name, output]) => cleanupSplitDir(name, output)),
+      { concurrency: 'unbounded' },
+    )
+    const result = yield* Effect.result(hono(config))
+    return [
+      ...cleaned.filter((log) => log !== undefined),
+      Result.isSuccess(result)
+        ? '✅ takibi-hono: generated successfully'
+        : `❌ takibi-hono: ${result.failure.message}`,
+    ]
+  })
 }
 
 function addInputGlobsToWatcher(server: ViteDevServer, absoluteInputPath: string) {
@@ -189,81 +213,82 @@ function addInputGlobsToWatcher(server: ViteDevServer, absoluteInputPath: string
   return inputDirectory
 }
 
+/** The plugin's boundary: Vite's hooks are Promise/callback APIs, the generators are Effects. */
+function run<A>(program: Effect.Effect<A, never, FileSystem.FileSystem>) {
+  return Effect.runPromise(program.pipe(Effect.provide(fileSystemLayer)))
+}
+
 export function takibiHonoVite(): any {
-  // Intentional `const` + mutable property pattern for state spanning Vite
-  // lifecycle hooks (configureServer / handleHotUpdate / watcher callbacks).
-  // Matches hono-takibi's vite-plugin; see AGENTS.md "コード品質" — long-lived
-  // state containers are the canonical exception to the no-`let` rule.
+  // Intentional `const` + mutable property pattern for state spanning Vite lifecycle hooks
+  // (configureServer / handleHotUpdate / watcher callbacks).
   const pluginState: {
-    current: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'] | null
-    previous: Extract<ReturnType<typeof parseConfig>, { ok: true }>['value'] | null
+    current: Config | null
     inputDirectory: string | null
   } = {
     current: null,
-    previous: null,
     inputDirectory: null,
   }
-  const absoluteConfigFilePath = toAbsolutePath('takibi-hono.config.ts')
-  const runGenerationAndReload = async (server?: ViteDevServer) => {
-    if (!pluginState.current) return
-    console.log('🔥 takibi-hono')
-    const { logs } = await runGeneration(pluginState.current)
-    for (const log of logs) console.log(log)
-    if (server) server.ws.send({ type: 'full-reload' })
-  }
-  const handleConfigChange = async (server: ViteDevServer) => {
-    const nextConfig = await readConfigWithHotReload(server)
-    if (!nextConfig.ok) {
-      console.error(`❌ config: ${nextConfig.error}`)
-      return
-    }
-    if (pluginState.current) {
-      const cleaned = await cleanupStaleOutputs(pluginState.current, nextConfig.value)
-      for (const p of cleaned) console.log(`🧹 cleanup: ${p}`)
-    }
-    pluginState.previous = pluginState.current
-    pluginState.current = nextConfig.value
-    pluginState.inputDirectory = addInputGlobsToWatcher(
-      server,
-      toAbsolutePath(pluginState.current.input),
-    )
-    await runGenerationAndReload(server)
-  }
+  const absoluteConfigFilePath = toAbsolutePath(DEFAULT_CONFIG_FILE)
+
+  const regenerate = (server?: ViteDevServer) =>
+    Effect.gen(function* () {
+      if (!pluginState.current) return
+      yield* Console.log('🔥 takibi-hono')
+      const logs = yield* runGeneration(pluginState.current)
+      for (const log of logs) yield* Console.log(log)
+      if (server) server.ws.send({ type: 'full-reload' })
+    })
+
+  /** Loads the config; on success, remembers it and starts watching its input documents. */
+  const loadConfig = (server: ViteDevServer) =>
+    Effect.gen(function* () {
+      const next = yield* Effect.result(readConfigWithHotReload(server))
+      if (Result.isFailure(next)) {
+        yield* Console.error(`❌ config: ${next.failure.message}`)
+        return false
+      }
+      if (pluginState.current) {
+        const cleaned = yield* cleanupStaleOutputs(pluginState.current, next.success)
+        for (const stale of cleaned) yield* Console.log(`🧹 cleanup: ${stale}`)
+      }
+      pluginState.current = next.success
+      pluginState.inputDirectory = addInputGlobsToWatcher(
+        server,
+        toAbsolutePath(next.success.input),
+      )
+      return true
+    })
+
+  const handleConfigChange = (server: ViteDevServer) =>
+    Effect.gen(function* () {
+      if (yield* loadConfig(server)) yield* regenerate(server)
+    })
 
   return {
     name: 'takibi-hono-vite',
 
     handleHotUpdate(context: { file: string; server: ViteDevServer }) {
-      if (path.resolve(context.file) === absoluteConfigFilePath) {
-        handleConfigChange(context.server).catch((err) =>
-          console.error('❌ hot-update error:', err),
-        )
-        return []
-      }
-      return
+      if (path.resolve(context.file) !== absoluteConfigFilePath) return undefined
+      run(handleConfigChange(context.server)).catch((error: unknown) => {
+        console.error('❌ hot-update error:', error)
+      })
+      return []
     },
-    async buildStart() {
+    buildStart() {
       // Dev-only: handled by configureServer
+      return Promise.resolve()
     },
     configureServer(server: ViteDevServer) {
-      ;(async () => {
-        const initialConfig = await readConfigWithHotReload(server)
-        if (!initialConfig.ok) {
-          console.error(`❌ config: ${initialConfig.error}`)
-          return
-        }
-        pluginState.current = initialConfig.value
-
-        pluginState.inputDirectory = addInputGlobsToWatcher(
-          server,
-          toAbsolutePath(pluginState.current.input),
-        )
+      const start = Effect.gen(function* () {
+        if (!(yield* loadConfig(server))) return
         server.watcher.add(absoluteConfigFilePath)
-        const debouncedRegenerate = debounce(200, () => void runGenerationAndReload(server))
-        server.watcher.on('all', async (_eventType, filePath) => {
+        const debouncedRegenerate = debounce(200, () => {
+          void run(regenerate(server))
+        })
+        server.watcher.on('all', (_eventType, filePath) => {
           const absoluteChanged = path.resolve(filePath)
           if (absoluteChanged === absoluteConfigFilePath) {
-            await handleConfigChange(server)
+            void run(handleConfigChange(server))
             return
           }
           if (
@@ -273,8 +298,11 @@ export function takibiHonoVite(): any {
             debouncedRegenerate()
           }
         })
-        await runGenerationAndReload(server)
-      })().catch((err) => console.error('❌ watch error:', err))
+        yield* regenerate(server)
+      })
+      run(start).catch((error: unknown) => {
+        console.error('❌ watch error:', error)
+      })
     },
   }
 }

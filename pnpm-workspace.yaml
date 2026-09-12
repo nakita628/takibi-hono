@@ -3,5 +3,14 @@ packages:
   - fixtures/*
 allowBuilds:
   esbuild: false
+  # Optional native accelerator pulled in through oas-truth -> schema-to-library -> effect ->
+  # msgpackr; the JS fallback is enough, so its build script stays off.
+  msgpackr-extract: false
 minimumReleaseAgeExclude:
-  - schema-to-library@0.3.3
+  - hono-takibi@0.11.0
+  - oas-truth@0.0.3
+# @effect/platform-node pins effect to one release candidate but takes
+# @effect/platform-node-shared with a caret, which resolves to a later RC that imports
+# modules the pinned effect does not have. Keep the whole Effect set on one RC.
+overrides:
+  '@effect/platform-node-shared': 4.0.0-rc.112

@@ -1,54 +1,57 @@
-import { isHttpMethod, isOperation } from '../guard/index.js'
-import type { OpenAPI, Operation, Parameter } from '../openapi/index.js'
-import { makeHandlerFileName } from '../utils/index.js'
-import { resolveParameterRef, resolvePathItemRef } from './openapi.js'
+import type { OpenAPI, Operation, Parameter, PathItem, Reference } from 'oas-truth'
+import { schemaRefToName } from 'oas-truth'
 
-function resolvePathItemParameters(params: unknown, openapi: OpenAPI) {
-  if (!Array.isArray(params)) return undefined
-  return params
-    .map((p) => resolveParameterRef(p, openapi.components))
-    .filter((p): p is Parameter => p !== undefined)
+const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const
+
+export type Route = {
+  readonly method: (typeof HTTP_METHODS)[number]
+  /** Hono path (`/users/:id`). */
+  readonly path: string
+  readonly operation: Operation
+  /** Path Item level parameters, shared by every operation under the path. */
+  readonly parameters: readonly (Parameter | Reference)[]
 }
 
-export function collectOperations(openapi: OpenAPI) {
-  return Object.entries(openapi.paths).reduce(
-    (groups, [pathStr, rawPathItem]) => {
-      const pathItem = resolvePathItemRef(rawPathItem, openapi.components)
-      if (!pathItem) return groups
-      const groupName = makeHandlerFileName(pathStr)
-      const pathItemParameters = resolvePathItemParameters(pathItem.parameters, openapi)
-      const ops = Object.entries(pathItem)
-        .filter(
-          (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
-        )
-        .map(([method, operation]) => ({ method, path: pathStr, operation, pathItemParameters }))
-
-      return ops.length > 0
-        ? groups.set(groupName, [...(groups.get(groupName) ?? []), ...ops])
-        : groups
-    },
-    new Map<
-      string,
-      readonly {
-        readonly method: string
-        readonly path: string
-        readonly operation: Operation
-        readonly pathItemParameters?: readonly Parameter[] | undefined
-      }[]
-    >(),
-  )
+function isInline<T extends object>(value: T | Reference): value is T {
+  return !('$ref' in value && typeof value.$ref === 'string')
 }
 
-export function collectWebhookOperations(openapi: OpenAPI) {
-  if (!openapi.webhooks) return []
-  return Object.entries(openapi.webhooks).flatMap(([webhookName, rawPathItem]) => {
-    const pathItem = resolvePathItemRef(rawPathItem, openapi.components)
-    if (!pathItem) return []
-    const pathItemParameters = resolvePathItemParameters(pathItem.parameters, openapi)
-    return Object.entries(pathItem)
-      .filter(
-        (entry): entry is [string, Operation] => isHttpMethod(entry[0]) && isOperation(entry[1]),
-      )
-      .map(([method, operation]) => ({ webhookName, method, operation, pathItemParameters }))
+/** Follows a local `$ref` into its Components map (`undefined` when it does not resolve). */
+export function resolveRef<T extends object>(
+  value: T | Reference | undefined,
+  map: { readonly [k: string]: T } | undefined,
+): T | undefined {
+  if (value === undefined) return undefined
+  if (isInline(value)) return value
+  return map?.[schemaRefToName(value.$ref ?? '')]
+}
+
+function makeRoutes(path: string, rawPathItem: PathItem, openapi: OpenAPI): readonly Route[] {
+  const pathItem = resolveRef(rawPathItem, openapi.components?.pathItems)
+  if (!pathItem) return []
+  return HTTP_METHODS.flatMap((method) => {
+    const operation = pathItem[method]
+    return operation ? [{ method, path, operation, parameters: pathItem.parameters ?? [] }] : []
   })
+}
+
+/** `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. */
+export function makeHandlerFileName(path: string) {
+  return path.split('/').find(Boolean)?.toLowerCase() ?? '__root'
+}
+
+export function collectRoutes(openapi: OpenAPI) {
+  const paths: { readonly [path: string]: PathItem } = openapi.paths
+  return Object.entries(paths).reduce((groups, [path, pathItem]) => {
+    const routes = makeRoutes(path.replaceAll(/\{([^}]+)\}/gu, ':$1'), pathItem, openapi)
+    const name = makeHandlerFileName(path)
+    return routes.length > 0 ? groups.set(name, [...(groups.get(name) ?? []), ...routes]) : groups
+  }, new Map<string, readonly Route[]>())
+}
+
+/** OAS 3.1 webhooks, each served as `/<name>`. */
+export function collectWebhookRoutes(openapi: OpenAPI) {
+  return Object.entries(openapi.webhooks ?? {}).flatMap(([name, pathItem]) =>
+    makeRoutes(`/${name}`, pathItem, openapi),
+  )
 }

@@ -1,5 +1,10 @@
 import path from 'node:path'
 
+import type { FormatConfig } from 'oxfmt'
+
+import type { ComponentKind } from '../generator/components.js'
+import { COMPONENT_KINDS } from '../generator/components.js'
+
 /** Shared shape for the framework query-hook generators (swr / tanstack / vue / ...). */
 type ClientQueryOptions = {
   readonly output: string
@@ -35,166 +40,126 @@ export type ClientOptions = {
     | undefined
 }
 
-/** User-facing `takibi-hono` config block accepted by `defineConfig`. */
-export type TakibiHonoOptions = {
-  readonly readonly?: boolean | undefined
-  readonly client?: ClientOptions | undefined
-  /** Directory for generated handler files (default `src/handlers`). */
+type TargetConfig = {
+  readonly output: string
+  readonly split?: boolean | undefined
+  readonly import?: string | undefined
+  readonly exportTypes?: boolean | undefined
+}
+
+/** The `takibi-hono` config `hono()` runs from (the shape `parseConfig` returns). */
+export type TakibiHonoConfig = {
+  readonly input: string
+  readonly schema: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
   readonly output?: string | undefined
+  readonly basePath?: string | undefined
+  readonly openapi?: boolean | undefined
+  readonly format?: FormatConfig | undefined
+  readonly readonly?: boolean | undefined
   readonly pathAlias?: string | undefined
+  readonly client?: ClientOptions | undefined
   readonly components?:
-    | ({ readonly output?: string | undefined } & Partial<
-        Record<
-          'schemas' | 'parameters' | 'headers' | 'mediaTypes',
-          {
-            readonly output: string
-            readonly exportTypes?: boolean | undefined
-            readonly split?: boolean | undefined
-            readonly import?: string | undefined
-          }
-        > &
-          Record<
-            | 'responses'
-            | 'requestBodies'
-            | 'examples'
-            | 'securitySchemes'
-            | 'links'
-            | 'callbacks'
-            | 'pathItems',
-            {
-              readonly output: string
-              readonly split?: boolean | undefined
-              readonly import?: string | undefined
-            }
-          >
-      >)
+    | ({ readonly output?: string | undefined } & {
+        readonly [K in 'schemas' | ComponentKind]?: TargetConfig | undefined
+      })
     | undefined
 }
 
-/**
- * Schemas join the aggregate barrel (and therefore export their inferred type) when
- * `components.output` is set and no per-type `schemas` config overrides it. A per-type
- * `schemas` config opts in via its own `exportTypes` instead, so it is excluded here.
- */
-export function isSchemasAggregate(ohConfig: TakibiHonoOptions | undefined) {
-  return ohConfig?.components?.output !== undefined && ohConfig?.components?.schemas === undefined
+export type Target = {
+  /** A `.ts` file, or the directory of a split target. */
+  readonly output: string
+  readonly split: boolean
+  readonly exportTypes: boolean
+  readonly import: string | undefined
 }
 
-/** Computed once per run from config; every generator consumes this instead of re-deriving paths. */
 export type Layout = {
-  readonly schemasFile: string
-  readonly schemasDir: string
   readonly handlersDir: string
-  readonly componentsBaseOutput: string | undefined
-  /** When `components.output` is a `.ts` file, all components + schemas aggregate into it. */
-  readonly componentsSingleFile: string | undefined
-  readonly pathAlias: string | undefined
-  /** Per-component-type relative imports from the handlers directory. */
-  readonly componentPaths: Record<string, string>
   readonly appDir: string
+  readonly pathAlias: string | undefined
+  /** Set when every component kind lives in one module. */
+  readonly aggregate: string | undefined
+  readonly targets: { readonly [K in 'schemas' | ComponentKind]?: Target }
 }
 
-export function resolveLayout(ohConfig: TakibiHonoOptions | undefined): Layout {
-  const handlersOutput = ohConfig?.output ?? 'src/handlers'
-  const handlersDir = handlersOutput.endsWith('.ts') ? path.dirname(handlersOutput) : handlersOutput
-  const appDir = path.dirname(handlersDir)
-  const pathAlias = ohConfig?.pathAlias
-  const componentsBaseOutput = ohConfig?.components?.output
-  // `.ts` => single-file aggregate (schemas + all components in one file); a directory keeps the
-  // legacy `<base>/<kind>/index.ts` fallback.
-  const componentsSingleFile = componentsBaseOutput?.endsWith('.ts')
-    ? componentsBaseOutput
-    : undefined
-  const schemasConfig = ohConfig?.components?.schemas
-  const schemasOutput =
-    componentsSingleFile ??
-    schemasConfig?.output ??
-    (componentsBaseOutput ? `${componentsBaseOutput}/index.ts` : 'src/components/index.ts')
-  const schemasDir = schemasOutput.endsWith('.ts') ? path.dirname(schemasOutput) : schemasOutput
-  const schemasFile = schemasOutput.endsWith('.ts')
-    ? schemasOutput
-    : path.join(schemasOutput, 'index.ts')
-  const componentPaths = makeComponentPaths(
-    handlersDir,
-    appDir,
-    schemasFile,
-    ohConfig,
-    componentsBaseOutput,
-    componentsSingleFile,
-    pathAlias,
-  )
+function toFile(output: string) {
+  return output.endsWith('.ts') ? output : path.join(output, 'index.ts')
+}
+
+/** A per-kind config as a target; `split` only applies to a directory output. */
+function toTarget(entry: TargetConfig): Target {
+  const split = entry.split === true && !entry.output.endsWith('.ts')
   return {
-    schemasFile,
-    schemasDir,
-    handlersDir,
-    componentsBaseOutput,
-    componentsSingleFile,
-    pathAlias,
-    componentPaths,
-    appDir,
+    output: split ? entry.output : toFile(entry.output),
+    split,
+    exportTypes: entry.exportTypes ?? false,
+    import: entry.import,
   }
 }
 
-const COMPONENT_KEYS = [
-  'parameters',
-  'headers',
-  'securitySchemes',
-  'requestBodies',
-  'responses',
-  'examples',
-  'links',
-  'callbacks',
-  'pathItems',
-  'mediaTypes',
-] as const
-
-function makeComponentPaths(
-  handlersDir: string,
-  appDir: string,
-  schemasFile: string,
-  ohConfig: TakibiHonoOptions | undefined,
-  componentsBaseOutput: string | undefined,
-  componentsSingleFile: string | undefined,
-  pathAlias: string | undefined,
-): Record<string, string> {
-  // pathAlias maps to the app directory; resolve module specifiers against it so they are
-  // import-site independent (e.g. `@/components`).
-  const aliasPrefix = pathAlias?.endsWith('/') ? pathAlias.slice(0, -1) : pathAlias
-  const importTo = (toFile: string): string =>
-    aliasPrefix
-      ? `${aliasPrefix}/${path
-          .relative(appDir, toFile)
-          .replace(/\.ts$/, '')
-          .replace(/\/index$/, '')
-          .replaceAll('\\', '/')}`
-      : computeRelativeImport(handlersDir, toFile)
-  // Single-file mode: schemas + every component live in one file, so all keys import from it.
-  if (componentsSingleFile) {
-    const spec = importTo(componentsSingleFile)
-    return Object.fromEntries([['schemas', spec], ...COMPONENT_KEYS.map((k) => [k, spec])])
+/**
+ * Two modes. Per-kind: any `components.<kind>` config places that kind (schemas
+ * default to `src/components/index.ts`; unconfigured kinds are not generated).
+ * Aggregate: otherwise every kind shares one module — `components.output`, or
+ * `src/components/index.ts`.
+ */
+export function resolveLayout(config: TakibiHonoConfig): Layout {
+  const handlersDir = config.output ?? 'src/handlers'
+  const layout = {
+    handlersDir,
+    appDir: path.dirname(handlersDir),
+    pathAlias: config.pathAlias,
   }
-  const paths: Record<string, string> = {}
-  paths.schemas = ohConfig?.components?.schemas?.import ?? importTo(schemasFile)
-  for (const k of COMPONENT_KEYS) {
-    const componentConfig = ohConfig?.components?.[k]
-    if (componentConfig) {
-      if (componentConfig.import) {
-        paths[k] = componentConfig.import
-      } else {
-        const output = componentConfig.output
-        const file = output.endsWith('.ts') ? output : path.join(output, 'index.ts')
-        paths[k] = importTo(file)
-      }
-    } else if (componentsBaseOutput) {
-      paths[k] = importTo(path.join(componentsBaseOutput, k, 'index.ts'))
+  const components = config.components
+  const configured = (['schemas', ...COMPONENT_KINDS] as const).filter(
+    (kind) => components?.[kind] !== undefined,
+  )
+  if (configured.length === 0) {
+    const file = toFile(components?.output ?? 'src/components')
+    const target = { output: file, split: false, import: undefined }
+    return {
+      ...layout,
+      aggregate: file,
+      targets: Object.fromEntries(
+        (['schemas', ...COMPONENT_KINDS] as const).map((kind) => [
+          kind,
+          { ...target, exportTypes: kind === 'schemas' },
+        ]),
+      ),
     }
   }
-  return paths
+  return {
+    ...layout,
+    aggregate: undefined,
+    targets: {
+      schemas: toTarget(components?.schemas ?? { output: 'src/components/index.ts' }),
+      ...Object.fromEntries(
+        configured.flatMap((kind) => {
+          const target = components?.[kind]
+          return target ? [[kind, toTarget(target)]] : []
+        }),
+      ),
+    },
+  }
 }
 
-function computeRelativeImport(fromDir: string, toFile: string): string {
-  const rel = path.relative(fromDir, toFile)
-  const stripped = rel.replace(/\.ts$/, '').replace(/\/index$/, '')
-  const normalized = stripped.replace(/\\/g, '/')
-  return normalized.startsWith('.') ? normalized : `./${normalized}`
+/** A path as a module specifier: POSIX separators, no `.ts`, no trailing `index`. */
+function toSpecifier(file: string) {
+  return file
+    .replaceAll('\\', '/')
+    .replace(/\.ts$/u, '')
+    .replace(/(?:^|\/)index$/u, '')
+}
+
+/** The specifier a module in `fromDir` imports a target with: `import` override, path alias, or relative. */
+export function makeSpecifier(layout: Layout, fromDir: string, target: Target) {
+  if (target.import) return target.import
+  const file = target.split ? path.join(target.output, 'index.ts') : target.output
+  if (layout.pathAlias) {
+    const alias = layout.pathAlias.replace(/\/$/u, '')
+    const rel = toSpecifier(path.relative(layout.appDir, file))
+    return rel === '' ? alias : `${alias}/${rel}`
+  }
+  const rel = toSpecifier(path.relative(fromDir, file))
+  return rel === '' ? '.' : rel.startsWith('.') ? rel : `./${rel}`
 }

@@ -67,15 +67,17 @@ export default defineConfig({
   pathAlias: '@/',
 
   // Components (OpenAPI Components Object). `output` (single-file aggregate) and
-  // the per-type fields below are mutually exclusive — pick one mode. `split: true`
-  // makes a per-type `output` a directory (one file per entry + an index.ts
-  // barrel); omit it (default `false`) for a single bundled `.ts` file. `import`
-  // overrides the auto-derived specifier. `exportTypes: true` adds
-  // `export type X = z.infer<typeof XSchema>` aliases on schemas / parameters /
-  // headers / mediaTypes.
+  // the per-type fields below are mutually exclusive — pick one mode.
   //
-  // Single-file mode:
+  // Single-file mode (the default, at `src/components/index.ts`): schemas and every
+  // other component kind in one module, schema types exported.
   // components: { output: 'src/components.ts' },
+  //
+  // Per-type mode: only the configured kinds are generated (schemas always, at
+  // `src/components/index.ts` unless configured). `split: true` makes `output` a
+  // directory (one file per entry + an index.ts barrel); omit it for a single
+  // `.ts` file. `import` overrides the auto-derived specifier. `exportTypes: true`
+  // adds inferred type aliases on schemas / parameters / headers / mediaTypes.
   components: {
     schemas: {
       output: 'src/components/schemas',
@@ -214,8 +216,11 @@ export default defineConfig({
 ### CLI
 
 ```bash
-npx takibi-hono
+npx takibi-hono                               # runs ./takibi-hono.config.ts
+npx takibi-hono --config config/api.config.ts # runs another config file (-c)
 ```
+
+`--help`, `--version` and `--completions <bash|zsh|fish|sh>` are also available.
 
 ### Vite Plugin
 
@@ -286,11 +291,11 @@ import * as v from 'valibot'
 export const honoHandler = new Hono().get(
   '/hono',
   describeRoute({
-    description: 'Returns a welcome message from Takibi Hono.',
-    summary: 'Welcome',
     operationId: 'Hono_welcome',
+    summary: 'Welcome',
+    description: 'Returns a welcome message from Takibi Hono.',
     responses: {
-      200: {
+      '200': {
         description: 'The request has succeeded.',
         content: { 'application/json': { schema: resolver(v.object({ message: v.string() })) } },
       },

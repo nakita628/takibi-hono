@@ -1,180 +1,96 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { isSchemasAggregate, resolveLayout } from './layout.js'
+import { makeSpecifier, resolveLayout } from './layout.js'
 
-describe('resolveLayout: defaults', () => {
-  it.concurrent('uses src/handlers and src/components/index.ts when no config', () => {
-    expect(resolveLayout(undefined)).toStrictEqual({
-      schemasFile: 'src/components/index.ts',
-      schemasDir: 'src/components',
-      handlersDir: 'src/handlers',
-      componentsBaseOutput: undefined,
-      componentsSingleFile: undefined,
-      pathAlias: undefined,
-      appDir: 'src',
-      componentPaths: { schemas: '../components' },
-    })
-  })
-})
+const base = { input: 'openapi.yaml', schema: 'zod' } as const
 
-describe('resolveLayout: handlers / schemas overrides', () => {
-  it.concurrent('handlers.output as a directory leaves it as handlersDir', () => {
-    const layout = resolveLayout({ output: 'src/routes' })
-    expect(layout.handlersDir).toBe('src/routes')
+const aggregateTarget = (file: string) => ({ output: file, split: false, import: undefined })
+
+describe('resolveLayout', () => {
+  it('puts every component kind in src/components/index.ts by default', () => {
+    const layout = resolveLayout(base)
+    expect(layout.handlersDir).toBe('src/handlers')
     expect(layout.appDir).toBe('src')
-  })
-
-  it.concurrent('handlers.output ending with .ts uses its directory', () => {
-    const layout = resolveLayout({ output: 'src/handlers.ts' })
-    expect(layout.handlersDir).toBe('src')
-    expect(layout.appDir).toBe('.')
-  })
-
-  it.concurrent('schemas.output as a .ts file is used directly', () => {
-    const layout = resolveLayout({ components: { schemas: { output: 'src/schemas.ts' } } })
-    expect(layout.schemasFile).toBe('src/schemas.ts')
-    expect(layout.schemasDir).toBe('src')
-  })
-
-  it.concurrent('schemas.output as a directory becomes <dir>/index.ts', () => {
-    const layout = resolveLayout({ components: { schemas: { output: 'src/schemas' } } })
-    expect(layout.schemasFile).toBe('src/schemas/index.ts')
-    expect(layout.schemasDir).toBe('src/schemas')
-  })
-})
-
-describe('resolveLayout: components.output base directory', () => {
-  it.concurrent('uses <base>/index.ts for schemas when no schemas.output is set', () => {
-    const layout = resolveLayout({ components: { output: 'src/openapi' } })
-    expect(layout.schemasFile).toBe('src/openapi/index.ts')
-    expect(layout.componentsBaseOutput).toBe('src/openapi')
-  })
-
-  it.concurrent('individual schemas.output overrides the base output', () => {
-    const layout = resolveLayout({
-      components: { output: 'src/openapi', schemas: { output: 'src/custom.ts' } },
+    expect(layout.aggregate).toBe('src/components/index.ts')
+    expect(layout.targets.schemas).toStrictEqual({
+      ...aggregateTarget('src/components/index.ts'),
+      exportTypes: true,
     })
-    expect(layout.schemasFile).toBe('src/custom.ts')
-    expect(layout.componentsBaseOutput).toBe('src/openapi')
-  })
-})
-
-describe('resolveLayout: componentPaths', () => {
-  it.concurrent('emits relative path from handlersDir to schemasFile by default', () => {
-    const layout = resolveLayout({
-      output: 'src/handlers',
-      components: { schemas: { output: 'src/schemas.ts' } },
+    expect(layout.targets.responses).toStrictEqual({
+      ...aggregateTarget('src/components/index.ts'),
+      exportTypes: false,
     })
-    expect(layout.componentPaths.schemas).toBe('../schemas')
   })
 
-  it.concurrent('honors components.schemas.import override over relative path', () => {
+  it.each([
+    ['src/api/components.ts', 'src/api/components.ts'],
+    ['src/api/components', 'src/api/components/index.ts'],
+  ])('aggregates into components.output %s', (output, file) => {
+    const { handlersDir, appDir, aggregate } = resolveLayout({
+      ...base,
+      output: 'app/routes',
+      components: { output },
+    })
+    expect({ handlersDir, appDir, aggregate }).toStrictEqual({
+      handlersDir: 'app/routes',
+      appDir: 'app',
+      aggregate: file,
+    })
+  })
+
+  it('places only the configured kinds (schemas always) in per-kind mode', () => {
     const layout = resolveLayout({
-      output: 'src/handlers',
+      ...base,
       components: {
-        schemas: { output: 'src/schemas.ts', import: '@app/schemas' },
+        responses: { output: 'src/responses', split: true, import: '@/responses' },
+        parameters: { output: 'src/parameters.ts', split: true, exportTypes: true },
       },
     })
-    expect(layout.componentPaths.schemas).toBe('@app/schemas')
-  })
-
-  it.concurrent('derives per-component paths from componentsBaseOutput when no individual config', () => {
-    const layout = resolveLayout({
-      output: 'src/handlers',
-      components: { output: 'src/openapi' },
-    })
-    expect(layout.componentPaths.parameters).toBe('../openapi/parameters')
-    expect(layout.componentPaths.responses).toBe('../openapi/responses')
-    expect(layout.componentPaths.headers).toBe('../openapi/headers')
-  })
-
-  it.concurrent('honors per-component import override', () => {
-    const layout = resolveLayout({
-      output: 'src/handlers',
-      components: {
-        responses: { output: 'src/responses.ts', import: '@app/responses' },
+    expect(layout.aggregate).toBe(undefined)
+    expect(layout.targets).toStrictEqual({
+      schemas: {
+        output: 'src/components/index.ts',
+        split: false,
+        exportTypes: false,
+        import: undefined,
+      },
+      responses: {
+        output: 'src/responses',
+        split: true,
+        exportTypes: false,
+        import: '@/responses',
+      },
+      parameters: {
+        output: 'src/parameters.ts',
+        split: false,
+        exportTypes: true,
+        import: undefined,
       },
     })
-    expect(layout.componentPaths.responses).toBe('@app/responses')
   })
 })
 
-describe('resolveLayout: pathAlias', () => {
-  it.concurrent('resolves schemas import via the alias relative to appDir', () => {
-    const layout = resolveLayout({
-      pathAlias: '@',
-      output: 'src/handlers',
-      components: { schemas: { output: 'src/components/index.ts' } },
-    })
-    expect(layout.pathAlias).toBe('@')
-    expect(layout.componentPaths.schemas).toBe('@/components')
+describe('makeSpecifier', () => {
+  const layout = resolveLayout(base)
+  const target = {
+    output: 'src/components/index.ts',
+    split: false,
+    exportTypes: false,
+    import: undefined,
+  }
+
+  it.each([
+    ['src/handlers', target, '../components'],
+    ['src/components', target, '.'],
+    ['src/handlers', { ...target, output: 'src/schemas', split: true }, '../schemas'],
+    ['src/handlers', { ...target, import: '#components' }, '#components'],
+  ])('from %s', (fromDir, t, expected) => {
+    expect(makeSpecifier(layout, fromDir, t)).toBe(expected)
   })
 
-  it.concurrent('resolves componentsBaseOutput per-type paths via the alias', () => {
-    const layout = resolveLayout({
-      pathAlias: '@',
-      output: 'src/handlers',
-      components: { output: 'src/openapi' },
-    })
-    expect(layout.componentPaths.parameters).toBe('@/openapi/parameters')
-    expect(layout.componentPaths.responses).toBe('@/openapi/responses')
-  })
-
-  it.concurrent('alias single-file mode points every key at the aggregate file', () => {
-    const layout = resolveLayout({
-      pathAlias: '@',
-      output: 'src/handlers',
-      components: { output: 'src/openapi.ts' },
-    })
-    expect(layout.componentsSingleFile).toBe('src/openapi.ts')
-    expect(layout.componentPaths.schemas).toBe('@/openapi')
-    expect(layout.componentPaths.responses).toBe('@/openapi')
-  })
-
-  it.concurrent('a trailing slash in the alias is normalized away', () => {
-    const layout = resolveLayout({
-      pathAlias: '@/',
-      output: 'src/handlers',
-      components: { schemas: { output: 'src/components/index.ts' } },
-    })
-    expect(layout.componentPaths.schemas).toBe('@/components')
-  })
-
-  it.concurrent('per-component import override still wins over the alias', () => {
-    const layout = resolveLayout({
-      pathAlias: '@',
-      output: 'src/handlers',
-      components: { responses: { output: 'src/responses.ts', import: '@app/responses' } },
-    })
-    expect(layout.componentPaths.responses).toBe('@app/responses')
-  })
-})
-
-describe('isSchemasAggregate', () => {
-  it.concurrent('false when there is no components config', () => {
-    expect(isSchemasAggregate(undefined)).toBe(false)
-    expect(isSchemasAggregate({})).toBe(false)
-  })
-
-  it.concurrent('true for dir aggregate (components.output, no schemas override)', () => {
-    expect(isSchemasAggregate({ components: { output: 'src/openapi' } })).toBe(true)
-  })
-
-  it.concurrent('true for single-file aggregate (components.output ending in .ts)', () => {
-    expect(isSchemasAggregate({ components: { output: 'src/openapi.ts' } })).toBe(true)
-  })
-
-  it.concurrent('false for per-type schemas config without an aggregate output', () => {
-    expect(isSchemasAggregate({ components: { schemas: { output: 'src/schemas.ts' } } })).toBe(
-      false,
+  it('resolves through the path alias from the app directory', () => {
+    expect(makeSpecifier({ ...layout, pathAlias: '@/' }, 'src/handlers', target)).toBe(
+      '@/components',
     )
-  })
-
-  it.concurrent('false when a per-type schemas config overrides components.output', () => {
-    expect(
-      isSchemasAggregate({
-        components: { output: 'src/openapi', schemas: { output: 'src/custom/schemas.ts' } },
-      }),
-    ).toBe(false)
   })
 })

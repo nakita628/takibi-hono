@@ -1,4 +1,5 @@
-import { Node, Project, type SourceFile, SyntaxKind } from 'ts-morph'
+import type { SourceFile } from 'ts-morph'
+import { Node, Project, SyntaxKind } from 'ts-morph'
 
 function parseSnippet(code: string) {
   return new Project({ useInMemoryFileSystem: true }).createSourceFile('snippet.ts', code)
@@ -14,7 +15,7 @@ function makeSourcePair(existingCode: string, generatedCode: string) {
 
 function getBodyStart(file: SourceFile) {
   const decls = file.getImportDeclarations()
-  return decls.length > 0 ? decls[decls.length - 1].getEnd() : 0
+  return decls.at(-1)?.getEnd() ?? 0
 }
 
 function extractImportSection(file: SourceFile, code: string) {
@@ -69,9 +70,9 @@ function extractRouteInfo(code: string) {
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const dotPos = propAccess.getNameNode().getStart() - 1
     const before = code.slice(0, dotPos)
-    const commentMatch = before.match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/)
+    const commentMatch = before.match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/u)
     result.set(`${method}:${routePath}`, {
-      body: args[args.length - 1].getText(),
+      body: args.at(-1)?.getText() ?? '',
       comment: commentMatch?.[1],
     })
   }
@@ -98,9 +99,9 @@ function replaceRouteParts(
     seenPositions.add(namePos)
     const existing = existingRoutes.get(`${method}:${routePath}`)
     if (!existing) continue
-    if (STUBS.has(existing.body.replace(/\s/g, ''))) continue
-    const lastArg = args[args.length - 1]
-    ops.push([lastArg.getStart(), lastArg.getEnd(), existing.body])
+    if (STUBS.has(existing.body.replaceAll(/\s/gu, ''))) continue
+    const lastArg = args.at(-1)
+    if (lastArg) ops.push([lastArg.getStart(), lastArg.getEnd(), existing.body])
   }
   return applyRangeOps(generatedCode, ops)
 }
@@ -139,7 +140,7 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   const nonHandlerSection = nonHandlerCode.length > 0 ? `${nonHandlerCode.join('\n\n')}\n\n` : ''
   const assembled = `${[mergedImports, '', nonHandlerSection + mergedGeneratedBody]
     .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
+    .replaceAll(/\n{3,}/gu, '\n\n')
     .trim()}\n`
   return restoreRouteComments(assembled, existingRoutes)
 }
@@ -160,7 +161,7 @@ export function mergeAppFile(existingCode: string, generatedCode: string) {
   const afterApi = existingCode.slice(existingApiStmt.getEnd())
   return `${[mergedImports.trimEnd(), '\n', betweenImportsAndApi, generatedApiText, afterApi]
     .join('')
-    .replace(/\n{3,}/g, '\n\n')
+    .replaceAll(/\n{3,}/gu, '\n\n')
     .trim()}\n`
 }
 
@@ -193,11 +194,11 @@ function restoreRouteComments(
       const colonIdx = key.indexOf(':')
       const method = key.slice(0, colonIdx)
       const routePath = key.slice(colonIdx + 1)
-      const escapedPath = routePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const escapedPath = routePath.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')
       const isChainMethod = ['get', 'post', 'put', 'patch', 'delete', 'options'].includes(method)
       const pattern = isChainMethod
-        ? new RegExp(`\\.${method}\\('${escapedPath}'`)
-        : new RegExp(`\\.on\\('${method.toUpperCase()}','${escapedPath}'`)
+        ? new RegExp(`\\.${method}\\('${escapedPath}'`, 'u')
+        : new RegExp(`\\.on\\('${method.toUpperCase()}','${escapedPath}'`, 'u')
       const callLiteral = isChainMethod
         ? `.${method}('${routePath}'`
         : `.on('${method.toUpperCase()}','${routePath}'`

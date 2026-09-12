@@ -1,12 +1,10 @@
 #!/usr/bin/env node
+import * as NodeRuntime from '@effect/platform-node/NodeRuntime'
+import * as NodeServices from '@effect/platform-node/NodeServices'
+import { Effect } from 'effect'
+
 import { takibiHono } from './cli/index.js'
 
-void takibiHono().then((result) => {
-  if (result.ok) {
-    console.log(result.value)
-    process.exit(0)
-  } else {
-    console.error(result.error)
-    process.exit(1)
-  }
-})
+NodeRuntime.runMain(
+  takibiHono(process.argv.slice(2), import.meta.url).pipe(Effect.provide(NodeServices.layer)),
+)

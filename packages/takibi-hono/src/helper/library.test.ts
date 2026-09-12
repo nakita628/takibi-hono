@@ -1,81 +1,55 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { getLibraryConfig, getStandardValidatorConfig } from './library.js'
+import { getLibrary, makeInlineAdapter } from './library.js'
 
-describe('getLibraryConfig', () => {
-  const libraries = ['zod', 'valibot', 'typebox', 'arktype', 'effect'] as const
+describe('typebox withRef', () => {
+  const { withRef } = getLibrary('typebox')
 
-  for (const lib of libraries) {
-    it.concurrent(`should return config for ${lib}`, () => {
-      const config = getLibraryConfig(lib)
-      expect(typeof config.schemaImport).toBe('string')
-    })
-  }
-
-  it.concurrent('zod config should have correct values', () => {
-    expect(getLibraryConfig('zod')).toStrictEqual({
-      schemaImport: "import*as z from'zod'",
-    })
-  })
-
-  it.concurrent('valibot config should have correct values', () => {
-    expect(getLibraryConfig('valibot')).toStrictEqual({
-      schemaImport: "import*as v from'valibot'",
-    })
-  })
-
-  it.concurrent('typebox config should have correct values', () => {
-    expect(getLibraryConfig('typebox')).toStrictEqual({
-      schemaImport: "import Type from'typebox'",
-    })
-  })
-
-  it.concurrent('arktype config should have correct values', () => {
-    expect(getLibraryConfig('arktype')).toStrictEqual({
-      schemaImport: "import{type}from'arktype'",
-    })
-  })
-
-  it.concurrent('effect config should have correct values', () => {
-    expect(getLibraryConfig('effect')).toStrictEqual({
-      schemaImport: "import{Schema}from'effect'",
-    })
+  it.each([
+    ['Type.Object({a:Type.String()})', 'Type.Object({a:Type.String()},{ref:"X"})'],
+    [
+      'Type.Object({a:Type.String()},{description:"d"})',
+      'Type.Object({a:Type.String()},{ref:"X",description:"d"})',
+    ],
+    ['Type.String()', 'Type.String({ref:"X"})'],
+    ['Type.String({minLength:1})', 'Type.String({ref:"X",minLength:1})'],
+    ['Type.Record(Type.String(),Type.Any())', 'Type.Record(Type.String(),Type.Any(),{ref:"X"})'],
+    ["Type.Cyclic({X:Type.Any()},'X')", 'Type.Cyclic({X:Type.Any()},\'X\',{ref:"X"})'],
+    [
+      'Type.Readonly(Type.Object({a:Type.String()}))',
+      'Type.Readonly(Type.Object({a:Type.String()},{ref:"X"}))',
+    ],
+    ['TagSchema', 'TagSchema'],
+  ])('%s', (expr, expected) => {
+    expect(withRef(expr, 'X')).toBe(expected)
   })
 })
 
-describe('getStandardValidatorConfig', () => {
-  it.concurrent('zod', () => {
-    const config = getStandardValidatorConfig('zod')
-    expect(config.validatorFn).toBe('sValidator')
-    expect(config.validatorImport).toBe("import{sValidator}from'@hono/standard-validator'")
-    expect(config.validatorPackage).toBe('@hono/standard-validator')
+describe('makeInlineAdapter', () => {
+  it('drops code-injection x-* keys from inline schemas', () => {
+    expect(
+      makeInlineAdapter('zod', { resolver: false }).toExpression({
+        type: 'string',
+        'x-refine': '(v) => globalThis.process.exit(1)',
+      }),
+    ).toBe('z.string()')
   })
 
-  it.concurrent('valibot', () => {
-    const config = getStandardValidatorConfig('valibot')
-    expect(config.validatorFn).toBe('sValidator')
-    expect(config.validatorImport).toBe("import{sValidator}from'@hono/standard-validator'")
-    expect(config.validatorPackage).toBe('@hono/standard-validator')
+  it('unwraps Effect lazy references', () => {
+    expect(
+      makeInlineAdapter('effect', { resolver: false }).toExpression({
+        type: 'array',
+        items: { $ref: '#/components/schemas/User' },
+      }),
+    ).toBe('Schema.Array(UserSchema)')
   })
 
-  it.concurrent('typebox', () => {
-    const config = getStandardValidatorConfig('typebox')
-    expect(config.validatorFn).toBe('tbValidator')
-    expect(config.validatorImport).toBe("import{tbValidator}from'@hono/typebox-validator'")
-    expect(config.validatorPackage).toBe('@hono/typebox-validator')
-  })
-
-  it.concurrent('arktype', () => {
-    const config = getStandardValidatorConfig('arktype')
-    expect(config.validatorFn).toBe('sValidator')
-    expect(config.validatorImport).toBe("import{sValidator}from'@hono/standard-validator'")
-    expect(config.validatorPackage).toBe('@hono/standard-validator')
-  })
-
-  it.concurrent('effect', () => {
-    const config = getStandardValidatorConfig('effect')
-    expect(config.validatorFn).toBe('effectValidator')
-    expect(config.validatorImport).toBe("import{effectValidator}from'@hono/effect-validator'")
-    expect(config.validatorPackage).toBe('@hono/effect-validator')
+  it.each([
+    ['zod', false, undefined],
+    ['zod', true, 'resolver(X)'],
+    ['typebox', true, 'resolver(Compile(X))'],
+    ['effect', true, 'resolver(Schema.toStandardSchemaV1(X))'],
+  ] as const)('%s with resolver %s wraps schema slots as %s', (lib, resolver, expected) => {
+    expect(makeInlineAdapter(lib, { resolver }).wrapSchema?.('X')).toBe(expected)
   })
 })
