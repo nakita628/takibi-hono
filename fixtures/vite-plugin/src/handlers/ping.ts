@@ -6,7 +6,7 @@ export const pingHandler = new Hono().get(
   describeRoute({
     summary: 'Ping',
     operationId: 'ping',
-    responses: { 200: { description: 'OK' } },
+    responses: { '200': { description: 'OK' } },
   }),
   (c) => {},
 )

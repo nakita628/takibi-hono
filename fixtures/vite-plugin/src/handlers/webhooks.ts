@@ -7,20 +7,20 @@ export const webhooksHandler = new Hono()
   .post(
     '/newOrder',
     describeRoute({
+      operationId: 'onNewOrder',
       summary: 'New order webhook',
       tags: ['Webhooks'],
-      operationId: 'onNewOrder',
-      responses: { 200: { description: 'Acknowledged' } },
+      responses: { '200': { description: 'Acknowledged' } },
     }),
-    validator('json', z.object({ orderId: z.string(), amount: z.number().optional() })),
+    validator('json', z.object({ orderId: z.string(), amount: z.number().exactOptional() })),
     (c) => {},
   )
   .post(
     '/userCreated',
     describeRoute({
-      summary: 'User created webhook',
       operationId: 'onUserCreated',
-      responses: { 200: { description: 'Acknowledged' } },
+      summary: 'User created webhook',
+      responses: { '200': { description: 'Acknowledged' } },
     }),
     validator('json', UserSchema),
     (c) => {},
