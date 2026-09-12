@@ -24,7 +24,8 @@ they match).
 
 ## The agent rules
 
-`AGENTS.md` is the short index every agent reads; the rules themselves are `.cursor/rules/*.mdc`
-(`CLAUDE.md` only imports `AGENTS.md`). When a rule changes, keep the table in `AGENTS.md` in
-step. A rule states what the repository actually does — when the code and a rule disagree, fix the
-one that is wrong in the same change rather than leaving them apart.
+The agent rules are `.cursor/rules/*.mdc` and nothing else: `project.mdc` is always applied, the
+others by their `globs` (or, for `playbooks.mdc`, on request). Keep each rule's `description` and
+`globs` accurate — they decide when it is read. A rule states what the repository actually does —
+when the code and a rule disagree, fix the one that is wrong in the same change rather than
+leaving them apart.
