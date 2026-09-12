@@ -136,6 +136,10 @@ function isSplitOutput(value: unknown): value is { readonly output: string } {
   )
 }
 
+/**
+ * The fully generated outputs. The handlers directory is left out: it holds hand-written
+ * handler bodies, and `writeHandlers` already removes the files no route maps to.
+ */
 function extractOutputPaths(config: Config) {
   const componentOutputs = Object.entries(config.components ?? {}).flatMap(([key, value]) =>
     key !== 'output' && isOutputConfig(value) ? [value.output] : [],
@@ -144,12 +148,10 @@ function extractOutputPaths(config: Config) {
   const clientOutputs = Object.values(config.client ?? {}).flatMap((value) =>
     isOutputConfig(value) ? [value.output] : [],
   )
-  return [config.output, ...componentOutputs, ...baseOutput, ...clientOutputs]
-    .filter((output) => output !== undefined)
-    .map(toAbsolutePath)
+  return [...componentOutputs, ...baseOutput, ...clientOutputs].map(toAbsolutePath)
 }
 
-/** Removes outputs the previous config wrote and the current one no longer names. */
+/** Removes generated outputs the previous config wrote and the current one no longer names. */
 function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
   return Effect.gen(function* () {
     const current = new Set(extractOutputPaths(currentConfig))
@@ -171,9 +173,10 @@ function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
 }
 
 /**
- * Empties the split directories (handlers, split components and clients) so an entry the
- * spec no longer names does not survive, then runs the generators. A failure is reported
- * as a log line rather than raised, so the dev server keeps running.
+ * Empties the split component and client directories so an entry the spec no longer names
+ * does not survive, then runs the generators. The handlers directory is not emptied: the
+ * handler bodies in it survive only through `writeHandlers`' merge with the existing files.
+ * A failure is reported as a log line rather than raised, so the dev server keeps running.
  */
 function runGeneration(config: Config) {
   return Effect.gen(function* () {
@@ -184,9 +187,6 @@ function runGeneration(config: Config) {
       ...Object.entries(config.client ?? {}).flatMap(([key, value]) =>
         isSplitOutput(value) ? [[key, value.output] as const] : [],
       ),
-      ...(config.output && !config.output.endsWith('.ts')
-        ? [['handlers', config.output] as const]
-        : []),
     ]
     const cleaned = yield* Effect.all(
       splitDirs.map(([name, output]) => cleanupSplitDir(name, output)),

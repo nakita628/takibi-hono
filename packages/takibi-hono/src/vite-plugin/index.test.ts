@@ -198,42 +198,54 @@ describe('takibiHonoVite', () => {
     expect(vi.mocked(hono)).toHaveBeenCalledTimes(2)
   })
 
-  it('reloads the config when it changes, removing outputs it no longer names', async () => {
+  it('reloads the config when it changes, removing generated outputs it no longer names', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const plugin = takibiHonoVite()
     const { server, sentMessages, state } = createMockServer({
       input: 'openapi.yaml',
       schema: 'zod',
       output: 'old/handlers',
+      components: { output: 'old/components.ts' },
     })
-    write(path.join(process.cwd(), 'old/handlers/users.ts'))
+    const cwd = process.cwd()
+    write(path.join(cwd, 'old/handlers/users.ts'), 'handler body')
+    write(path.join(cwd, 'old/components.ts'))
     plugin.configureServer(server)
     await vi.waitFor(() => {
       expect(sentMessages.length).toBe(1)
     })
 
-    state.config = { input: 'openapi.yaml', schema: 'valibot', output: 'new/handlers' }
-    const configFile = path.join(process.cwd(), 'takibi-hono.config.ts')
+    const next = {
+      input: 'openapi.yaml',
+      schema: 'valibot',
+      output: 'new/handlers',
+      components: { output: 'new/components.ts' },
+    }
+    state.config = next
+    const configFile = path.join(cwd, 'takibi-hono.config.ts')
     expect(plugin.handleHotUpdate({ file: configFile, server })).toStrictEqual([])
     expect(plugin.handleHotUpdate({ file: 'src/other.ts', server })).toBe(undefined)
 
     await vi.waitFor(() => {
       expect(sentMessages.length).toBe(2)
     })
-    expect(fs.existsSync(path.join(process.cwd(), 'old/handlers'))).toBe(false)
-    expect(log.mock.calls).toContainEqual([
-      `🧹 cleanup: ${path.join(process.cwd(), 'old/handlers')}`,
+    expect(fs.existsSync(path.join(cwd, 'old/components.ts'))).toBe(false)
+    expect(fs.readFileSync(path.join(cwd, 'old/handlers/users.ts'), 'utf8')).toBe('handler body')
+    expect(log.mock.calls).toStrictEqual([
+      ['🔥 takibi-hono'],
+      ['✅ takibi-hono: generated successfully'],
+      [`🧹 cleanup: ${path.join(cwd, 'old/components.ts')}`],
+      ['🔥 takibi-hono'],
+      ['✅ takibi-hono: generated successfully'],
     ])
-    expect(vi.mocked(hono).mock.calls.at(-1)).toStrictEqual([
-      { input: 'openapi.yaml', schema: 'valibot', output: 'new/handlers' },
-    ])
+    expect(vi.mocked(hono).mock.calls.at(-1)).toStrictEqual([next])
   })
 
-  it('empties split directories before generating, leaving other files alone', async () => {
+  it('empties split directories before generating, leaving handlers and other files alone', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const cwd = process.cwd()
-    write(path.join(cwd, 'src/handlers/users.ts'))
-    write(path.join(cwd, 'src/handlers/pets.ts'))
+    write(path.join(cwd, 'src/handlers/users.ts'), 'users handler body')
+    write(path.join(cwd, 'src/handlers/pets.ts'), 'pets handler body')
     write(path.join(cwd, 'src/handlers/README.md'))
     write(path.join(cwd, 'src/schemas/user.ts'))
     write(path.join(cwd, 'src/responses.ts'))
@@ -252,12 +264,23 @@ describe('takibiHonoVite', () => {
     await vi.waitFor(() => {
       expect(sentMessages.length).toBe(1)
     })
-    expect(fs.readdirSync(path.join(cwd, 'src/handlers'))).toStrictEqual(['README.md'])
+    expect(fs.readdirSync(path.join(cwd, 'src/handlers')).sort()).toStrictEqual([
+      'README.md',
+      'pets.ts',
+      'users.ts',
+    ])
+    expect(fs.readFileSync(path.join(cwd, 'src/handlers/users.ts'), 'utf8')).toBe(
+      'users handler body',
+    )
+    expect(fs.readFileSync(path.join(cwd, 'src/handlers/pets.ts'), 'utf8')).toBe(
+      'pets handler body',
+    )
     expect(fs.readdirSync(path.join(cwd, 'src/schemas'))).toStrictEqual([])
     expect(fs.existsSync(path.join(cwd, 'src/responses.ts'))).toBe(true)
-    expect(log.mock.calls.slice(1, 3).map(([line]: unknown[]) => line)).toStrictEqual([
-      '🧹 schemas: cleaned 1 files',
-      '🧹 handlers: cleaned 2 files',
+    expect(log.mock.calls).toStrictEqual([
+      ['🔥 takibi-hono'],
+      ['🧹 schemas: cleaned 1 files'],
+      ['✅ takibi-hono: generated successfully'],
     ])
   })
 })

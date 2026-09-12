@@ -227,7 +227,9 @@ export function readConfig(configPath: string = DEFAULT_CONFIG_FILE, reload = fa
     const href = pathToFileURL(abs).href
     const specifier = reload ? `${href}?reload=${String((reloadCount += 1))}` : href
     const mod: unknown = yield* Effect.tryPromise({
-      try: () => import(specifier),
+      // The Vite plugin SSR-loads this module through the user's config file; the specifier
+      // is a runtime file URL, so Vite's import analysis has nothing to resolve.
+      try: () => import(/* @vite-ignore */ specifier),
       catch: (error) =>
         new ConfigError({ message: error instanceof Error ? error.message : String(error) }),
     })
