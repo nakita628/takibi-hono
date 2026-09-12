@@ -1,6 +1,17 @@
 packages:
   - packages/*
   - fixtures/*
+# TypeSpec ships every @typespec/* package in one release, so each workspace package takes its
+# version from this catalog (`"catalog:"`) and Renovate moves them together (see renovate.json).
+# Strict mode makes `pnpm add` refuse a version outside the catalog.
+catalogMode: strict
+catalog:
+  '@typespec/compiler': ^1.16.0
+  '@typespec/http': ^1.16.0
+  '@typespec/openapi': ^1.16.0
+  '@typespec/openapi3': ^1.16.0
+  '@typespec/rest': ^0.86.0
+  '@typespec/versioning': ^0.86.0
 allowBuilds:
   esbuild: false
   # Optional native accelerator pulled in through oas-truth -> schema-to-library -> effect ->

@@ -30,7 +30,8 @@ packages/takibi-hono/          the published package (the only npm artifact)
   vite.config.ts               pack (build), test and lint; the lint section is the standard
 fixtures/vite-plugin/          a real Hono app driving the Vite plugin; its src/ is takibi-hono output
 vite.config.ts                 fmt only: the formatting style every workspace inherits
-pnpm-workspace.yaml            workspaces, the Effect override, allowBuilds, minimumReleaseAgeExclude
+pnpm-workspace.yaml            workspaces, the @typespec catalog, the Effect override, allowBuilds,
+                               minimumReleaseAgeExclude
 renovate.json                  dependency updates (Saturdays, Asia/Tokyo); see the CI rule
 .github/workflows/test.yml     Test: build, unit tests, `vp run check`
 .github/workflows/lint.yml     Lint: actionlint and zizmor over the workflows

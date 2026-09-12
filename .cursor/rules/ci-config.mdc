@@ -65,7 +65,14 @@ itself to, and its comments explain the choices. It mirrors hono-takibi and heki
   schema-to-library uses; `@effect/platform-node-shared` is forced to the same one by `overrides` in
   `pnpm-workspace.yaml` (its caret range would otherwise resolve a later RC that imports modules
   the pinned `effect` lacks). They move together, in one change.
-- The `@typespec/*` packages move together, to one TypeSpec release.
+- The `@typespec/*` packages move together, to one TypeSpec release: TypeSpec publishes them
+  together (compiler, http, openapi and openapi3 on 1.x, rest and versioning on 0.x) and each
+  declares the others as peers at its own release. Their versions live **only** in the strict
+  `catalog` of `pnpm-workspace.yaml`; a `package.json` says `"catalog:"`, and `pnpm pack` /
+  `pnpm publish` write the catalog range into the published manifest. `catalogMode: strict` makes
+  `pnpm add` refuse a version outside the catalog. `@typespec/openapi` is a devDependency only so
+  the peer of `@typespec/openapi3` follows the catalog instead of being auto-installed at an older
+  release.
 - `oas-truth` and `hono-takibi` are the generator's core; a bump changes generated output, so read
   the diff of the test expectations rather than updating them blindly. A version newer than pnpm's
   minimum release age goes into `minimumReleaseAgeExclude`, and comes out once it is old enough.

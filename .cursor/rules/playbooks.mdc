@@ -1,5 +1,5 @@
 ---
-description: Step-by-step playbooks for the recurring tasks here — adding a config option, fixing a generator bug, porting from hono-takibi, a vendor extension request, checking a change in the fixture, clearing a lint failure, adding a lint rule, bumping effect or oas-truth, and releasing. Read this when starting any of those.
+description: Step-by-step playbooks for the recurring tasks here — adding a config option, fixing a generator bug, porting from hono-takibi, a vendor extension request, checking a change in the fixture, clearing a lint failure, adding a lint rule, bumping effect, TypeSpec or oas-truth, and releasing. Read this when starting any of those.
 alwaysApply: false
 ---
 
@@ -83,6 +83,14 @@ For a change to the Vite plugin, the handler / app output or the merge:
 3. `pnpm check`. The RC moves the Schema and CLI APIs, so expect errors in `config/` and `cli/`.
 4. `pnpm test`, and read every behavior difference rather than adjusting an assertion to match.
 5. Say in the commit body which upstream changes forced code changes.
+
+## Bump TypeSpec
+
+1. Change every `@typespec/*` entry in the `catalog` of `pnpm-workspace.yaml` to the new release
+   (1.x and 0.x together), never a `package.json`. Renovate's `typespec` group does the same.
+2. `pnpm install`, then check `pnpm-lock.yaml` holds one version of each `@typespec/*` package and
+   `pnpm peers check` reports nothing for them.
+3. `pnpm test`: TypeSpec input is compiled for real, so read any changed expectation.
 
 ## Bump oas-truth or hono-takibi
 
