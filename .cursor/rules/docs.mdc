@@ -1,6 +1,6 @@
 ---
 description: The README, the Cursor rules and every other Markdown file, and the markdownlint, textlint and cspell rules they are held to
-globs: **/*.md,**/*.mdc,cspell.config.yaml,project-words.txt,.textlintrc.yml,.markdownlint-cli2.jsonc
+globs: **/*.md,**/*.mdc,cspell.config.yml,project-words.txt,.textlintrc.yml,.markdownlint-cli2.jsonc
 alwaysApply: false
 ---
 
@@ -68,7 +68,7 @@ leaving them apart. The rules are linted like any other Markdown.
   **US English** (`behavior`, `optimization`, `color`).
 - A genuine project term (a package, tool or API name that recurs) is a one-line addition to
   `project-words.txt`, kept sorted. Never add a typo there, and never add `ignoreWords` or
-  `ignorePaths` to `cspell.config.yaml` to silence a word.
+  `ignorePaths` to `cspell.config.yml` to silence a word.
 - Deliberate non-words (a word split on purpose, test data in another language) are declared in
   that file only, with the reason: `// cspell:ignore word` in code,
   `<!-- … cspell:ignore word -->` in Markdown.

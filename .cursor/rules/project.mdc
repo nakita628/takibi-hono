@@ -35,7 +35,7 @@ pnpm-workspace.yaml            workspaces, the @typespec catalog, the Effect ove
 renovate.json                  dependency updates (Saturdays, Asia/Tokyo); see the CI rule
 .markdownlint-cli2.jsonc       markdownlint: the structure of the Markdown and the Cursor rules
 .textlintrc.yml                textlint: the prose (terminology, balanced pairs, no TODO)
-cspell.config.yaml             cspell: the spelling of every tracked file, code included
+cspell.config.yml              cspell: the spelling of every tracked file, code included
 project-words.txt              the words cspell does not know but this project uses on purpose
 .secretlintrc.json             secretlint: no credential is ever committed
 scripts/typespec.ts            fails when the @typespec/* packages in pnpm-lock.yaml mix releases

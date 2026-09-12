@@ -1,6 +1,6 @@
 ---
 description: Workflows, action pinning, the lint / format / build configuration, the repository linters and their scripts, dependencies, the published package and releasing
-globs: .github/**,**/package.json,**/vite.config.ts,**/tsconfig.json,pnpm-workspace.yaml,renovate.json,scripts/**,cspell.config.yaml,project-words.txt,.textlintrc.yml,.markdownlint-cli2.jsonc,.secretlintrc.json
+globs: .github/**,**/package.json,**/vite.config.ts,**/tsconfig.json,pnpm-workspace.yaml,renovate.json,scripts/**,cspell.config.yml,project-words.txt,.textlintrc.yml,.markdownlint-cli2.jsonc,.secretlintrc.json
 alwaysApply: false
 ---
 
@@ -92,13 +92,13 @@ itself to, and its comments explain the choices.
   the peer of `@typespec/openapi3` follows the catalog instead of being auto-installed at an older
   release.
 - `oas-truth` and the client-generation dependency (`src/core/client.ts`) are the generator's
-  core; a bump changes generated output, so read
-  the diff of the test expectations rather than updating them blindly. A version newer than pnpm's
-  minimum release age goes into `minimumReleaseAgeExclude`, and comes out once it is old enough.
+  core; a bump changes generated output, so read the diff of the test expectations rather than
+  updating them blindly. A version newer than pnpm's minimum release age goes into
+  `minimumReleaseAgeExclude`, and comes out once it is old enough.
 - The package's runtime `dependencies` are what every user installs. Adding one is a design
   decision — ask first. Tooling goes in `devDependencies`.
-- Renovate (`renovate.json`) opens update PRs on Saturdays
-  (Asia/Tokyo), after a release has been out 7 days (1 day for a security fix). It merges pins,
+- Renovate (`renovate.json`) opens update PRs on Saturdays (Asia/Tokyo), after a release has
+  been out 7 days (1 day for a security fix). It merges pins,
   lockfile maintenance and minor / patch updates of packages past 0.x by itself — never an action
   digest. The `typespec` group keeps TypeSpec in one PR; the `effect` group is always merged by
   hand. A security update bypasses its group and bumps only the advisory's package, so a
