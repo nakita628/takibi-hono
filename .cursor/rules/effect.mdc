@@ -1,0 +1,75 @@
+---
+description: How Effect programs, errors, services and the config schema are written in the package
+globs: packages/takibi-hono/src/**/*.ts
+alwaysApply: false
+---
+
+# Effect
+
+The package is written on Effect v4 (`4.0.0-rc.112`, pinned exactly to the release candidate
+`oas-truth`'s schema-to-library uses), in the same style as hono-takibi.
+
+## One shape for an Effect program
+
+```ts
+export function readFile(path: string) {
+  return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    return yield* fs
+      .readFileString(path)
+      .pipe(Effect.catchIf(isNotFound, () => Effect.succeed(null)))
+  })
+}
+```
+
+- A function that does I/O **returns an Effect** — never `{ ok, value | error }`, never a Promise.
+- An Effect program is the return value of a named `function`, written as
+  `return Effect.gen(function* () { ... })`, optionally followed by `.pipe(...)` for recovery or a
+  provided service. Straight-line `yield*` steps with early-return guards.
+- Sequential work is `Effect.forEach(..., { discard: true })`; independent work is
+  `Effect.all(..., { concurrency: 'unbounded' })`.
+- **Run an Effect only at a boundary**: `src/index.ts` (`NodeRuntime.runMain`), the Vite plugin's
+  hooks, and `src/testing`. Everywhere else an Effect is returned, so its requirements stay visible
+  to the caller.
+- `Effect.promise` is for what cannot reject: a dynamic `import()` of a sibling module (the CLI
+  loads `core` lazily), or `oas-truth`'s `parseOpenAPI`, which answers with a result. Anything that
+  can reject goes through `Effect.tryPromise` with a `catch` that maps to a typed error.
+
+## Errors
+
+- Failures are tagged errors: `OpenAPIError` (`src/openapi`), `FormatError` (`src/format`),
+  `ClientError` (`src/core/client.ts`) as `Data.TaggedError`, and `ConfigError` (`src/config`) as
+  `Schema.TaggedError` because it comes out of a schema decode. Filesystem failures stay the
+  platform's `PlatformError`.
+- An external result or an unexported error type (oas-truth's result, hono-takibi's errors) is
+  converted into one of our tagged errors in the module at that boundary.
+- Every error carries a `message` written for the person who ran the command: what is wrong and,
+  where possible, what to do. The CLI renders it as-is.
+- Absorb only the failure you mean: `Effect.catchIf` on the specific reason (`isNotFound` in
+  `src/file`), not a blanket `orElse` — unless the question is genuinely advisory (the Vite
+  plugin's `statOrNull`).
+- `hono()` stops at the first failure. The Vite plugin reports a generation failure as a log line
+  (`Effect.result`) so the dev server keeps running.
+
+## Services
+
+- The filesystem is `FileSystem.FileSystem`, provided once at a boundary: `NodeServices.layer` in
+  the CLI entry, `fileSystemLayer` (`src/file`) in the Vite plugin and `src/testing`.
+- **All file access goes through `src/file`** (`readFile` → `null`, `readdir` → `[]`, `unlink`
+  forced, `mkdir` recursive, `writeFile`). Never `node:fs`. Only "not there" is absorbed.
+- `writeFile` skips identical bytes. That skip is contract: the Vite plugin watches the project,
+  and a rewrite would feed a change event back into it.
+- oxfmt options travel as the `FormatOptions` reference (`src/format`), provided per run from the
+  config's `format` block, so two runs in one process cannot leak options into each other.
+
+## The config schema
+
+- Config validation is `effect/Schema` in `src/config`, decoded with
+  `onExcessProperty: 'error'` so an unknown key is rejected. A failure is
+  `Invalid config: <a.b.c>: <message>`; a missing file is `ConfigError` with `notFound: true`.
+- A new option is a schema field whose check message names what is expected.
+- Keep `defineConfig`'s input type (`ConfigSchema.Encoded`) accurate: it is what users get
+  completion and errors from while they type.
+- The CLI is `effect/unstable/cli` with one flag, `--config` / `-c`. `--help`, `--version` (read
+  from `package.json`) and `--completions` are the library's. `ShowHelp` is raised only when no
+  config was asked for and the default file is missing.

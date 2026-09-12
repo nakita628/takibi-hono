@@ -1,0 +1,152 @@
+---
+description: src layering, per-directory responsibilities, the oas-truth boundary, user code in the output, vendor extensions and the public API
+globs: packages/takibi-hono/src/**/*.ts
+alwaysApply: false
+---
+
+# Architecture
+
+## Layering
+
+Dependencies run **one way**. The order is enforced by the `no-restricted-imports` overrides in
+the `lint` section of `packages/takibi-hono/vite.config.ts`, each with a message saying what the
+directory may import:
+
+```text
+leaves       config  file  format  merge  openapi     (no project-internal imports)
+             helper -> helper only
+generator -> helper
+emit      -> format, file
+core      -> helper, generator, emit, file, format, merge, openapi
+cli       -> config, core
+vite-plugin -> config, core, file
+testing   -> file                                     (test-only; nothing in dist imports it)
+```
+
+Wanting to reach an upper layer means the design is wrong — pass the value in, or move the shared
+code down. `core` cannot import `config`, which is why `core/layout.ts` declares its own
+`TakibiHonoConfig` shape. A new edge, or a new `src/` directory, is a change to the overrides
+first and to the code second.
+
+## Responsibilities
+
+| Directory | Owns | Never does |
+| --- | --- | --- |
+| `config/` | the Effect Schema config, `defineConfig`, `parseConfig`, `readConfig`, `ConfigError` | import anything internal |
+| `openapi/` | `parseOpenAPI`: oas-truth's parser wrapped in an Effect, `OpenAPIError` | generate code |
+| `file/` | every file operation, over `FileSystem`, plus `fileSystemLayer` | decide what to write |
+| `format/` | oxfmt through the `FormatOptions` reference, `FormatError` | touch the filesystem |
+| `emit/` | format → mkdir → write (`emit`, `emitFiles`) | build code |
+| `merge/` | pure merges of regenerated code into the existing handler and app files (ts-morph) | know about OpenAPI or the filesystem |
+| `helper/` | `library.ts` (the per-lib table: lazy, Standard Schema bridge, ref registration, import candidates, `makeInlineAdapter`), `identifiers.ts`, `imports.ts`, `graph.ts` ($ref graph: Tarjan SCC, dependency order, cycle groups), `operations.ts` (paths / webhooks → routes) | file I/O |
+| `generator/` | pure code builders: `schemas.ts` (`components.schemas`), `components.ts` (oas-truth's `make*Code`, plus the `mediaTypes` oas-truth lacks), `handler.ts` (route chains and the app) | touch the filesystem, run an Effect |
+| `core/` | orchestration: `index.ts` (`hono()`), `layout.ts` (config → paths and import specifiers), `components.ts`, `handlers.ts`, `client.ts` | assemble code strings (`make*Code` lives in `generator`) |
+| `cli/` | the `takibi-hono` command on `effect/unstable/cli` | generator logic |
+| `vite-plugin/` | `takibiHonoVite()`: reload the config, regenerate on change, clean stale outputs | generator logic |
+| `testing/` | `runGenerator` / `runGeneratorError` | ship in `dist` |
+
+## One pipeline
+
+The CLI and the Vite plugin both call only `hono()` (`src/core/index.ts`), which runs, stopping at
+the first failure: `parseOpenAPI` → `resolveLayout` → `writeComponents` → `writeHandlers` →
+`writeApp` → (opt-in) `makeClients`. Each `write*` takes the `Layout` and returns an Effect. Anything
+that changes what gets generated belongs in `hono()` or below, so the two entry points cannot
+disagree. What only the plugin does (config reload, cleaning split and stale outputs) says why in
+its own comment.
+
+With `openapi: false`, schemas are not registered as refs (`registerRef: false`) and each route
+uses the library's plain Hono validator middleware (`sValidator`, or `tbValidator` for typebox).
+
+## Output that holds the user's code
+
+The handler files (one per first path segment, plus `webhooks.ts` in hono-openapi mode) and the app
+entry are **merged**, not rewritten: `writeHandlers` / `writeApp` read the existing file and
+`mergeHandlerFile` / `mergeAppFile` carry across handler bodies, user imports, non-handler code and
+route JSDoc. `writeHandlers` itself deletes the handler files no route maps to any more.
+
+- Never delete, empty or blindly overwrite that output — not in a cleanup, not in a split clean,
+  not on a config change. (The Vite plugin once emptied the handlers directory before every run and
+  lost every handler body; its tests now pin that it does not.)
+- A change to what they emit must keep the merge able to carry the user's edits across; add a
+  merge test when the emitted structure changes.
+
+Everything else — components, split component directories, clients — is the generator's and is
+rewritten wholesale; the Vite plugin empties split component and client directories before a run.
+
+## The oas-truth boundary
+
+- OpenAPI types (`OpenAPI`, `Schema`, `Components`, …) and `parseOpenAPI` are imported straight
+  from `oas-truth`; there is no re-export module.
+- **No direct dependency on schema-to-library.** Every validator expression comes from oas-truth's
+  adapter (`toExpression`), so schema-to-library's version is decided by oas-truth and the output
+  cannot drift.
+  - A named `components.schemas` declaration is `toExpression({ ...schema, title: 'XSchema' })`.
+  - `readonly` is `x-readonly: true` on object / array nodes.
+  - typebox / arktype cycle groups use `toExpression({ title, $defs })` (definitions mode) to build
+    the `Type.Cyclic` / `scope` container.
+  - zod / valibot / effect cycles: the lazy the adapter removed is re-wrapped, by AST, only around
+    the references inside the group (`wrapReferences`).
+- Inline schemas go through `makeInlineAdapter` (oas-truth's `makeAdapter`, lazy removal for every
+  lib, and hono-openapi's `resolver(...)` via `wrapSchema`).
+- Values are emitted with `valueToCode` / `makeSchemaReplacements`. `resolver(...)` wraps **only
+  response `content` schemas** in `describeRoute`: that is all hono-openapi resolves; header
+  schemas stay plain JSON Schema.
+- Query and path parameters are coerced by schema-to-library's `paramIn`
+  (`adapter.toExpression(schema, paramIn)`), one synthesized object schema per location. This was
+  once kept here because the five libraries had no symmetric coercion; schema-to-library 0.4
+  covers all of them (zod `z.coerce`, valibot `v.transform(Number)`, typebox `Codec`, arktype
+  `.parse`, effect `NumberFromString`), so it is delegated.
+- **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
+  schema-to-library.
+
+## Ref registration (hono-openapi `components.schemas`)
+
+With `openapi: true`, every `components.schemas` declaration is registered under its name
+(`withRef` in `helper/library.ts`):
+
+- zod `.meta({ ref })`, valibot `v.pipe(x, v.metadata({ ref }))`, arktype `.configure({ ref })`,
+  effect `.annotate({ identifier })` are **added on the outside only** — inner meta is inherited.
+- typebox puts `ref` in the outermost builder's options argument (its position is found by
+  parsing the code).
+- The `description` / `examples` / `deprecated` meta schema-to-library emits is never rewritten.
+
+## Vendor extensions (`x-*`)
+
+Three layers, decided 2026-05-24:
+
+- **A — messages** (`x-error-message`, `x-pattern-message`, `x-minimum-message`,
+  `x-required-message`, …): supported, always on; emitted as validator error messages.
+- **B — transforms** (`x-trim`, `x-coerce`, `x-readonly`, `x-stringbool`, `x-brand`,
+  `x-normalize`, …): supported, always on; declarative keys schema-to-library emits per lib.
+- **C — code injection** (`x-refine`, `x-superRefine`, `x-preprocess`, `x-codec`, `x-transform`,
+  `x-pipe`, `x-check`, `x-filter`, `x-narrow`, `x-morph`): **unsupported, permanently.**
+  schema-to-library's `unsafeCodeExtensions` is never passed, by takibi-hono or by oas-truth's
+  adapter.
+
+Why C stays sealed: it pastes spec strings into generated code verbatim, which is remote code
+execution wherever a spec crosses a trust boundary (a SaaS, a playground); schema-to-library's
+denylist is bypassable through built-in prototypes (`String.prototype.concat.call('proc','ess')`,
+`this['cons'+'tructor']`, `(0).constructor`); an opt-in is one config line away from being enabled
+by mistake; and one RCE after opening it would be irreversible. Reopening needs all of: a sandboxed
+evaluator in schema-to-library instead of the denylist, a fresh threat-model review, and published
+operating guidance for SaaS / playground use. Until then a proposal to expose it is declined.
+
+**Transparency contract:** takibi-hono and oas-truth's adapter pass **every** `x-*` key through to
+schema-to-library unfiltered. C-layer keys disappear only because schema-to-library defaults
+`unsafeCodeExtensions` to `false` — never because takibi-hono strips them.
+`generator/schemas.test.ts` (all five libs: A and B applied, C dropped) and
+`helper/library.test.ts` (the inline path drops C) pin that. Per-extension behavior is
+schema-to-library's to test.
+
+## Public API
+
+What users can import is exactly the `exports` map of `packages/takibi-hono/package.json`:
+
+- `takibi-hono/config` → `src/config/index.ts` (`defineConfig` and the config types)
+- `takibi-hono/vite-plugin` → `src/vite-plugin/index.ts` (`takibiHonoVite`)
+- the `takibi-hono` bin → `dist/index.js` ← `src/index.ts` → `src/cli`
+
+`pack.entry` in `packages/takibi-hono/vite.config.ts` has one entry per subpath; adding a subpath
+means adding it in both places. The config schema, the CLI flag and the Vite plugin's behavior are
+public too: changing them updates the README in the same change. Do not introduce a breaking change
+on your own initiative — say what it would take and ask.

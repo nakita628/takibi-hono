@@ -1,0 +1,30 @@
+---
+description: The README and the other Markdown in the repository
+globs: **/*.md,**/*.mdc
+alwaysApply: false
+---
+
+# Documentation
+
+`README.md` is the user documentation: install, setup (minimal and full config), the CLI, the
+Vite plugin, handler merge and a worked example. It exists **twice, identically**: the root copy
+is what GitHub shows, `packages/takibi-hono/README.md` is what npm shows. Edit one and copy it
+over the other in the same change (`cmp README.md packages/takibi-hono/README.md` is silent when
+they match).
+
+- Links are absolute `https://github.com/...` / `https://...` URLs: a relative link breaks on npm.
+- A change to the config, the CLI or the Vite plugin updates the matching section — the
+  `Full Config` block, `Usage`, `Handler Merge` — in the same change. Keep the `Full Config`
+  block a config that actually passes `parseConfig`.
+- Every fenced block declares its language (`ts`, `tsp`, `bash`, `yaml`, `json`, `text`).
+  Terminal output and directory trees are `text`.
+- Write in English, US spelling. Use the canonical spelling of names: TypeScript, JavaScript,
+  OpenAPI (never "Open API"), TypeSpec, npm, GitHub, Hono, oxfmt, oxlint.
+- No `TODO` in the docs; parked work belongs in the report.
+
+## The agent rules
+
+`AGENTS.md` is the short index every agent reads; the rules themselves are `.cursor/rules/*.mdc`
+(`CLAUDE.md` only imports `AGENTS.md`). When a rule changes, keep the table in `AGENTS.md` in
+step. A rule states what the repository actually does — when the code and a rule disagree, fix the
+one that is wrong in the same change rather than leaving them apart.

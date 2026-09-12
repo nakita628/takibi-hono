@@ -1,0 +1,114 @@
+---
+description: Workflows, action pinning, the lint / format / build configuration, dependencies, the published package and releasing
+globs: .github/**,**/package.json,**/vite.config.ts,**/tsconfig.json,pnpm-workspace.yaml,renovate.json
+alwaysApply: false
+---
+
+# CI and configuration
+
+## The workflows
+
+The layout mirrors hono-takibi and hekireki.
+
+- `test.yml` (Test): `vp install --frozen-lockfile` → `vp run takibi-hono#build` → the package
+  tests → `vp run check`. A new check goes into the root `package.json` scripts **and** here, so
+  local and CI cannot disagree about what "clean" means.
+- `lint.yml` (Lint): installs actionlint (`actionlint-py`) and zizmor with pipx at pinned versions,
+  sets `LINT_ACTIONS_REQUIRED=1` so a missing tool fails, and runs `vp run lint`.
+- `release.yml` runs after Test succeeds on a push to `main`; see Releasing.
+- **Actions are pinned to a commit digest with the tag kept as a comment**:
+  `uses: actions/checkout@3d3c42e… # v7.0.1`. A floating tag is a mutable dependency with access to
+  the job — never introduce one. Resolve a tag with
+  `git ls-remote https://github.com/<owner>/<repo> 'refs/tags/<tag>*'` (for an annotated tag, the
+  `^{}` line is the commit).
+- `permissions` stays minimal (`{}` or `contents: read`, widened per job); checkout uses
+  `persist-credentials: false`. The one exception is the `tag` job, which pushes with the
+  checkout's token and is excused in `.github/zizmor.yml`.
+- A finding is excused next to what it is about, with the reason: an inline
+  `# zizmor: ignore[audit]`, or an entry in `.github/zizmor.yml` pinned to `file:line:col` (move
+  the line number when the file shifts). actionlint ignores only `concurrency.queue`, which it does
+  not know yet. Never drop the check.
+- Verify a workflow change with `pnpm lint` with both tools installed, and in a fresh clone when it
+  depends on files a checkout would not have (`dist`, `coverage`).
+
+## Editing the lint configuration
+
+The `lint` section of `packages/takibi-hono/vite.config.ts` is the standard this repository holds
+itself to, and its comments explain the choices. It mirrors hono-takibi and hekireki.
+
+- Adding a rule: place it in the section it belongs to, with the reason above it if its name does
+  not say it. Run `pnpm check` and fix what it reports in the code — the rule is not finished until
+  the repository passes it.
+- A rule that does not fit is **left out of the list**, with a comment saying why. It is never set
+  to `'off'` in `rules`; `'off'` appears only in `overrides`, scoped to the files it describes,
+  with the reason.
+- `categories` (correctness / suspicious / perf) are errors, so rules in those categories are not
+  restated in `rules`.
+- `plugins` replaces oxlint's defaults, so the defaults are restated there — do not drop one while
+  adding another.
+- A new `src/` directory gets its `no-restricted-imports` override (see the architecture rule).
+
+## Formatting
+
+- The style lives in the root `vite.config.ts` `fmt` block (printWidth 100, single quotes, no
+  semicolons, sorted `package.json` and imports) and every workspace inherits it. Keep its
+  `ignorePatterns` specific: a broad root-relative pattern makes a workspace skip its own files.
+  `fixtures/**` is ignored because it holds generator output formatted by takibi-hono itself.
+- The same style is `defaultConfig` in `src/format/index.ts`, because generated code is formatted
+  at runtime. Change both together.
+
+## Dependencies
+
+- `pnpm-lock.yaml` is written by `pnpm install`. Never edit it by hand. CI installs with
+  `--frozen-lockfile`.
+- `effect` and `@effect/platform-node` are pinned exactly to the release candidate oas-truth's
+  schema-to-library uses; `@effect/platform-node-shared` is forced to the same one by `overrides` in
+  `pnpm-workspace.yaml` (its caret range would otherwise resolve a later RC that imports modules
+  the pinned `effect` lacks). They move together, in one change.
+- The `@typespec/*` packages move together, to one TypeSpec release.
+- `oas-truth` and `hono-takibi` are the generator's core; a bump changes generated output, so read
+  the diff of the test expectations rather than updating them blindly. A version newer than pnpm's
+  minimum release age goes into `minimumReleaseAgeExclude`, and comes out once it is old enough.
+- The package's runtime `dependencies` are what every user installs. Adding one is a design
+  decision — ask first. Tooling goes in `devDependencies`.
+- Renovate (`renovate.json`, the same settings as hono-takibi) opens update PRs on Saturdays
+  (Asia/Tokyo), after a release has been out 7 days (1 day for a security fix). It automerges pins,
+  lockfile maintenance and minor / patch updates of packages past 0.x — never an action digest. The
+  `typespec` group keeps TypeSpec in one PR; the `effect` group never automerges.
+- Renovate cannot see the pipx-installed actionlint and zizmor; bump their versions in `lint.yml`
+  by hand.
+
+## The published package
+
+- `exports`: `./config` and `./vite-plugin`, each `types` + `import` from `dist`; `bin` is
+  `dist/index.js`. `pack.entry` in `packages/takibi-hono/vite.config.ts` builds one file per entry
+  (`.js` / `.d.ts` via `outExtensions`). Keep them in step.
+- There are no lifecycle scripts: the release workflow's `publish` job builds right before it
+  publishes.
+- The package `README.md` is what npm shows; keep it identical to the root copy (see the docs
+  rule).
+
+## Releasing
+
+Releases are CI's job, driven by the `version` field of `packages/takibi-hono/package.json`.
+`release.yml` runs after Test passes on a push to `main` and, from the exact commit Test ran on:
+
+1. **check** — reads the version and asks npm whether it is published;
+2. **tag** — creates `v<version>` on that commit, or verifies it is already there; a published
+   version with no tag, or a tag on another commit, stops with an error that says what to do;
+3. **publish** — only when npm lacks the version: build, then `pnpm publish` through npm Trusted
+   Publishing (OIDC, `id-token: write`, environment `release`), so no npm token is stored;
+4. **release** — creates the GitHub release for the tag with generated notes.
+
+Rules that follow:
+
+- **To release, bump `version` in its own commit (`chore: release takibi-hono <version>`), with
+  `pnpm check` and `pnpm test` green, and push to `main`.** Nothing else publishes.
+- **Never `npm publish` / `pnpm publish` by hand, and never create or move a `v*` tag by hand.**
+- Never reuse or roll back a published version; to fix a release, bump again.
+- If a job fails (an npm outage, a Trusted Publisher mismatch), fix the cause and re-run the failed
+  jobs; every job is safe to re-run and the tag already points at the right commit.
+- npm's Trusted Publisher for `takibi-hono` names this repository, **workflow `release.yml`** and
+  **environment `release`**. Renaming either breaks publishing: the OIDC exchange answers 404 and
+  `pnpm publish` fails with a misleading `404 Not Found - PUT …/takibi-hono`. Change the npm
+  setting in the same breath, or do not rename.

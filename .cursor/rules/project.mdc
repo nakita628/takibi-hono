@@ -1,0 +1,119 @@
+---
+description: Repository map, commands, invariants and the definition of done (always applied)
+alwaysApply: true
+---
+
+# takibi-hono — how this repository is run
+
+Generates [Hono](https://hono.dev/) code — validation schemas (zod / valibot / typebox / arktype
+/ effect), [hono-openapi](https://hono.dev/examples/hono-openapi) routes with `describeRoute`,
+the app entry and handler stubs — from OpenAPI or TypeSpec. Published to npm as `takibi-hono`,
+with a CLI and a Vite plugin. Built on Effect v4; formatted by oxfmt, linted by oxlint and tested
+with Vitest, all through vite-plus (`vp`) on pnpm.
+
+It owns only the Hono-specific part. Parsing, the OpenAPI types and every Components kind except
+`schemas` come from [`oas-truth`](https://www.npmjs.com/package/oas-truth); client code (RPC,
+query hooks, the `App` type, docs) is delegated to `hono-takibi`. Its siblings are
+`nakita628/hono-takibi` and `asphodelos` (Elysia), and conventions are shared with them.
+
+This repository is operated **through agent conversation**. The config files are the source of
+truth: when an instruction contradicts one, quote the config and ask before changing it.
+
+Everything committed is written in **English** — code, comments, TSDoc, Markdown, commit
+messages, workflow comments. Test data may be in any language.
+
+## Layout
+
+```text
+packages/takibi-hono/          the published package (the only npm artifact)
+  src/                         implementation; see the architecture rule for the layering
+  vite.config.ts               pack (build), test and lint; the lint section is the standard
+fixtures/vite-plugin/          a real Hono app driving the Vite plugin; its src/ is takibi-hono output
+vite.config.ts                 fmt only: the formatting style every workspace inherits
+pnpm-workspace.yaml            workspaces, the Effect override, allowBuilds, minimumReleaseAgeExclude
+renovate.json                  dependency updates (Saturdays, Asia/Tokyo); see the CI rule
+.github/workflows/test.yml     Test: build, unit tests, `vp run check`
+.github/workflows/lint.yml     Lint: actionlint and zizmor over the workflows
+.github/workflows/release.yml  after Test on main: tag, npm publish, GitHub release
+.github/zizmor.yml             zizmor findings excused, each with its reason
+README.md                      user docs; packages/takibi-hono/README.md is an identical copy
+```
+
+## Commands
+
+Run these from the repository root.
+
+| Goal | Command |
+| --- | --- |
+| Install dependencies | `pnpm install --frozen-lockfile` |
+| Format check, oxlint (type-aware) and type check, workflow lint | `pnpm check` |
+| Autofix formatting and lint | `pnpm fix` |
+| Unit tests | `pnpm test` |
+| One test file | `pnpm -F takibi-hono test src/<path>.test.ts` |
+| Coverage | `pnpm coverage` |
+| Build `dist` | `vp run takibi-hono#build` |
+| actionlint + zizmor over `.github/workflows` | `pnpm lint` |
+| Run the fixture app (after a build) | `pnpm -F fixture-vite-plugin dev` |
+
+- `pnpm lint` only prints a note when actionlint / zizmor are not installed
+  (`pipx install actionlint-py`, `pipx install zizmor`); the Lint workflow always runs them.
+- The fixture and the published entry points run from `dist`: build before using them, never
+  judge a change against a stale build.
+
+## Definition of done
+
+Before reporting a task finished, **`pnpm check` and `pnpm test` must both be green** — CI runs
+the build, the tests and the check. One failure means not done. If you only ran part of it, say
+which part.
+
+- A behavior change ships with a test that fails before it and passes after.
+- A change to the config, the CLI, the Vite plugin or the generated output updates the README in
+  the same change (both copies; see the docs rule).
+- Report results as they are. Never call a task complete while hiding a failing command, and
+  never make a check pass by weakening it.
+
+## Invariants
+
+- **Never relax a linter to get a change through.** Do not set a rule to `'off'`, do not lower
+  `categories`, do not drop `denyWarnings`, do not add an `ignorePatterns` entry to hide a
+  finding. If a rule genuinely does not fit, say so and ask.
+- **Suppressions live next to the code, naming the rule and the reason:**
+  `// oxlint-disable-next-line rule-name -- reason`. `reportUnusedDisableDirectives: 'deny'` is
+  on, so a suppression that stopped firing must go. Do not add a file-level disable; the one that
+  exists (`no-console` in `src/vite-plugin/index.ts`) is there because terminal output is the
+  plugin's interface.
+- **No `TODO` / `FIXME`** — `no-warning-comments` rejects them. Parked work belongs in the report.
+- **Failures are typed Effect errors, never throws** — see the Effect rule.
+- **The handlers directory and the app entry hold the user's code.** They are merged, never
+  deleted, emptied or blindly overwritten — not by a cleanup, not on a config change. See the
+  architecture rule.
+- **Never hand-edit generated files:** `pnpm-lock.yaml` (let `pnpm install` write it), `dist/`,
+  `coverage/`, and the generated parts of `fixtures/vite-plugin/src` (regenerate them).
+- **`effect` and `@effect/platform-node` are pinned exactly** to the release candidate
+  `oas-truth`'s schema-to-library uses, and `@effect/platform-node-shared` is overridden to the
+  same one in `pnpm-workspace.yaml`. They move together, in one change.
+- **The C-layer `x-*` extensions (code injection) stay unsupported.** `unsafeCodeExtensions` is
+  never passed to schema-to-library. See the architecture rule before touching vendor extensions.
+- **Never bump `version` in `packages/takibi-hono/package.json`** unless the task is a release that
+  was asked for: pushing a new version to `main` is what publishes it. Never `npm publish`,
+  `pnpm publish` or push a `v*` tag by hand, and never rename `release.yml` or its `release`
+  environment without the matching npm Trusted Publisher change (see the CI rule).
+
+## Working order
+
+1. Read the rules in force for the files you are about to touch (`lint` in
+   `packages/takibi-hono/vite.config.ts`, and the matching `.cursor/rules/*.mdc`).
+2. Implement it the way the surrounding code is written. Do not introduce a second idiom.
+3. `pnpm fix`, then `pnpm check` and `pnpm test`.
+4. Commit and push (see Git policy).
+5. In the final report state what changed, which commands verified it, and anything left out.
+
+## Git policy
+
+- The owner has authorized committing **directly to `main`** and pushing once `pnpm check` and
+  `pnpm test` are green. Never force-push and never rewrite pushed history.
+- One logical change per commit. The subject follows the existing history's conventional form,
+  `type(scope): imperative summary` — `fix(vite-plugin): keep hand-written handlers when
+  regenerating`, `ci: …`, `chore: …`, `docs: …`, `refactor: …`. The body explains why.
+- A release is its own commit: `chore: release takibi-hono <version>`.
+- Do not commit generated output, secrets or local tooling files.
