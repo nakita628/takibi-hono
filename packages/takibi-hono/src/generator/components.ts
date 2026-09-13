@@ -1,15 +1,16 @@
-import type { ComponentAdapter, Components } from 'oas-truth'
+import type { ComponentAdapter, ComponentCodeOptions, Components } from 'oas-truth'
 import {
-  makeCallbacksCode,
-  makeExamplesCode,
-  makeHeadersCode,
-  makeLinksCode,
-  makeParametersCode,
-  makePathItemsCode,
-  makeRequestBodiesCode,
-  makeResponsesCode,
-  makeSecuritySchemesCode,
-  toIdentifierPascalCase,
+  makeCallbacksDeclarations,
+  makeExamplesDeclarations,
+  makeHeadersDeclarations,
+  makeLinksDeclarations,
+  makeMediaTypesDeclarations,
+  makeParametersDeclarations,
+  makePathItemsDeclarations,
+  makeRequestBodiesDeclarations,
+  makeResponsesDeclarations,
+  makeSchemaIdentifiers,
+  makeSecuritySchemesDeclarations,
 } from 'oas-truth'
 
 export const COMPONENT_KINDS = [
@@ -29,39 +30,25 @@ export type ComponentKind = (typeof COMPONENT_KINDS)[number]
 
 type BuildOptions = { readonly exportTypes: boolean; readonly readonly: boolean }
 
-/** `components.mediaTypes` (OAS 3.2) — the one Components key oas-truth has no builder for. */
-function makeMediaTypesCode(
-  components: Components,
-  adapter: ComponentAdapter,
-  exportTypes: boolean,
-) {
-  return Object.entries(components.mediaTypes ?? {})
-    .flatMap(([name, media]) => {
-      if (!('schema' in media) || !media.schema) return []
-      const constName = `${toIdentifierPascalCase(name)}MediaTypeSchema`
-      const typeInfer = exportTypes ? `\n\n${adapter.renderTypeInfer(constName)}` : ''
-      return [`export const ${constName}=${adapter.toExpression(media.schema)}${typeInfer}`]
-    })
-    .join('\n\n')
-}
+type Declaration = { readonly fileName: string; readonly code: string }
 
 const BUILDERS: {
   readonly [K in ComponentKind]: (
     components: Components,
     adapter: ComponentAdapter,
-    options: BuildOptions,
-  ) => string
+    options: ComponentCodeOptions,
+  ) => readonly Declaration[]
 } = {
-  parameters: (c, a, o) => makeParametersCode(c, a, o.exportTypes),
-  headers: (c, a, o) => makeHeadersCode(c, a, o.exportTypes),
-  securitySchemes: (c, _, o) => makeSecuritySchemesCode(c, o.readonly),
-  requestBodies: (c, a, o) => makeRequestBodiesCode(c, a, o.readonly),
-  responses: (c, a, o) => makeResponsesCode(c, a, o.readonly),
-  examples: (c, _, o) => makeExamplesCode(c, o.readonly),
-  links: (c, _, o) => makeLinksCode(c, o.readonly),
-  callbacks: (c, a, o) => makeCallbacksCode(c, a, o.readonly),
-  pathItems: (c, a, o) => makePathItemsCode(c, a, o.readonly),
-  mediaTypes: (c, a, o) => makeMediaTypesCode(c, a, o.exportTypes),
+  parameters: (c, a, o) => makeParametersDeclarations(c, a, o),
+  headers: (c, a, o) => makeHeadersDeclarations(c, a, o),
+  securitySchemes: (c, _, o) => makeSecuritySchemesDeclarations(c, o),
+  requestBodies: (c, a, o) => makeRequestBodiesDeclarations(c, a, o),
+  responses: (c, a, o) => makeResponsesDeclarations(c, a, o),
+  examples: (c, _, o) => makeExamplesDeclarations(c, o),
+  links: (c, _, o) => makeLinksDeclarations(c, o),
+  callbacks: (c, a, o) => makeCallbacksDeclarations(c, a, o),
+  pathItems: (c, a, o) => makePathItemsDeclarations(c, a, o),
+  mediaTypes: (c, a, o) => makeMediaTypesDeclarations(c, a, o),
 }
 
 /**
@@ -73,23 +60,13 @@ export function makeComponentCode(
   components: Components,
   adapter: ComponentAdapter,
   options: BuildOptions & { readonly split: boolean },
-): readonly { readonly fileName: string; readonly code: string }[] {
-  const build = (subset: Components) =>
-    BUILDERS[kind](subset, adapter, options)
-      .split('\n')
-      .filter((line) => !line.startsWith('import '))
-      .join('\n')
-      .trim()
-  if (!options.split) {
-    const code = build(components)
-    return code === '' ? [] : [{ fileName: 'index', code }]
-  }
-  const entries: { readonly [name: string]: unknown } = components[kind] ?? {}
-  return Object.entries(entries).flatMap(([name, value]) => {
-    const code = build({ [kind]: { [name]: value } })
-    const ident = toIdentifierPascalCase(name)
-    return code === ''
-      ? []
-      : [{ fileName: `${ident.charAt(0).toLowerCase()}${ident.slice(1)}`, code }]
+): readonly Declaration[] {
+  const entries = BUILDERS[kind](components, adapter, {
+    exportTypes: options.exportTypes,
+    readonly: options.readonly,
+    identifiers: makeSchemaIdentifiers(components.schemas ?? {}),
   })
+  if (options.split) return entries.map(({ fileName, code }) => ({ fileName, code }))
+  const code = entries.map((entry) => entry.code).join(';')
+  return code === '' ? [] : [{ fileName: 'index', code }]
 }

@@ -12,9 +12,9 @@ with a CLI and a Vite plugin. Built on Effect v4; formatted by oxfmt, linted by 
 with Vitest, all through vite-plus (`vp`) on pnpm.
 
 It owns only the Hono-specific part. Parsing, the OpenAPI types and the Components builders
-(including `schemas`) come from [`oas-truth`](https://www.npmjs.com/package/oas-truth);
-`mediaTypes` is the one kind oas-truth still lacks. Client code (RPC, query hooks, the `App`
-type, docs) is delegated to the client-generation dependency wired in `src/core/client.ts`.
+(including `schemas` and `mediaTypes`) come from [`oas-truth`](https://www.npmjs.com/package/oas-truth).
+Client code (RPC, query hooks, the `App` type, docs) is delegated to the client-generation
+dependency wired in `src/core/client.ts`.
 
 This repository is operated **through agent conversation**. The config files are the source of
 truth: when an instruction contradicts one, quote the config and ask before changing it.

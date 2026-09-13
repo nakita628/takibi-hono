@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { makeSchemaDeclarations, makeSchemaIdentifiers, makeSchemasPrologue } from './schemas.js'
+import { makeSchemaDeclarations, makeSchemasPrologue } from './schemas.js'
 
 const schemas = {
   Pet: {
@@ -211,16 +211,6 @@ describe('makeSchemaDeclarations', () => {
       ).toStrictEqual([expected])
     },
   )
-})
-
-describe('makeSchemaIdentifiers', () => {
-  it('suffixes keys that fold to the same identifier', () => {
-    expect([...makeSchemaIdentifiers({ user: {}, User: {}, 'user-profile': {} })]).toStrictEqual([
-      ['user', 'User'],
-      ['User', 'User2'],
-      ['user-profile', 'UserProfile'],
-    ])
-  })
 })
 
 describe('makeSchemasPrologue', () => {

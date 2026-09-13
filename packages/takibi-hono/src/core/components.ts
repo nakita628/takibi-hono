@@ -39,8 +39,8 @@ function placeEntries(
 }
 
 /**
- * `components.schemas` through oas-truth's `makeSchemaDeclarations` (plus
- * hono-openapi ref registration), every other kind through its builders. In
+ * `components.schemas` through oas-truth's `makeSchemaDeclarations` (`ref: true`
+ * for hono-openapi registration), every other kind through its declarations. In
  * hono-openapi mode each `schema:` slot is wrapped in `resolver(...)` and each
  * schema registers itself under `components.schemas`.
  */

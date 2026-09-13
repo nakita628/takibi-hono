@@ -1,5 +1,6 @@
 import type { ComponentAdapter, Components, Operation, Schema, SchemaLib } from 'oas-truth'
 import {
+  makeSchemaIdentifiers,
   makeSchemaReplacements,
   schemaRefToName,
   toIdentifierPascalCase,
@@ -64,7 +65,14 @@ function bodyTarget(mediaType: string) {
  * Response content schemas are the only slots hono-openapi resolves, so only they
  * are wrapped in `resolver(...)`; header schemas stay plain JSON Schema.
  */
-function makeDescribeRoute(operation: Operation, adapter: ComponentAdapter, responseRefs: boolean) {
+function makeDescribeRoute(
+  operation: Operation,
+  adapter: ComponentAdapter,
+  options: {
+    readonly responseRefs: boolean
+    readonly identifiers: ReadonlyMap<string, string>
+  },
+) {
   const doc = Object.fromEntries(
     Object.entries(operation)
       .filter(([key]) => DESCRIBE_ROUTE_KEYS.has(key))
@@ -77,16 +85,18 @@ function makeDescribeRoute(operation: Operation, adapter: ComponentAdapter, resp
       ]),
   )
   const responses = Object.values(operation.responses ?? {})
+  const identifiers = options.identifiers
   const contents = makeSchemaReplacements(
     responses.flatMap((response) => (response.$ref === undefined ? [response.content ?? {}] : [])),
     adapter,
+    { slot: 'response-content', identifiers },
   )
   const references = responses.flatMap((response) =>
-    responseRefs && response.$ref?.startsWith('#/components/responses/')
+    options.responseRefs && response.$ref?.startsWith('#/components/responses/')
       ? [[response, `${toIdentifierPascalCase(schemaRefToName(response.$ref))}Response`] as const]
       : [],
   )
-  return `describeRoute(${valueToCode(doc, new Map([...contents, ...references]))})`
+  return `describeRoute(${valueToCode(doc, new Map([...contents, ...references]), identifiers)})`
 }
 
 /**
@@ -156,8 +166,11 @@ export function makeHandlerCode(
   context: HandlerContext,
 ) {
   const library = getLibrary(context.lib)
-  const adapter = makeInlineAdapter(context.lib, { resolver: false })
-  const resolverAdapter = makeInlineAdapter(context.lib, { resolver: true })
+  const adapter = makeInlineAdapter(context.lib, {
+    resolver: context.openapi,
+    ...(context.openapi && { slots: ['response-content'] as const }),
+  })
+  const identifiers = makeSchemaIdentifiers(context.components?.schemas ?? {})
   const validator = context.openapi
     ? { name: 'validator', wrap: library.toStandardSchema }
     : { name: library.validator.entry.name, wrap: library.validator.wrap }
@@ -165,7 +178,12 @@ export function makeHandlerCode(
     makeRouteCall(route.method, [
       `'${route.path}'`,
       ...(context.openapi
-        ? [makeDescribeRoute(route.operation, resolverAdapter, context.responseRefs)]
+        ? [
+            makeDescribeRoute(route.operation, adapter, {
+              responseRefs: context.responseRefs,
+              identifiers,
+            }),
+          ]
         : []),
       ...makeValidators(route, context.components, adapter).map(
         ([target, expr]) => `${validator.name}('${target}',${validator.wrap(expr)})`,

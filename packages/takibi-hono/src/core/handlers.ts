@@ -2,12 +2,11 @@ import path from 'node:path'
 
 import { Effect } from 'effect'
 import type { OpenAPI } from 'oas-truth'
-import { toIdentifierPascalCase } from 'oas-truth'
+import { makeSchemaIdentifiers, toIdentifierPascalCase } from 'oas-truth'
 
 import { emit } from '../emit/index.js'
 import { readdir, readFile, unlink } from '../file/index.js'
 import { makeAppCode, makeHandlerCode, toHandlerVarName } from '../generator/handler.js'
-import { makeSchemaIdentifiers } from '../generator/schemas.js'
 import { collectRoutes, collectWebhookRoutes } from '../helper/operations.js'
 import { mergeAppFile, mergeHandlerFile } from '../merge/index.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'

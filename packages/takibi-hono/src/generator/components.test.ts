@@ -21,7 +21,7 @@ const components = {
 const zodResolver = makeInlineAdapter('zod', { resolver: true })
 
 describe('makeComponentCode', () => {
-  it('delegates to oas-truth and drops its import line', () => {
+  it('delegates to oas-truth declarations', () => {
     expect(
       makeComponentCode('responses', components, zodResolver, {
         exportTypes: false,
