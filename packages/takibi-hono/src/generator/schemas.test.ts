@@ -42,18 +42,21 @@ describe('makeSchemaDeclarations', () => {
         name: 'Tag',
         varName: 'TagSchema',
         fileName: 'tag',
+        importLine: "import * as z from 'zod'",
         code: 'export const TagSchema=z.string().meta({ref:"Tag"})\n\nexport type Tag=z.infer<typeof TagSchema>',
       },
       {
         name: 'Pet',
         varName: 'PetSchema',
         fileName: 'pet',
+        importLine: "import * as z from 'zod'",
         code: 'export const PetSchema=z.object({name:z.string(),tag:TagSchema.exactOptional()}).meta({description:"A pet"}).meta({ref:"Pet"})\n\nexport type Pet=z.infer<typeof PetSchema>',
       },
       {
         name: 'Node',
         varName: 'NodeSchema',
         fileName: 'node',
+        importLine: "import * as z from 'zod'",
         code: 'type NodeType={"children"?:(NodeType)[]}\n\nexport const NodeSchema:z.ZodType<NodeType>=z.object({children:z.array(z.lazy(() => NodeSchema)).exactOptional()}).meta({ref:"Node"})\n\nexport type Node=z.infer<typeof NodeSchema>',
       },
     ])
@@ -63,7 +66,7 @@ describe('makeSchemaDeclarations', () => {
     [
       'valibot',
       'export const PetSchema=v.pipe(v.pipe(v.object({name:v.string(),tag:v.optional(TagSchema)}),v.description("A pet")),v.metadata({ref:"Pet"}))\n\nexport type Pet=v.InferOutput<typeof PetSchema>',
-      'type NodeType={"children"?:(NodeType)[]}\n\nexport const NodeSchema:v.GenericSchema<NodeType>=v.pipe(v.partial(v.object({children:v.array(v.lazy(() => NodeSchema))})),v.metadata({ref:"Node"}))\n\nexport type Node=v.InferOutput<typeof NodeSchema>',
+      'type NodeType={"children"?:(NodeType)[]|undefined}\n\nexport const NodeSchema:v.GenericSchema<NodeType>=v.pipe(v.partial(v.object({children:v.array(v.lazy(() => NodeSchema))})),v.metadata({ref:"Node"}))\n\nexport type Node=v.InferOutput<typeof NodeSchema>',
     ],
     [
       'typebox',
@@ -78,7 +81,7 @@ describe('makeSchemaDeclarations', () => {
     [
       'effect',
       'export const PetSchema=Schema.Struct({name:Schema.String,tag:Schema.optional(TagSchema)}).annotate({description:"A pet"}).annotate({identifier:"Pet"})\n\nexport type Pet=Schema.Schema.Type<typeof PetSchema>',
-      'export const NodeSchema:Schema.Codec<any>=Schema.Struct({children:Schema.optional(Schema.Array(Schema.suspend(() => NodeSchema)))}).annotate({identifier:"Node"})\n\nexport type Node=Schema.Schema.Type<typeof NodeSchema>',
+      'type NodeType={"children"?:readonly (NodeType)[]|undefined}\n\nexport const NodeSchema:Schema.Codec<NodeType>=Schema.Struct({children:Schema.optional(Schema.Array(Schema.suspend(() => NodeSchema)))}).annotate({identifier:"Node"})\n\nexport type Node=Schema.Schema.Type<typeof NodeSchema>',
     ],
   ] as const)('%s: registers refs and declares the recursive schema', (lib, pet, node) => {
     const code = makeSchemaDeclarations(schemas as never, {
@@ -108,7 +111,7 @@ describe('makeSchemaDeclarations', () => {
   it.each([
     [
       'valibot',
-      'type NodeType={readonly "children"?:readonly (NodeType)[]}\n\nexport const NodeSchema:v.GenericSchema<NodeType>=v.pipe(v.pipe(v.partial(v.object({children:v.pipe(v.array(v.lazy(() => NodeSchema)),v.readonly())})),v.readonly()),v.metadata({ref:"Node"}))',
+      'type NodeType={readonly "children"?:readonly (NodeType)[]|undefined}\n\nexport const NodeSchema:v.GenericSchema<NodeType>=v.pipe(v.pipe(v.partial(v.object({children:v.pipe(v.array(v.lazy(() => NodeSchema)),v.readonly())})),v.readonly()),v.metadata({ref:"Node"}))',
     ],
     [
       'typebox',
