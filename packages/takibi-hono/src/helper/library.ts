@@ -6,19 +6,10 @@ import type { ImportEntry } from './imports.js'
 
 /**
  * What takibi-hono needs per validator library beyond oas-truth's adapter: the
- * lazy wrapper a `$ref` cycle needs, the validator bridges, hono-openapi `ref`
- * registration, and the identifiers generated code may import.
+ * validator bridges, hono-openapi `ref` registration, and the identifiers
+ * generated code may import.
  */
 type Library = {
-  /**
-   * Deferred reference: `pattern` matches the wrapper schema-to-library emits around
-   * a `$ref`, `wrap` builds it. TypeBox and arktype express cycles with containers.
-   */
-  readonly lazy:
-    | { readonly pattern: RegExp; readonly wrap: (varName: string) => string }
-    | undefined
-  /** Annotation that breaks TS7022 on a self/mutually recursive declaration. */
-  readonly cyclicAnnotation: ((typeName: string) => string) | undefined
   /** Standard Schema bridge for hono-openapi's `validator` / `resolver`. */
   readonly toStandardSchema: (expr: string) => string
   /** The Hono validator middleware used without hono-openapi, and its schema bridge. */
@@ -89,8 +80,6 @@ function findOptionsCall(node: ts.Node): ts.CallExpression | undefined {
 
 const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
   zod: {
-    lazy: { pattern: /z\.lazy\(\(\)\s*=>\s*(\w+)\)/gu, wrap: (name) => `z.lazy(() => ${name})` },
-    cyclicAnnotation: (typeName) => `z.ZodType<${typeName}>`,
     toStandardSchema: (expr) => expr,
     validator: { entry: STANDARD_VALIDATOR, wrap: (expr) => expr },
     withRef: (expr, ref) => `${expr}.meta({ref:${JSON.stringify(ref)}})`,
@@ -98,8 +87,6 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     imports: [{ name: 'z', from: 'zod', style: 'namespace' }],
   },
   valibot: {
-    lazy: { pattern: /v\.lazy\(\(\)\s*=>\s*(\w+)\)/gu, wrap: (name) => `v.lazy(() => ${name})` },
-    cyclicAnnotation: (typeName) => `v.GenericSchema<${typeName}>`,
     toStandardSchema: (expr) => expr,
     validator: { entry: STANDARD_VALIDATOR, wrap: (expr) => expr },
     // Each `v.metadata` action is read with the pipe state before it, so appending keeps the rest.
@@ -108,8 +95,6 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     imports: [{ name: 'v', from: 'valibot', style: 'namespace' }],
   },
   typebox: {
-    lazy: undefined,
-    cyclicAnnotation: undefined,
     toStandardSchema: (expr) => `Compile(${expr})`,
     validator: {
       entry: { name: 'tbValidator', from: '@hono/typebox-validator' },
@@ -125,8 +110,6 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     ],
   },
   arktype: {
-    lazy: undefined,
-    cyclicAnnotation: undefined,
     toStandardSchema: (expr) => expr,
     validator: { entry: STANDARD_VALIDATOR, wrap: (expr) => expr },
     withRef: (expr, ref) => `${expr}.configure({ref:${JSON.stringify(ref)}})`,
@@ -137,12 +120,6 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     ],
   },
   effect: {
-    lazy: {
-      pattern: /Schema\.suspend\(\(\)\s*=>\s*(\w+)\)/gu,
-      wrap: (name) => `Schema.suspend(() => ${name})`,
-    },
-    // `Codec` (not `Schema`) keeps the decoding services `never`, as `toStandardSchemaV1` requires.
-    cyclicAnnotation: () => 'Schema.Codec<any>',
     toStandardSchema: (expr) => `Schema.toStandardSchemaV1(${expr})`,
     validator: {
       entry: STANDARD_VALIDATOR,
@@ -162,22 +139,19 @@ export function getLibrary(lib: SchemaLib) {
 }
 
 /**
- * oas-truth's adapter for inline schemas. Inline schemas only reference declared
- * components, so every lazy wrapper is unwrapped (oas-truth does so for zod and
- * valibot, not Effect). `resolver` wraps each `schema:` slot for hono-openapi.
+ * oas-truth's adapter plus the host `reservedTypeNames` (so a schema named
+ * `Compile` cannot shadow the TypeBox import) and, in hono-openapi mode,
+ * `resolver(...)` around each `schema:` slot.
  */
 export function makeInlineAdapter(
   lib: SchemaLib,
   options: { readonly resolver: boolean },
 ): ComponentAdapter {
   const adapter = makeAdapter(lib)
-  const { lazy, toStandardSchema } = LIBRARIES[lib]
+  const { reserved, toStandardSchema } = LIBRARIES[lib]
   return {
     ...adapter,
-    toExpression: (schema, paramIn) => {
-      const expr = adapter.toExpression(schema, paramIn)
-      return lazy ? expr.replaceAll(lazy.pattern, '$1') : expr
-    },
+    reservedTypeNames: [...new Set([...(adapter.reservedTypeNames ?? []), ...reserved])],
     ...(options.resolver && {
       wrapSchema: (expr: string) => `resolver(${toStandardSchema(expr)})`,
     }),

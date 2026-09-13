@@ -39,9 +39,10 @@ function placeEntries(
 }
 
 /**
- * `components.schemas` through schema-to-library, every other kind through
- * oas-truth's builders. In hono-openapi mode each `schema:` slot is wrapped in
- * `resolver(...)` and each schema registers itself under `components.schemas`.
+ * `components.schemas` through oas-truth's `makeSchemaDeclarations` (plus
+ * hono-openapi ref registration), every other kind through its builders. In
+ * hono-openapi mode each `schema:` slot is wrapped in `resolver(...)` and each
+ * schema registers itself under `components.schemas`.
  */
 export function writeComponents(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout) {
   const lib = config.schema

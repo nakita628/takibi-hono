@@ -19,7 +19,8 @@ allowBuilds:
   msgpackr-extract: false
 minimumReleaseAgeExclude:
   - hono-takibi@0.11.0
-  - oas-truth@0.0.3
+  - oas-truth@0.2.0
+  - schema-to-library@0.4.1
 # @effect/platform-node pins effect to one release candidate but takes
 # @effect/platform-node-shared with a caret, which resolves to a later RC that imports
 # modules the pinned effect does not have. Keep the whole Effect set on one RC.

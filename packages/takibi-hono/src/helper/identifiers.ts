@@ -51,22 +51,3 @@ export function collectFreeIdentifiers(code: string): ReadonlySet<string> {
       .filter((name) => !declared.has(name)),
   )
 }
-
-/** Rewrites every reference to one of `names` in an expression with `wrap(name)`. */
-export function wrapReferences(
-  expr: string,
-  names: ReadonlySet<string>,
-  wrap: (name: string) => string,
-) {
-  if (names.size === 0) return expr
-  const source = parse(`(${expr})`)
-  // Positions are in `(${expr})`, one character ahead of `expr`; rewrite back to front.
-  return collectReferences(source)
-    .filter((node) => names.has(node.text))
-    .map((node) => [node.getStart(source) - 1, node.getEnd() - 1, node.text] as const)
-    .toReversed()
-    .reduce(
-      (acc, [start, end, name]) => `${acc.slice(0, start)}${wrap(name)}${acc.slice(end)}`,
-      expr,
-    )
-}

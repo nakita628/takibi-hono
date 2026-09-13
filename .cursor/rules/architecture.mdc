@@ -38,8 +38,8 @@ first and to the code second.
 | `format/` | oxfmt through the `FormatOptions` reference, `FormatError` | touch the filesystem |
 | `emit/` | format → mkdir → write (`emit`, `emitFiles`) | build code |
 | `merge/` | pure merges of regenerated code into the existing handler and app files (ts-morph) | know about OpenAPI or the filesystem |
-| `helper/` | `library.ts` (the per-lib table: lazy, Standard Schema bridge, ref registration, import candidates, `makeInlineAdapter`), `identifiers.ts`, `imports.ts`, `graph.ts` ($ref graph: Tarjan SCC, dependency order, cycle groups), `operations.ts` (paths / webhooks → routes) | file I/O |
-| `generator/` | pure code builders: `schemas.ts` (`components.schemas`), `components.ts` (oas-truth's `make*Code`, plus the `mediaTypes` oas-truth lacks), `handler.ts` (route chains and the app) | touch the filesystem, run an Effect |
+| `helper/` | `library.ts` (the per-lib table: Standard Schema bridge, ref registration, import candidates, `makeInlineAdapter`), `identifiers.ts`, `imports.ts`, `operations.ts` (paths / webhooks → routes) | file I/O |
+| `generator/` | pure code builders: `schemas.ts` (oas-truth's `makeSchemaDeclarations`, plus the host `wrapDeclaration` and arktype prologue), `components.ts` (oas-truth's `make*Code`, plus the `mediaTypes` oas-truth lacks), `handler.ts` (route chains and the app) | touch the filesystem, run an Effect |
 | `core/` | orchestration: `index.ts` (`hono()`), `layout.ts` (config → paths and import specifiers), `components.ts`, `handlers.ts`, `client.ts` | assemble code strings (`make*Code` lives in `generator`) |
 | `cli/` | the `takibi-hono` command on `effect/unstable/cli` | generator logic |
 | `vite-plugin/` | `takibiHonoVite()`: reload the config, regenerate on change, clean stale outputs | generator logic |
@@ -80,14 +80,13 @@ rewritten wholesale; the Vite plugin empties split component and client director
 - **No direct dependency on schema-to-library.** Every validator expression comes from oas-truth's
   adapter (`toExpression`), so schema-to-library's version is decided by oas-truth and the output
   cannot drift.
-  - A named `components.schemas` declaration is `toExpression({ ...schema, title: 'XSchema' })`.
-  - `readonly` is `x-readonly: true` on object / array nodes.
-  - typebox / arktype cycle groups use `toExpression({ title, $defs })` (definitions mode) to build
-    the `Type.Cyclic` / `scope` container.
-  - zod / valibot / effect cycles: the lazy the adapter removed is re-wrapped, by AST, only around
-    the references inside the group (`wrapReferences`).
-- Inline schemas go through `makeInlineAdapter` (oas-truth's `makeAdapter`, lazy removal for every
-  lib, and hono-openapi's `resolver(...)` via `wrapSchema`).
+  - Named `components.schemas` declarations come from oas-truth's `makeSchemaDeclarations`. This
+    package passes `typeAlias: 'key'` (the OpenAPI key as the type name) and, with
+    `openapi: true`, `wrapDeclaration` for hono-openapi ref registration.
+  - `readonly` is `x-readonly: true` on object / array nodes (oas-truth applies it).
+  - Cycle handling (lazy / `Type.Cyclic` / `scope`, the TS7022 annotation) lives in oas-truth.
+- Inline schemas go through `makeInlineAdapter` (oas-truth's `makeAdapter` plus hono-openapi's
+  `resolver(...)` via `wrapSchema`).
 - Values are emitted with `valueToCode` / `makeSchemaReplacements`. `resolver(...)` wraps **only
   response `content` schemas** in `describeRoute`: that is all hono-openapi resolves; header
   schemas stay plain JSON Schema.
