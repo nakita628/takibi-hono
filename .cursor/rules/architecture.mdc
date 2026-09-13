@@ -85,8 +85,8 @@ rewritten wholesale; the Vite plugin empties split component and client director
     `openapi: true`, `wrapDeclaration` for hono-openapi ref registration.
   - `readonly` is `x-readonly: true` on object / array nodes (oas-truth applies it).
   - Cycle handling (lazy / `Type.Cyclic` / `scope`, the TS7022 annotation) lives in oas-truth.
-- Inline schemas go through `makeInlineAdapter` (oas-truth's `makeAdapter` plus hono-openapi's
-  `resolver(...)` via `wrapSchema`).
+- Inline schemas go through `makeInlineAdapter`: oas-truth's `makeAdapter` plus hono-openapi's
+  `resolver(...)` via `wrapSchema`.
 - Values are emitted with `valueToCode` / `makeSchemaReplacements`. `resolver(...)` wraps **only
   response `content` schemas** in `describeRoute`: that is all hono-openapi resolves; header
   schemas stay plain JSON Schema.
