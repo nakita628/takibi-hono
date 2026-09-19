@@ -25,4 +25,4 @@ minimumReleaseAgeExclude:
 # @effect/platform-node-shared with a caret, which resolves to a later RC that imports
 # modules the pinned effect does not have. Keep the whole Effect set on one RC.
 overrides:
-  '@effect/platform-node-shared': 4.0.0-rc.112
+  '@effect/platform-node-shared': 4.0.0-rc.115
