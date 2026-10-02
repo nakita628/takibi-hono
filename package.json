@@ -15,7 +15,7 @@
     "@secretlint/secretlint-rule-preset-recommend": "13.0.5",
     "@textlint-rule/textlint-rule-no-unmatched-pair": "2.0.4",
     "cspell": "10.3.0",
-    "markdownlint-cli2": "0.23.2",
+    "markdownlint-cli2": "0.23.3",
     "secretlint": "13.0.5",
     "semver": "7.8.5",
     "textlint": "15.8.0",
