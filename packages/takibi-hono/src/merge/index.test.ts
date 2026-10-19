@@ -1738,6 +1738,38 @@ describe('mergeHandlerFile: human/generator boundary edge cases', () => {
   })
 })
 
+describe('a file that does not parse', () => {
+  // A hand edit in progress — an unclosed brace — would read as a file with no handlers,
+  // no routes and no imports, and the generated file would be written over it.
+  const broken = [
+    "import { Hono } from 'hono'",
+    '',
+    "export const petsHandler = new Hono().get('/pets', (c) => {",
+    "  return c.json({ half: 'written'",
+    '',
+  ].join('\n')
+  const generated = [
+    "import { Hono } from 'hono'",
+    '',
+    "export const petsHandler = new Hono().get('/pets', (c) => {})",
+    '',
+  ].join('\n')
+
+  it('is kept as it is by mergeHandlerFile', () => {
+    expect(mergeHandlerFile(broken, generated)).toBe(broken)
+  })
+
+  it('is kept as it is by mergeAppFile', () => {
+    const app = "import { Hono } from 'hono'\n\nconst app = new Hono(\n\nexport const api = app\n"
+    expect(
+      mergeAppFile(
+        app,
+        "import { Hono } from 'hono'\n\nconst app = new Hono()\n\nexport const api = app\n",
+      ),
+    ).toBe(app)
+  })
+})
+
 describe('mergeHandlerFile: import type relative path preservation', () => {
   it('preserves user-added `import type { Pet }` from a relative path', () => {
     const existing = [

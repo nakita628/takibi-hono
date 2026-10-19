@@ -20,7 +20,7 @@ const commandLine = {
 /**
  * Reads the config and runs every generator it opts into.
  *
- * The generator pipeline pulls in the OpenAPI parser, the TypeSpec compiler and ts-morph.
+ * The generator pipeline pulls in the OpenAPI parser, the TypeSpec compiler and oxc-parser.
  * `--help`, `--version`, `--completions` and every rejected command line must not pay for
  * that, so it is loaded here rather than at module scope.
  *
