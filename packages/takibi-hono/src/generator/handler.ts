@@ -75,7 +75,9 @@ function makeDescribeRoute(
 ) {
   const doc = Object.fromEntries(
     Object.entries(operation)
-      .filter(([key]) => DESCRIBE_ROUTE_KEYS.has(key))
+      // A TypeSpec document compiles to an Operation that carries `summary: undefined`;
+      // `describeRoute` types the field as `string`, so an undefined one is left out.
+      .filter(([key, value]) => DESCRIBE_ROUTE_KEYS.has(key) && value !== undefined)
       // YAML reads an unquoted `operationId: true` (or `404`) as a boolean (or number).
       .map(([key, value]) => [
         key,
