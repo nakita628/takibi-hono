@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { mergeAppFile, mergeBarrelFile, mergeHandlerFile } from './index.js'
+import { mergeAppFile, mergeHandlerFile } from './index.js'
 
 describe('mergeHandlerFile', () => {
   it('preserves handler body while updating route metadata', () => {
@@ -1353,38 +1353,6 @@ describe('mergeAppFile', () => {
 
     // Existing has no `export const api`, so returns generated
     expect(mergeAppFile(existing, generated)).toBe(generated)
-  })
-})
-
-describe('mergeBarrelFile', () => {
-  it('always returns generated', () => {
-    expect(
-      mergeBarrelFile(
-        "export * from './users'\n",
-        "export * from './users'\nexport * from './posts'\n",
-      ),
-    ).toBe("export * from './users'\nexport * from './posts'\n")
-  })
-
-  it('removes deleted exports', () => {
-    expect(
-      mergeBarrelFile(
-        "export * from './users'\nexport * from './deleted'\n",
-        "export * from './users'\n",
-      ),
-    ).toBe("export * from './users'\n")
-  })
-
-  it('replaces entire barrel content', () => {
-    const existing = "export * from './users'\nexport * from './posts'\n"
-    const generated = "export * from './pets'\nexport * from './users'\n"
-    expect(mergeBarrelFile(existing, generated)).toBe(generated)
-  })
-
-  it('handles empty generated barrel', () => {
-    const existing = "export * from './users'\n"
-    const generated = ''
-    expect(mergeBarrelFile(existing, generated)).toBe('')
   })
 })
 

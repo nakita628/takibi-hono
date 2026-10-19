@@ -1,16 +1,31 @@
 import type { SourceFile } from 'ts-morph'
 import { Node, Project, SyntaxKind } from 'ts-morph'
 
-function parseSnippet(code: string) {
-  return new Project({ useInMemoryFileSystem: true }).createSourceFile('snippet.ts', code)
+/** What a route call in the existing file contributes to the regenerated one. */
+type RouteInfo = {
+  readonly method: string
+  readonly routePath: string
+  /** The handler, the call's last argument, as written. */
+  readonly body: string
+  /** The JSDoc right above the call, if any. */
+  readonly comment: string | undefined
 }
 
-function makeSourcePair(existingCode: string, generatedCode: string) {
-  const project = new Project({ useInMemoryFileSystem: true })
-  return {
-    existingFile: project.createSourceFile('existing.ts', existingCode),
-    generatedFile: project.createSourceFile('generated.ts', generatedCode),
-  }
+/** Hono's chain methods; `head` / `trace` go through `.on('METHOD', path, ...)`. */
+const CHAIN_METHODS: ReadonlySet<string> = new Set([
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'options',
+])
+
+/** The handler the generator emits; a body that is still this stub has nothing to preserve. */
+const STUB = '(c)=>{}'
+
+function parseSnippet(code: string) {
+  return new Project({ useInMemoryFileSystem: true }).createSourceFile('snippet.ts', code)
 }
 
 function getBodyStart(file: SourceFile) {
@@ -30,11 +45,18 @@ function applyRangeOps(code: string, ops: readonly [start: number, end: number, 
     .reduce((acc, [start, end, text]) => acc.slice(0, start) + text + acc.slice(end), code)
 }
 
+/** `.on('METHOD', '/path'` or `.get('/path'`: the start of a route call, as the generator writes it. */
+function routeCallPrefix(method: string, routePath: string) {
+  return CHAIN_METHODS.has(method)
+    ? `.${method}('${routePath}'`
+    : `.on('${method.toUpperCase()}','${routePath}'`
+}
+
 function* iterateRouteCalls(file: SourceFile) {
   for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-    const expr = call.getExpression()
-    if (!Node.isPropertyAccessExpression(expr)) continue
-    const callName = expr.getName()
+    const propAccess = call.getExpression()
+    if (!Node.isPropertyAccessExpression(propAccess)) continue
+    const callName = propAccess.getName()
     const args = call.getArguments()
     if (callName === 'on') {
       if (args.length < 3) continue
@@ -42,36 +64,31 @@ function* iterateRouteCalls(file: SourceFile) {
       const pathArg = args[1]
       if (!Node.isStringLiteral(methodArg) || !Node.isStringLiteral(pathArg)) continue
       yield {
-        call,
-        propAccess: expr,
+        propAccess,
         method: methodArg.getLiteralValue().toLowerCase(),
         routePath: pathArg.getLiteralValue(),
         args,
       }
       continue
     }
-    if (!['get', 'post', 'put', 'patch', 'delete', 'options'].includes(callName)) continue
+    if (!CHAIN_METHODS.has(callName)) continue
     if (args.length < 2) continue
     const pathArg = args[0]
     if (!Node.isStringLiteral(pathArg)) continue
-    yield { call, propAccess: expr, method: callName, routePath: pathArg.getLiteralValue(), args }
+    yield { propAccess, method: callName, routePath: pathArg.getLiteralValue(), args }
   }
 }
 
 function extractRouteInfo(code: string) {
   const file = parseSnippet(code)
-  const result = new Map<
-    string,
-    {
-      readonly body: string
-      readonly comment: string | undefined
-    }
-  >()
+  const result = new Map<string, RouteInfo>()
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const dotPos = propAccess.getNameNode().getStart() - 1
     const before = code.slice(0, dotPos)
     const commentMatch = before.match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/u)
     result.set(`${method}:${routePath}`, {
+      method,
+      routePath,
       body: args.at(-1)?.getText() ?? '',
       comment: commentMatch?.[1],
     })
@@ -79,19 +96,9 @@ function extractRouteInfo(code: string) {
   return result
 }
 
-function replaceRouteParts(
-  generatedCode: string,
-  existingRoutes: ReadonlyMap<
-    string,
-    {
-      readonly body: string
-      readonly comment: string | undefined
-    }
-  >,
-) {
+function replaceRouteParts(generatedCode: string, existingRoutes: ReadonlyMap<string, RouteInfo>) {
   const file = parseSnippet(generatedCode)
   const seenPositions = new Set<number>()
-  const STUBS = new Set(['(c)=>{}'])
   const ops: [start: number, end: number, text: string][] = []
   for (const { args, propAccess, method, routePath } of iterateRouteCalls(file)) {
     const namePos = propAccess.getNameNode().getStart()
@@ -99,7 +106,7 @@ function replaceRouteParts(
     seenPositions.add(namePos)
     const existing = existingRoutes.get(`${method}:${routePath}`)
     if (!existing) continue
-    if (STUBS.has(existing.body.replaceAll(/\s/gu, ''))) continue
+    if (existing.body.replaceAll(/\s/gu, '') === STUB) continue
     const lastArg = args.at(-1)
     if (lastArg) ops.push([lastArg.getStart(), lastArg.getEnd(), existing.body])
   }
@@ -146,7 +153,8 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
 }
 
 export function mergeAppFile(existingCode: string, generatedCode: string) {
-  const { existingFile, generatedFile } = makeSourcePair(existingCode, generatedCode)
+  const existingFile = parseSnippet(existingCode)
+  const generatedFile = parseSnippet(generatedCode)
   const existingApiStmt = findApiStatement(existingFile)
   const generatedApiStmt = findApiStatement(generatedFile)
   if (!existingApiStmt || !generatedApiStmt) return generatedCode
@@ -165,10 +173,6 @@ export function mergeAppFile(existingCode: string, generatedCode: string) {
     .trim()}\n`
 }
 
-export function mergeBarrelFile(_existingCode: string, generatedCode: string) {
-  return generatedCode
-}
-
 function findApiStatement(file: SourceFile) {
   return file
     .getVariableStatements()
@@ -178,31 +182,14 @@ function findApiStatement(file: SourceFile) {
     )
 }
 
-function restoreRouteComments(
-  code: string,
-  existingRoutes: ReadonlyMap<
-    string,
-    {
-      readonly body: string
-      readonly comment: string | undefined
-    }
-  >,
-) {
-  return [...existingRoutes.entries()]
-    .filter(([, info]) => info.comment !== undefined)
-    .reduce((result, [key, info]) => {
-      const colonIdx = key.indexOf(':')
-      const method = key.slice(0, colonIdx)
-      const routePath = key.slice(colonIdx + 1)
-      const escapedPath = routePath.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')
-      const isChainMethod = ['get', 'post', 'put', 'patch', 'delete', 'options'].includes(method)
-      const pattern = isChainMethod
-        ? new RegExp(`\\.${method}\\('${escapedPath}'`, 'u')
-        : new RegExp(`\\.on\\('${method.toUpperCase()}','${escapedPath}'`, 'u')
-      const callLiteral = isChainMethod
-        ? `.${method}('${routePath}'`
-        : `.on('${method.toUpperCase()}','${routePath}'`
-      return result.replace(pattern, `\n  ${info.comment}\n  ${callLiteral}`)
+/** Puts each route's JSDoc back above the first occurrence of its regenerated call. */
+function restoreRouteComments(code: string, existingRoutes: ReadonlyMap<string, RouteInfo>) {
+  return [...existingRoutes.values()]
+    .flatMap((info) => (info.comment === undefined ? [] : [[info, info.comment] as const]))
+    .reduce((result, [info, comment]) => {
+      const call = routeCallPrefix(info.method, info.routePath)
+      // A replacer function, so a `$` in the comment is not read as a replacement pattern.
+      return result.replace(call, () => `\n  ${comment}\n  ${call}`)
     }, code)
 }
 
