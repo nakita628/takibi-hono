@@ -35,13 +35,11 @@ function isInputFile(filePath: string, inputDirectory: string) {
 }
 
 function debounce(delayMs: number, callback: () => void) {
-  const timerStorage = new WeakMap<() => void, ReturnType<typeof setTimeout>>()
-  const wrapped = () => {
-    const prev = timerStorage.get(wrapped)
-    if (prev !== undefined) clearTimeout(prev)
-    timerStorage.set(wrapped, setTimeout(callback, delayMs))
+  const pending: { timer: ReturnType<typeof setTimeout> | undefined } = { timer: undefined }
+  return () => {
+    clearTimeout(pending.timer)
+    pending.timer = setTimeout(callback, delayMs)
   }
-  return wrapped
 }
 
 function toConfigError(error: unknown) {
@@ -273,10 +271,6 @@ export function takibiHonoVite(): any {
         console.error('❌ hot-update error:', error)
       })
       return []
-    },
-    buildStart() {
-      // Dev-only: handled by configureServer
-      return Promise.resolve()
     },
     configureServer(server: ViteDevServer) {
       const start = Effect.gen(function* () {

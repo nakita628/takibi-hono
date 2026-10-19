@@ -84,10 +84,10 @@ function write(file: string, content = '') {
 }
 
 describe('takibiHonoVite', () => {
-  it('is a dev-only plugin whose buildStart does nothing', async () => {
+  it('is a dev-only plugin: a name, configureServer and handleHotUpdate', () => {
     const plugin = takibiHonoVite()
     expect(plugin.name).toBe('takibi-hono-vite')
-    await expect(plugin.buildStart()).resolves.toBe(undefined)
+    expect(Object.keys(plugin).sort()).toStrictEqual(['configureServer', 'handleHotUpdate', 'name'])
   })
 
   it('loads the config, watches it and its input documents, generates and reloads', async () => {
