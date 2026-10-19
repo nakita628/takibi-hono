@@ -82,6 +82,9 @@ export type Layout = {
   readonly targets: { readonly [K in 'schemas' | ComponentKind]?: Target }
 }
 
+/** Every component kind the layout places: the schemas, then the other Components kinds. */
+const KINDS = ['schemas', ...COMPONENT_KINDS] as const
+
 function toFile(output: string) {
   return output.endsWith('.ts') ? output : path.join(output, 'index.ts')
 }
@@ -111,9 +114,7 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
     pathAlias: config.pathAlias,
   }
   const components = config.components
-  const configured = (['schemas', ...COMPONENT_KINDS] as const).filter(
-    (kind) => components?.[kind] !== undefined,
-  )
+  const configured = KINDS.filter((kind) => components?.[kind] !== undefined)
   if (configured.length === 0) {
     const file = toFile(components?.output ?? 'src/components')
     const target = { output: file, split: false, import: undefined }
@@ -121,10 +122,7 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
       ...layout,
       aggregate: file,
       targets: Object.fromEntries(
-        (['schemas', ...COMPONENT_KINDS] as const).map((kind) => [
-          kind,
-          { ...target, exportTypes: kind === 'schemas' },
-        ]),
+        KINDS.map((kind) => [kind, { ...target, exportTypes: kind === 'schemas' }]),
       ),
     }
   }

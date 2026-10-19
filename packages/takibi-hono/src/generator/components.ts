@@ -39,16 +39,17 @@ const BUILDERS: {
     options: ComponentCodeOptions,
   ) => readonly Declaration[]
 } = {
-  parameters: (c, a, o) => makeParametersDeclarations(c, a, o),
-  headers: (c, a, o) => makeHeadersDeclarations(c, a, o),
-  securitySchemes: (c, _, o) => makeSecuritySchemesDeclarations(c, o),
-  requestBodies: (c, a, o) => makeRequestBodiesDeclarations(c, a, o),
-  responses: (c, a, o) => makeResponsesDeclarations(c, a, o),
-  examples: (c, _, o) => makeExamplesDeclarations(c, o),
-  links: (c, _, o) => makeLinksDeclarations(c, o),
-  callbacks: (c, a, o) => makeCallbacksDeclarations(c, a, o),
-  pathItems: (c, a, o) => makePathItemsDeclarations(c, a, o),
-  mediaTypes: (c, a, o) => makeMediaTypesDeclarations(c, a, o),
+  parameters: makeParametersDeclarations,
+  headers: makeHeadersDeclarations,
+  // Three kinds hold no schema, so their builders take no adapter.
+  securitySchemes: (components, _, options) => makeSecuritySchemesDeclarations(components, options),
+  requestBodies: makeRequestBodiesDeclarations,
+  responses: makeResponsesDeclarations,
+  examples: (components, _, options) => makeExamplesDeclarations(components, options),
+  links: (components, _, options) => makeLinksDeclarations(components, options),
+  callbacks: makeCallbacksDeclarations,
+  pathItems: makePathItemsDeclarations,
+  mediaTypes: makeMediaTypesDeclarations,
 }
 
 /**
