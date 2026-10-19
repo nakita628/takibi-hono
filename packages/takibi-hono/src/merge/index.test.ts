@@ -1797,6 +1797,39 @@ describe('mergeHandlerFile: import type relative path preservation', () => {
     expect(result.includes('c.json([] satisfies Pet[])')).toBe(true)
   })
 
+  it('keeps a type-only import from a module the generator also imports from', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import * as z from 'zod'",
+      "import type { Pet } from '../components'",
+      "import { PetSchema } from '../components'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => c.json([] satisfies Pet[]))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      "import { PetSchema } from '../components'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => {})",
+      '',
+    ].join('\n')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { sValidator } from '@hono/standard-validator'",
+        "import * as z from 'zod'",
+        "import { PetSchema } from '../components'",
+        "import type { Pet } from '../components'",
+        '',
+        "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => c.json([] satisfies Pet[]))",
+        '',
+      ].join('\n'),
+    )
+  })
+
   it('drops a non-type relative import (treated as generator-managed)', () => {
     const existing = [
       "import { Hono } from 'hono'",

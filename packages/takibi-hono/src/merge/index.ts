@@ -254,11 +254,14 @@ function mergeImports(existingFile: SourceFile, generatedImports: string) {
   const userImports = existingFile
     .getImportDeclarations()
     .filter((decl) => {
+      // The generator never writes `import type`, so a type-only import is the user's even
+      // when it names a module the generator imports from (`import type { Pet } from
+      // '../components'` beside the generated `import { PetSchema } from '../components'`).
+      if (decl.isTypeOnly()) return true
       const spec = decl.getModuleSpecifierValue()
       if (HANDLER_IMPORT_SOURCES.has(spec) || generatedSpecifiers.has(spec)) return false
-      // Type-only relative imports are user-added (e.g. `import type { Pet }`).
-      // Value relative imports are generator-managed.
-      if (spec.startsWith('.') && !decl.isTypeOnly()) return false
+      // A value import from a relative path is generator-managed.
+      if (spec.startsWith('.')) return false
       const named = decl.getNamedImports()
       return !(named.length > 0 && named.every((ni) => generatedNamedImports.has(ni.getName())))
     })
