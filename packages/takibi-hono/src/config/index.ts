@@ -178,9 +178,7 @@ const ConfigSchema = Schema.Struct({
   test: removed(
     'test is not provided: takibi-hono generates no test files. Write them against the handlers it generates.',
   ),
-  testFramework: removed(
-    'testFramework is not provided: takibi-hono generates no test files.',
-  ),
+  testFramework: removed('testFramework is not provided: takibi-hono generates no test files.'),
 }).annotate({ title: 'takibi-hono config' })
 
 /** A validated config: component outputs normalized. */
