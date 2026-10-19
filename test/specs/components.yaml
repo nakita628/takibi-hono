@@ -1,0 +1,132 @@
+# Every kind of the Components Object, for the split layout: one file per entry and a
+# barrel per kind, with schemas that reference each other (a self cycle and a mutual one),
+# a Path Item behind $ref, and the kinds the handlers never import (examples, links,
+# callbacks, security schemes) alongside the ones they do.
+openapi: 3.1.0
+info:
+  title: Components
+  version: 1.0.0
+paths:
+  /nodes:
+    $ref: '#/components/pathItems/Nodes'
+  /users/{userId}:
+    get:
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200': { $ref: '#/components/responses/UserFound' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: replaceUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody: { $ref: '#/components/requestBodies/UserBody' }
+      callbacks:
+        onChange: { $ref: '#/components/callbacks/UserChanged' }
+      responses:
+        '200': { $ref: '#/components/responses/UserFound' }
+components:
+  schemas:
+    Node:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/Node' }
+    Author:
+      type: object
+      properties:
+        name: { type: string }
+        posts:
+          type: array
+          items: { $ref: '#/components/schemas/Post' }
+    Post:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        author: { $ref: '#/components/schemas/Author' }
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role:
+          type: string
+          enum: [admin, member]
+          default: member
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+  headers:
+    RateLimit:
+      description: Requests left in the window
+      schema: { type: integer }
+  requestBodies:
+    UserBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/User' }
+  responses:
+    UserFound:
+      description: The user
+      headers:
+        X-Rate-Limit: { $ref: '#/components/headers/RateLimit' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/User' }
+          examples:
+            admin: { $ref: '#/components/examples/Admin' }
+    NotFound:
+      description: Not found
+  examples:
+    Admin:
+      summary: An administrator
+      value: { id: 7e6c0e40-9f1e-4b6e-9b2a-2e5b8a0c1d11, email: admin@example.com, role: admin }
+  links:
+    GetUser:
+      operationId: getUser
+      parameters:
+        userId: $response.body#/id
+  callbacks:
+    UserChanged:
+      '{$request.body#/callbackUrl}':
+        post:
+          requestBody:
+            content:
+              application/json:
+                schema: { $ref: '#/components/schemas/User' }
+          responses:
+            '200':
+              description: Received
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  pathItems:
+    Nodes:
+      get:
+        operationId: listNodes
+        parameters:
+          - $ref: '#/components/parameters/Page'
+        responses:
+          '200':
+            description: The nodes
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items: { $ref: '#/components/schemas/Node' }

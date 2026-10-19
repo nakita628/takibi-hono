@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - fixtures/*
+  - test
 # TypeSpec ships every @typespec/* package in one release, so each workspace package takes its
 # version from this catalog (`"catalog:"`) and Renovate moves them together (see renovate.json).
 # Strict mode makes `pnpm add` refuse a version outside the catalog.

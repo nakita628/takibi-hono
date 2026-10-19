@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Vite plugin
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: OK
+  /todos:
+    get:
+      operationId: listTodos
+      responses:
+        '200':
+          description: The todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Todo' }
+components:
+  schemas:
+    Todo:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: integer }
+        title: { type: string }

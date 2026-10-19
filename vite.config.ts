@@ -9,13 +9,19 @@ export default defineConfig({
   // `fmt.ignorePatterns` is inherited too, so keep every pattern here specific enough that it
   // matches nothing inside a workspace (a broad root-relative pattern such as `packages/**`
   // makes the workspaces' own `vp check` exclude every file). `fixtures/**` holds generator
-  // output formatted by takibi-hono itself.
+  // output formatted by takibi-hono itself, and so do the golden copies, seeds and overlays
+  // of the cases in `test/`.
   fmt: {
     printWidth: 100,
     singleQuote: true,
     semi: false,
     sortPackageJson: true,
     experimentalSortImports: {},
-    ignorePatterns: ['fixtures/**'],
+    ignorePatterns: [
+      'fixtures/**',
+      'test/cases/*/expected/**',
+      'test/cases/*/seed/**',
+      'test/cases/*/overlay/**',
+    ],
   },
 })
