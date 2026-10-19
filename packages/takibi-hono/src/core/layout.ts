@@ -7,9 +7,9 @@ import { COMPONENT_KINDS } from '../generator/components.js'
 
 /** Shared shape for the framework query-hook generators (swr / tanstack / vue / ...). */
 type ClientQueryOptions = {
+  /** One `.ts` file (`parseConfig` normalizes a directory to `<dir>/index.ts`). */
   readonly output: string
   readonly import: string
-  readonly split?: boolean | undefined
   readonly client?: string | undefined
 }
 

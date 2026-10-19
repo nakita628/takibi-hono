@@ -81,11 +81,22 @@ const ExportTypesOutputSchema = splitUnion({
   exportTypes: Schema.optionalKey(Schema.Boolean),
 })
 
+/**
+ * A key this package does not support. Naming it fails with the reason, where an unknown key
+ * would only say "Expected no excess property": each is a key a user may well reach for —
+ * one hono-takibi retired, or one hono-takibi has never offered here.
+ */
+function removed(message: string) {
+  return Schema.optionalKey(Schema.Never.annotate({ message }))
+}
+
 const ClientQuerySchema = Schema.Struct({
-  output: Schema.String,
+  output: FileOutputSchema,
   import: Schema.String,
-  split: Schema.optionalKey(Schema.Boolean),
   client: Schema.optionalKey(Schema.String),
+  split: removed(
+    'split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
+  ),
 })
 
 const ClientSchema = Schema.Struct({
@@ -161,6 +172,15 @@ const ConfigSchema = Schema.Struct({
   client: Schema.optionalKey(ClientSchema),
   pathAlias: Schema.optionalKey(Schema.String),
   components: Schema.optionalKey(ComponentsSchema),
+  // Test generation is not provided. hono-takibi once scaffolded a test file per handler and
+  // retired it (its config rejects `test` / `testFramework` the same way); takibi-hono never
+  // took it on, and says so to a config that asks.
+  test: removed(
+    'test is not provided: takibi-hono generates no test files. Write them against the handlers it generates.',
+  ),
+  testFramework: removed(
+    'testFramework is not provided: takibi-hono generates no test files.',
+  ),
 }).annotate({ title: 'takibi-hono config' })
 
 /** A validated config: component outputs normalized. */

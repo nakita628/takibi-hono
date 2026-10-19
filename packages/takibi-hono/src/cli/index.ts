@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 
 import { Console, Effect, FileSystem, Option, Runtime, Schema } from 'effect'
-import { CliError, CliOutput, Command, Flag } from 'effect/unstable/cli'
+import { CliError, CliOutput, Command, Flag } from 'effect/cli'
 
 import { DEFAULT_CONFIG_FILE, readConfig } from '../config/index.js'
 
@@ -9,7 +9,7 @@ const COMMAND_NAME = 'takibi-hono'
 
 /** What `takibi-hono` accepts; each value is decoded before {@link generate} sees it. */
 const commandLine = {
-  config: Flag.file('config', { mustExist: true }).pipe(
+  config: Flag.File('config', { mustExist: true }).pipe(
     Flag.withAlias('c'),
     Flag.withDescription(`Config file to run (default: ./${DEFAULT_CONFIG_FILE})`),
     Flag.withMetavar('file'),

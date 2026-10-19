@@ -75,8 +75,8 @@ export function makeClients(
           ? Effect.gen(function* () {
               const output = yield* resolveWithin(baseDir, cfg.output)
               yield* hooks(oa, output, cfg.import, library, {
-                ...(cfg.split !== undefined && { split: cfg.split }),
                 ...(cfg.client !== undefined && { clientName: cfg.client }),
+                ...(basePath !== undefined && { basePath }),
               })
             })
           : Effect.void
@@ -89,7 +89,6 @@ export function makeClients(
         oa,
         output,
         client.rpc.import,
-        client.rpc.split,
         client.rpc.client,
         client.rpc.parseResponse,
         basePath,

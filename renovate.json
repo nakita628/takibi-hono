@@ -42,7 +42,7 @@
       "automerge": false
     },
     {
-      "description": "Kept on the release candidate oas-truth's schema-to-library uses, with @effect/platform-node-shared overridden to it in pnpm-workspace.yaml; move them together by hand.",
+      "description": "Kept on the effect release hono-takibi uses, whose Effects the package composes; move them together by hand, with the scoped @effect/platform-node-shared override in pnpm-workspace.yaml.",
       "matchPackageNames": ["effect", "@effect/**"],
       "groupName": "effect",
       "automerge": false

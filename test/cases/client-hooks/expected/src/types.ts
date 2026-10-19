@@ -3,6 +3,10 @@ type DeepReadonly<T> = T extends (infer R)[]
   : T extends object
     ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
     : T
+type Tag = 'dog' | 'cat' | 'bird'
+type Pet = { id: number; name: string; tag?: Tag | undefined }
+type NewPet = { name: string; tag?: Tag | undefined }
+type Error = { message: string }
 declare const routes: import('@hono/zod-openapi').OpenAPIHono<
   import('hono/types').Env,
   DeepReadonly<
@@ -11,28 +15,22 @@ declare const routes: import('@hono/zod-openapi').OpenAPIHono<
     } & {
       '/pets': {
         $get: {
-          input: {
-            query: { limit?: number | undefined; tag?: 'dog' | 'cat' | 'bird' | undefined }
-          } & { header: { 'X-Request-Id'?: string | undefined } } & {
-            cookie: { session?: string | undefined }
-          }
-          output: { id: number; name: string; tag?: 'dog' | 'cat' | 'bird' | undefined }[]
+          input: { query: { limit?: number | undefined; tag?: Tag | undefined } } & {
+            header: { 'X-Request-Id'?: string | undefined }
+          } & { cookie: { session?: string | undefined } }
+          output: Pet[]
           outputFormat: 'json'
           status: 200
         }
         $post:
           | {
-              input: { header: { 'X-Request-Id'?: string | undefined } } & {
-                json: { name: string; tag?: 'dog' | 'cat' | 'bird' | undefined }
-              }
-              output: { id: number; name: string; tag?: 'dog' | 'cat' | 'bird' | undefined }
+              input: { header: { 'X-Request-Id'?: string | undefined } } & { json: NewPet }
+              output: Pet
               outputFormat: 'json'
               status: 201
             }
           | {
-              input: { header: { 'X-Request-Id'?: string | undefined } } & {
-                json: { name: string; tag?: 'dog' | 'cat' | 'bird' | undefined }
-              }
+              input: { header: { 'X-Request-Id'?: string | undefined } } & { json: NewPet }
               output: {}
               outputFormat: string
               status: 400
@@ -47,15 +45,10 @@ declare const routes: import('@hono/zod-openapi').OpenAPIHono<
     } & {
       '/pets/:petId': {
         $get:
+          | { input: { param: { petId: number } }; output: Pet; outputFormat: 'json'; status: 200 }
           | {
               input: { param: { petId: number } }
-              output: { id: number; name: string; tag?: 'dog' | 'cat' | 'bird' | undefined }
-              outputFormat: 'json'
-              status: 200
-            }
-          | {
-              input: { param: { petId: number } }
-              output: { message: string }
+              output: Error
               outputFormat: 'json'
               status: 404
             }

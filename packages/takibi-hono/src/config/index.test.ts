@@ -44,8 +44,8 @@ describe('parseConfig', () => {
       readonly: true,
       pathAlias: '@/',
       client: {
-        rpc: { output: 'src/rpc', import: '../lib', split: true, parseResponse: true, docs: false },
-        swr: { output: 'src/swr', import: '../lib', client: 'api' },
+        rpc: { output: 'src/rpc', import: '../lib', parseResponse: true, docs: false },
+        swr: { output: 'src/swr.ts', import: '../lib', client: 'api' },
         type: { output: 'src/types.ts', readonly: true },
         docs: { output: 'src/docs', entry: 'src/index.ts', curl: true },
       },
@@ -58,6 +58,10 @@ describe('parseConfig', () => {
     }
     expect(await parse(config)).toStrictEqual({
       ...config,
+      client: {
+        ...config.client,
+        rpc: { output: 'src/rpc/index.ts', import: '../lib', parseResponse: true, docs: false },
+      },
       components: {
         schemas: { split: true, output: 'src/schemas', import: '../schemas', exportTypes: true },
         responses: { output: 'src/responses/index.ts' },
@@ -114,6 +118,21 @@ describe('parseConfig', () => {
       'a client generator without import',
       { ...base, client: { rpc: { output: 'src/rpc' } } },
       'client.rpc.import: Missing key',
+    ],
+    [
+      'the retired client split option',
+      { ...base, client: { swr: { output: 'src/swr.ts', import: '../lib', split: true } } },
+      'client.swr.split: split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
+    ],
+    [
+      'test generation',
+      { ...base, test: true },
+      'test: test is not provided: takibi-hono generates no test files. Write them against the handlers it generates.',
+    ],
+    [
+      'a test framework',
+      { ...base, testFramework: 'vitest' },
+      'testFramework: testFramework is not provided: takibi-hono generates no test files.',
     ],
     ['a non-boolean readonly', { ...base, readonly: 'yes' }, 'readonly: Expected boolean'],
     [

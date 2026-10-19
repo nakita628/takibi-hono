@@ -71,7 +71,8 @@ route JSDoc. `writeHandlers` itself deletes the handler files no route maps to a
   merge test when the emitted structure changes.
 
 Everything else — components, split component directories, clients — is the generator's and is
-rewritten wholesale; the Vite plugin empties split component and client directories before a run.
+rewritten wholesale; the Vite plugin empties split component directories before a run (client
+outputs are single files).
 
 ## The oas-truth boundary
 

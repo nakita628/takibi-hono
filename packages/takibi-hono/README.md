@@ -141,59 +141,25 @@ export default defineConfig({
   },
 
   // Client-code generators (RPC + framework query hooks + types + docs). Each
-  // generator takes `output` + `import`; `client` is the exported client variable
-  // (default 'client'). Query-hook keys are camelCase (`tanstackQuery`, ...).
+  // generator writes one file: `output` (a directory is normalized to
+  // `<dir>/index.ts`) and imports the Hono client from `import`; `client` is the
+  // exported client variable (default 'client'). Query-hook keys are camelCase
+  // (`tanstackQuery`, ...).
   client: {
     rpc: {
-      output: 'src/rpc',
-      import: '../lib',
-      split: true,
+      output: 'src/rpc.ts',
+      import: './lib',
       client: 'client',
       parseResponse: true,
       docs: false, // operation summary/description as JSDoc
     },
-    swr: {
-      output: 'src/swr',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    tanstackQuery: {
-      output: 'src/tanstack-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    svelteQuery: {
-      output: 'src/svelte-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    vueQuery: {
-      output: 'src/vue-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    preactQuery: {
-      output: 'src/preact-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    solidQuery: {
-      output: 'src/solid-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
-    angularQuery: {
-      output: 'src/angular-query',
-      import: '../lib',
-      split: true,
-      client: 'client',
-    },
+    swr: { output: 'src/swr.ts', import: './lib', client: 'client' },
+    tanstackQuery: { output: 'src/tanstack-query.ts', import: './lib', client: 'client' },
+    svelteQuery: { output: 'src/svelte-query.ts', import: './lib', client: 'client' },
+    vueQuery: { output: 'src/vue-query.ts', import: './lib', client: 'client' },
+    preactQuery: { output: 'src/preact-query.ts', import: './lib', client: 'client' },
+    solidQuery: { output: 'src/solid-query.ts', import: './lib', client: 'client' },
+    angularQuery: { output: 'src/angular-query.ts', import: './lib', client: 'client' },
     // Self-contained `App` type for RPC client distribution
     type: {
       output: 'src/types.ts',

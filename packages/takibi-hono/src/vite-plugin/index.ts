@@ -171,21 +171,17 @@ function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
 }
 
 /**
- * Empties the split component and client directories so an entry the spec no longer names
- * does not survive, then runs the generators. The handlers directory is not emptied: the
- * handler bodies in it survive only through `writeHandlers`' merge with the existing files.
- * A failure is reported as a log line rather than raised, so the dev server keeps running.
+ * Empties the split component directories so an entry the spec no longer names does not
+ * survive, then runs the generators. Client outputs are single files, rewritten whole. The
+ * handlers directory is not emptied: the handler bodies in it survive only through
+ * `writeHandlers`' merge with the existing files. A failure is reported as a log line rather
+ * than raised, so the dev server keeps running.
  */
 function runGeneration(config: Config) {
   return Effect.gen(function* () {
-    const splitDirs = [
-      ...Object.entries(config.components ?? {}).flatMap(([key, value]) =>
-        key !== 'output' && isSplitOutput(value) ? [[key, value.output] as const] : [],
-      ),
-      ...Object.entries(config.client ?? {}).flatMap(([key, value]) =>
-        isSplitOutput(value) ? [[key, value.output] as const] : [],
-      ),
-    ]
+    const splitDirs = Object.entries(config.components ?? {}).flatMap(([key, value]) =>
+      key !== 'output' && isSplitOutput(value) ? [[key, value.output] as const] : [],
+    )
     const cleaned = yield* Effect.all(
       splitDirs.map(([name, output]) => cleanupSplitDir(name, output)),
       { concurrency: 'unbounded' },

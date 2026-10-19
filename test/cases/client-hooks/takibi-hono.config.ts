@@ -1,7 +1,7 @@
 import { defineConfig } from 'takibi-hono/config'
 
 const hook = (name: string) =>
-  ({ output: `__generated__/client-hooks/src/${name}`, import: '../lib', split: true }) as const
+  ({ output: `__generated__/client-hooks/src/${name}.ts`, import: './lib' }) as const
 
 export default defineConfig({
   input: 'specs/petstore.yaml',

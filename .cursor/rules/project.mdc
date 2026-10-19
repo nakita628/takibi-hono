@@ -110,9 +110,10 @@ which part.
   architecture rule.
 - **Never hand-edit generated files:** `pnpm-lock.yaml` (let `pnpm install` write it), `dist/`,
   `coverage/`, and the generated parts of `fixtures/vite-plugin/src` (regenerate them).
-- **`effect` and `@effect/platform-node` are pinned exactly** to the release candidate
-  `oas-truth`'s schema-to-library uses, and `@effect/platform-node-shared` is overridden to the
-  same one in `pnpm-workspace.yaml`. They move together, in one change.
+- **`effect` and `@effect/platform-node` are pinned exactly** to the release `hono-takibi` uses
+  (its Effects are composed in `src/core/client.ts`), and the scoped
+  `@effect/platform-node-shared` override in `pnpm-workspace.yaml` keeps schema-to-library's
+  release-candidate tree consistent. They move together, in one change.
 - **The C-layer `x-*` extensions (code injection) stay unsupported.** `unsafeCodeExtensions` is
   never passed to schema-to-library. See the architecture rule before touching vendor extensions.
 - **Never bump `version` in `packages/takibi-hono/package.json`** unless the task is a release that

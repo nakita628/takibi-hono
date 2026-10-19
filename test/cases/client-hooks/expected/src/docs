@@ -35,6 +35,14 @@ Lists the pets, newest first.
 |session|cookie|string|false|none|
 |X-Request-Id|header|string|false|none|
 
+#### Enumerated Values
+
+|Parameter|Value|
+|---|---|
+|tag|dog|
+|tag|cat|
+|tag|bird|
+
 > Example responses
 
 > 200 Response
@@ -66,6 +74,20 @@ Status Code **200**
 |» name|string|true|none|none|
 |» tag|[Tag](#schematag)|false|none|none|
 
+#### Enumerated Values
+
+|Property|Value|
+|---|---|
+|» tag|dog|
+|» tag|cat|
+|» tag|bird|
+
+### Response Headers
+
+|Status|Header|Type|Format|Description|
+|---|---|---|---|---|
+|200|X-Total-Count|integer||Total number of pets|
+
 <aside class="success">
 This operation does not require authentication
 </aside>
@@ -79,8 +101,13 @@ This operation does not require authentication
 ```bash
 curl http://localhost:3000/api/pets \
   -X POST \
+  -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
-  -H "X-API-Key: ${API_KEY}"
+  -H "X-API-Key: ${API_KEY}" \
+  -d '{
+    "name": "string",
+    "tag": "dog"
+  }'
 ```
 
 `POST /pets`
@@ -99,9 +126,17 @@ curl http://localhost:3000/api/pets \
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
 |X-Request-Id|header|string|false|none|
-|body|body|[NewPet](#schemanewpet)|false|none|
+|body|body|[NewPet](#schemanewpet)|true|none|
 |» name|body|string|true|none|
 |» tag|body|[Tag](#schematag)|false|none|
+
+#### Enumerated Values
+
+|Parameter|Value|
+|---|---|
+|» tag|dog|
+|» tag|cat|
+|» tag|bird|
 
 > Example responses
 
@@ -148,7 +183,7 @@ curl http://localhost:3000/api/ \
 
 ```json
 {
-  "status": "string"
+  "status": "ok"
 }
 ```
 
@@ -206,11 +241,15 @@ This operation does not require authentication
 > Code samples
 
 ```bash
-curl 'http://localhost:3000/api/pets/{petId}' \
+curl http://localhost:3000/api/pets/1 \
   -H 'Accept: application/json'
 ```
 
 `GET /pets/{petId}`
+
+<aside class="warning">
+This operation is deprecated
+</aside>
 
 <h3 id="getpet-parameters">Parameters</h3>
 
@@ -256,7 +295,7 @@ This operation does not require authentication
 > Code samples
 
 ```bash
-curl 'http://localhost:3000/api/pets/{petId}' \
+curl http://localhost:3000/api/pets/0 \
   -X DELETE
 ```
 
@@ -285,18 +324,29 @@ This operation does not require authentication
 > Code samples
 
 ```bash
-curl 'http://localhost:3000/api/pets/{petId}/photos' \
+curl http://localhost:3000/api/pets/0/photos \
   -X POST \
-  -H 'Content-Type: application/x-www-form-urlencoded'
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'caption=string&featured=true'
 ```
 
 `POST /pets/{petId}/photos`
+
+> Body parameter
+
+```yaml
+caption: string
+featured: true
+```
 
 <h3 id="uploadphoto-parameters">Parameters</h3>
 
 |Name|In|Type|Required|Description|
 |---|---|---|---|---|
 |petId|path|integer|true|none|
+|body|body|object|false|none|
+|» caption|body|string|true|none|
+|» featured|body|boolean|false|none|
 
 <h3 id="uploadphoto-responses">Responses</h3>
 
@@ -349,6 +399,51 @@ Status Code **200**
 This operation does not require authentication
 </aside>
 
+<h1 id="petstore-webhooks">Webhooks</h1>
+
+## A pet was added
+
+<a id="opIdonPetAdded"></a>
+
+`POST petAdded`
+
+> Body parameter
+
+```json
+{
+  "id": 0,
+  "name": "string",
+  "tag": "dog"
+}
+```
+
+<h3 id="a-pet-was-added-parameters">Parameters</h3>
+
+|Name|In|Type|Required|Description|
+|---|---|---|---|---|
+|body|body|[Pet](#schemapet)|true|none|
+|» id|body|integer|true|none|
+|» name|body|string|true|none|
+|» tag|body|[Tag](#schematag)|false|none|
+
+#### Enumerated Values
+
+|Parameter|Value|
+|---|---|
+|» tag|dog|
+|» tag|cat|
+|» tag|bird|
+
+<h3 id="a-pet-was-added-responses">Responses</h3>
+
+|Status|Meaning|Description|Schema|
+|---|---|---|---|
+|200|OK|Acknowledged|None|
+
+<aside class="success">
+This operation does not require authentication
+</aside>
+
 # Schemas
 
 <h2 id="tocS_Tag">Tag</h2>
@@ -377,6 +472,8 @@ This operation does not require authentication
 }
 ```
 
+A pet in the store
+
 ### Properties
 
 |Name|Type|Required|Restrictions|Description|
@@ -384,6 +481,14 @@ This operation does not require authentication
 |id|integer|true|none|none|
 |name|string|true|none|none|
 |tag|[Tag](#schematag)|false|none|none|
+
+#### Enumerated Values
+
+|Property|Value|
+|---|---|
+|tag|dog|
+|tag|cat|
+|tag|bird|
 
 <h2 id="tocS_NewPet">NewPet</h2>
 <!-- backwards compatibility -->
@@ -405,6 +510,14 @@ This operation does not require authentication
 |---|---|---|---|---|
 |name|string|true|none|none|
 |tag|[Tag](#schematag)|false|none|none|
+
+#### Enumerated Values
+
+|Property|Value|
+|---|---|
+|tag|dog|
+|tag|cat|
+|tag|bird|
 
 <h2 id="tocS_Error">Error</h2>
 <!-- backwards compatibility -->

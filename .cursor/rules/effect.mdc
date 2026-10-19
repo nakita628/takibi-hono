@@ -6,8 +6,10 @@ alwaysApply: false
 
 # Effect
 
-The package is written on Effect v4 (`4.0.0-rc.112`, pinned exactly to the release candidate
-`oas-truth`'s schema-to-library uses).
+The package is written on Effect v4 (`4.0.5`, pinned exactly to the release `hono-takibi` uses:
+its client generators return Effects that `src/core/client.ts` composes, so the two must share
+one `effect`. `oas-truth` hands over a result, not an Effect, so its schema-to-library may keep
+its own release candidate).
 
 ## One shape for an Effect program
 

@@ -83,10 +83,11 @@ itself to, and its comments explain the choices.
 
 - `pnpm-lock.yaml` is written by `pnpm install`. Never edit it by hand. CI installs with
   `--frozen-lockfile`.
-- `effect` and `@effect/platform-node` are pinned exactly to the release candidate oas-truth's
-  schema-to-library uses; `@effect/platform-node-shared` is forced to the same one by `overrides` in
-  `pnpm-workspace.yaml` (its caret range would otherwise resolve a later RC that imports modules
-  the pinned `effect` lacks). They move together, in one change.
+- `effect` and `@effect/platform-node` are pinned exactly to the release `hono-takibi` uses, whose
+  Effects the package composes. oas-truth's schema-to-library still pins a release candidate, and
+  its `@effect/platform-node` would take `@effect/platform-node-shared` at a caret that resolves to
+  the release, which imports modules that RC lacks; the `overrides` entry in `pnpm-workspace.yaml`
+  is scoped to that one parent and keeps its tree on the RC. They move together, in one change.
 - The `@typespec/*` packages move together, to one TypeSpec release: TypeSpec publishes them
   together (`compiler`, `http`, `openapi` and `openapi3` on 1.x, `rest` and `versioning` on 0.x)
   and each declares the others as peers at its own release; `scripts/typespec.ts` fails when
