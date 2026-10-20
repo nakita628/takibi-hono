@@ -72,6 +72,8 @@ export function readFile(path: string) {
 - A new option is a schema field whose check message names what is expected.
 - Keep `defineConfig`'s input type (`ConfigSchema.Encoded`) accurate: it is what users get
   completion and errors from while they type.
-- The CLI is `effect/unstable/cli` with one flag, `--config` / `-c`. `--help`, `--version` (read
-  from `package.json`) and `--completions` are the library's. `ShowHelp` is raised only when no
-  config was asked for and the default file is missing.
+- The CLI is `effect/cli` with one flag, `--config` / `-c`. `--help`, `--version` (the version
+  of `package.json`, imported at build time) and `--completions` are the library's; the
+  arguments come from the `Stdio` service (`process.argv` under `NodeServices.layer`, a given
+  list under `Stdio.layerTest` in the tests). `ShowHelp` is raised only when no config was asked
+  for and the default file is missing.

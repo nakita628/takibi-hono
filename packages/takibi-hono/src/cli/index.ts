@@ -1,8 +1,7 @@
-import { fileURLToPath } from 'node:url'
+import { Console, Effect, Option } from 'effect'
+import { CliError, Command, Flag } from 'effect/cli'
 
-import { Console, Effect, FileSystem, Option, Runtime, Schema } from 'effect'
-import { CliError, CliOutput, Command, Flag } from 'effect/cli'
-
+import manifest from '../../package.json' with { type: 'json' }
 import { DEFAULT_CONFIG_FILE, readConfig } from '../config/index.js'
 
 const COMMAND_NAME = 'takibi-hono'
@@ -73,43 +72,10 @@ const cli = Command.make(COMMAND_NAME, commandLine, generate).pipe(
 )
 
 /**
- * The version could not be read: the manifest beside the entry is missing, is not JSON,
- * or carries no `version` — a broken install, not anything the caller typed. It is raised
- * before the command runs, so it is rendered here through the same formatter and marked as
- * reported, so `runMain` does not print it a second time.
+ * Runs `takibi-hono`. The arguments come from the `Stdio` service — `process.argv` under
+ * `NodeServices.layer`, a given list under `Stdio.layerTest` — and `--version` answers with
+ * the version of the package manifest, which the build takes in with the source.
  */
-function reportBrokenInstall(cause: { readonly message: string }) {
-  return Effect.gen(function* () {
-    const error = new CliError.UserError({
-      cause,
-      userMessage: `Cannot read the version from package.json: ${cause.message}`,
-    })
-    error[Runtime.errorReported] = false
-    const formatter = yield* CliOutput.Formatter
-    yield* Console.error(formatter.formatError(error))
-    return yield* error
-  })
-}
-
-/**
- * Runs `takibi-hono` against an argument list.
- *
- * `entryUrl` is the `import.meta.url` of the executable; `--version` is read from the
- * `package.json` beside it. Only the entry can supply that: `src/index.ts` and the
- * `dist/index.js` it is packed into both sit one directory below the manifest.
- */
-export function takibiHono(argv: readonly string[], entryUrl: string) {
-  return Effect.gen(function* () {
-    const manifestPath = fileURLToPath(new URL('../package.json', entryUrl))
-    const fs = yield* FileSystem.FileSystem
-    const source = yield* fs.readFileString(manifestPath)
-    const manifest = yield* Effect.try({
-      try: (): unknown => JSON.parse(source),
-      catch: (cause) => new Error(`${manifestPath} is not valid JSON`, { cause }),
-    })
-    const { version } = yield* Schema.decodeUnknownEffect(
-      Schema.Struct({ version: Schema.String }),
-    )(manifest)
-    return yield* Command.runWith(cli, { version })(argv)
-  }).pipe(Effect.catchIf((error) => !CliError.isCliError(error), reportBrokenInstall))
+export function takibiHono() {
+  return Command.run(cli, { version: manifest.version })
 }
