@@ -22,6 +22,9 @@ export default defineConfig({
       'test/cases/*/expected/**',
       'test/cases/*/seed/**',
       'test/cases/*/overlay/**',
+      'test/conformance/*/valid.test.ts',
+      'test/conformance/*/invalid.test.ts',
+      'test/specs/conformance-*.yaml',
     ],
   },
 })

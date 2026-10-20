@@ -130,6 +130,9 @@ function makeValidators(
         .filter((parameter) => location === 'path' || parameter.required === true)
         .map((parameter) => parameter.name),
     }
+    // Every location arrives as text, but oas-truth's adapter (and schema-to-library behind
+    // it) coerces only `query` and `path`; a header or cookie parameter of another type is
+    // validated as the string it arrived as until that widens upstream.
     const paramIn = location === 'path' || location === 'query' ? location : undefined
     return [
       [location === 'path' ? 'param' : location, adapter.toExpression(schema, paramIn)] as const,

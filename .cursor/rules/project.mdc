@@ -65,6 +65,7 @@ Run these from the repository root.
 | One test file | `pnpm -F takibi-hono test src/<path>.test.ts` |
 | The end-to-end suite alone (after a build) | `pnpm -F @takibi-hono/test test` |
 | Accept changed generator output as the golden copy, after reading the diff | `pnpm -F @takibi-hono/test update-expected` |
+| hono-takibi's parameter conformance suites, as a scorecard (red by design; see the testing rule) | `pnpm -F @takibi-hono/test conformance` |
 | Coverage | `pnpm coverage` |
 | Build `dist` | `vp run takibi-hono#build` |
 | Run the fixture app (after a build) | `pnpm -F fixture-vite-plugin dev` |

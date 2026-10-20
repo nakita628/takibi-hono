@@ -27,15 +27,15 @@ const cases = listCases(testRoot)
 const FILLED_STUB =
   "(c) => c.json(Object.fromEntries((['param', 'query', 'header', 'cookie', 'json', 'form'] as const).map((target) => [target, c.req.valid(target as never)])))"
 
-const fillStubs = (dir) => {
+const fillStubs = (dir, stub) => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const file = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      fillStubs(file)
+      fillStubs(file, stub)
     } else if (entry.name.endsWith('.ts')) {
       const source = readFileSync(file, 'utf8')
       // oxfmt may break a long stub across lines: `(\n  c,\n) => {}`.
-      const filled = source.replaceAll(/\(\s*c,?\s*\) => \{\}/gu, FILLED_STUB)
+      const filled = source.replaceAll(/\(\s*c,?\s*\) => \{\}/gu, stub)
       if (filled !== source) writeFileSync(file, filled)
     }
   }
@@ -73,7 +73,10 @@ const generateCase = ({ name, dir }) =>
         // `__app__/<name>` is the same output made runnable: stubs filled, and an overlay/ dir
         // (what the generated code imports but the generator does not write) copied over it.
         copyTree(generated, app)
-        fillStubs(app)
+        // A stub.txt in the case replaces the default handler body: the conformance cases
+        // answer hono-takibi's description of the validated values, from an overlay module.
+        const stub = path.join(dir, 'stub.txt')
+        fillStubs(app, existsSync(stub) ? readFileSync(stub, 'utf8').trim() : FILLED_STUB)
         const overlay = path.join(dir, 'overlay')
         if (existsSync(overlay)) copyTree(overlay, app)
       }

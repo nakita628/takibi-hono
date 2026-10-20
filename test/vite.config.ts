@@ -8,6 +8,10 @@ export default defineConfig({
       // and config (the Vite plugin, which reads its config from the working directory).
       '*/*.test.ts',
       'runtime/**/*.test.ts',
+      // hono-takibi's parameter conformance suites, over the apps takibi-hono generates: a
+      // scorecard, run on request (`pnpm -F @takibi-hono/test conformance`), red where the
+      // schema libraries' coercion still falls short of hono-takibi's.
+      ...(process.env['TAKIBI_HONO_CONFORMANCE'] === '1' ? ['conformance/*/*.test.ts'] : []),
     ],
     exclude: ['**/node_modules/**'],
     // Regenerates __generated__ and __app__ from the cases before the suite runs (needs
@@ -29,6 +33,9 @@ export default defineConfig({
       'cases/*/expected/**',
       'cases/*/seed/**',
       'cases/*/overlay/**',
+      // hono-takibi's conformance suites, copied as they are: their lint is hono-takibi's.
+      'conformance/*/valid.test.ts',
+      'conformance/*/invalid.test.ts',
     ],
     env: { node: true, es2024: true },
     // Setting `plugins` replaces oxlint's default list — restate the defaults, then add
@@ -143,6 +150,9 @@ export default defineConfig({
       'cases/*/expected/**',
       'cases/*/seed/**',
       'cases/*/overlay/**',
+      'conformance/*/valid.test.ts',
+      'conformance/*/invalid.test.ts',
+      'specs/conformance-*.yaml',
     ],
   },
 })

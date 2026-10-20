@@ -8,6 +8,7 @@
     "test": "vp test",
     "generate": "node scripts/generate.mjs",
     "typecheck": "node scripts/typecheck.mjs",
+    "conformance": "TAKIBI_HONO_CONFORMANCE=1 vp test conformance/",
     "update-expected": "node scripts/generate.mjs && node scripts/update-expected.mjs"
   },
   "devDependencies": {

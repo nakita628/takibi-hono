@@ -78,6 +78,21 @@ because the plugin reads its config from the working directory.
 - `scripts/copy.mjs` copies trees file by file: `fs.cpSync` drops the read bits on a devcontainer
   bind mount.
 
+## The conformance scorecard (`test/conformance/`)
+
+hono-takibi's parameter suites — query, path, header and cookie parameters, form and JSON
+bodies — copied as they are (`conformance/<name>/{valid,invalid}.test.ts`, their documents as
+`specs/conformance-<name>.yaml`) and run against the app takibi-hono generates from the same
+document (`cases/conformance-<name>`, zod with hono-openapi). The handler stubs there answer
+hono-takibi's description of the validated values (`stub.txt` and the `overlay/src/echo.ts` of
+each case), and `conformance/<name>/app.ts` reshapes a validation failure into the 422 and issue
+paths the suites expect of their own host.
+
+It runs on request, `pnpm -F @takibi-hono/test conformance`, and it is red: it measures how far
+schema-to-library's coercion is from hono-takibi's, parameter by parameter, and is the list of
+what to report upstream. Nothing in it is adjusted to pass; a suite that cannot load is noted at
+the top of its document (the `format: trim` parameters). It is not part of `pnpm test` or CI.
+
 ## Coverage of behavior
 
 - A bugfix ships with a test that fails before it and passes after. Prove it: revert the fix,
