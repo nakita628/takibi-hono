@@ -9,5 +9,5 @@ export default defineConfig({
   openapi: true,
   basePath: '/api',
   output: '__generated__/openapi-typebox/src/handlers',
-  components: { output: '__generated__/openapi-typebox/src/components' },
+  components: { output: '__generated__/openapi-typebox/src/components/index.ts' },
 })

@@ -9,7 +9,7 @@ export default defineConfig({
   openapi: true,
   basePath: '/api',
   output: '__generated__/client-hooks/src/handlers',
-  components: { output: '__generated__/client-hooks/src/components' },
+  components: { output: '__generated__/client-hooks/src/components/index.ts' },
   client: {
     rpc: { output: '__generated__/client-hooks/src/rpc.ts', import: './lib' },
     swr: hook('swr'),

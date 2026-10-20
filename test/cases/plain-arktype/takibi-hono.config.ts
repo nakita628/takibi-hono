@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'arktype',
   basePath: '/api',
   output: '__generated__/plain-arktype/src/handlers',
-  components: { output: '__generated__/plain-arktype/src/components' },
+  components: { output: '__generated__/plain-arktype/src/components/index.ts' },
 })

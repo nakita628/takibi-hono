@@ -50,7 +50,12 @@ describe('parseConfig', () => {
         docs: { output: 'src/docs', entry: 'src/index.ts', curl: true },
       },
       components: {
-        schemas: { output: 'src/schemas', split: true, import: '../schemas', exportTypes: true },
+        schemas: {
+          output: 'src/schemas',
+          split: true,
+          package: '@acme/schemas',
+          exportTypes: true,
+        },
         responses: { output: 'src/responses' },
         parameters: { output: 'src/parameters.ts', exportTypes: true },
         mediaTypes: { output: 'src/media', split: false },
@@ -63,7 +68,12 @@ describe('parseConfig', () => {
         rpc: { output: 'src/rpc/index.ts', import: '../lib', parseResponse: true, docs: false },
       },
       components: {
-        schemas: { split: true, output: 'src/schemas', import: '../schemas', exportTypes: true },
+        schemas: {
+          split: true,
+          output: 'src/schemas',
+          package: '@acme/schemas',
+          exportTypes: true,
+        },
         responses: { output: 'src/responses/index.ts' },
         parameters: { output: 'src/parameters.ts', exportTypes: true },
         mediaTypes: { split: false, output: 'src/media/index.ts' },
@@ -71,8 +81,11 @@ describe('parseConfig', () => {
     })
   })
 
-  it('keeps components.output as written (single-file aggregate)', async () => {
-    const config = { ...base, components: { output: 'src/components' } }
+  it('keeps components.output and its package as written (single-file aggregate)', async () => {
+    const config = {
+      ...base,
+      components: { output: 'src/components/index.ts', package: '@acme/components' },
+    }
     expect(await parse(config)).toStrictEqual(config)
   })
 
@@ -108,6 +121,26 @@ describe('parseConfig', () => {
       'components.output next to a per-type output',
       { ...base, components: { output: 'src/c.ts', schemas: { output: 'src/s.ts' } } },
       'components: components.output is mutually exclusive with per-type component outputs (schemas, responses, ...). Use output for single-file mode, or per-type fields for split mode.',
+    ],
+    [
+      'a components.output that is a directory',
+      { ...base, components: { output: 'src/components' } },
+      'components.output: must be a .ts file',
+    ],
+    [
+      'components.package without components.output',
+      { ...base, components: { package: '@acme/components', schemas: { output: 'src/s.ts' } } },
+      'components: components.package goes with components.output: a per-type output names its package in its own block.',
+    ],
+    [
+      'a package that is not a module specifier',
+      { ...base, components: { output: 'src/c.ts', package: 'my pkg' } },
+      'components.package: must be a module specifier, with no whitespace or quotes',
+    ],
+    [
+      'the retired per-type import',
+      { ...base, components: { responses: { output: 'src/r.ts', import: '../r' } } },
+      'components.responses.import: import was removed: a generated file imports another one relatively, under pathAlias inside the directory of the app entry, or by package from another package.',
     ],
     [
       'a client type output that is not .ts',

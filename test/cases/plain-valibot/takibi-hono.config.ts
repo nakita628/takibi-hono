@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'valibot',
   basePath: '/api',
   output: '__generated__/plain-valibot/src/handlers',
-  components: { output: '__generated__/plain-valibot/src/components' },
+  components: { output: '__generated__/plain-valibot/src/components/index.ts' },
 })

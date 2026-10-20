@@ -20,11 +20,7 @@ export default defineConfig({
       exportTypes: true,
     },
     headers: { output: '__generated__/split/src/components/headers.ts', exportTypes: true },
-    requestBodies: {
-      output: '__generated__/split/src/components/requestBodies',
-      split: true,
-      import: '@/components/requestBodies',
-    },
+    requestBodies: { output: '__generated__/split/src/components/requestBodies', split: true },
     examples: { output: '__generated__/split/src/components/examples', split: true },
     links: { output: '__generated__/split/src/components/links.ts' },
     callbacks: { output: '__generated__/split/src/components/callbacks', split: true },

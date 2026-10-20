@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'zod',
   openapi: true,
   output: '__generated__/src/handlers',
-  components: { output: '__generated__/src/components' },
+  components: { output: '__generated__/src/components/index.ts' },
 })

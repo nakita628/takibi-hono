@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'valibot',
   openapi: true,
   output: '__generated__/typespec/src/handlers',
-  components: { output: '__generated__/typespec/src/components' },
+  components: { output: '__generated__/typespec/src/components/index.ts' },
 })

@@ -62,81 +62,86 @@ export default defineConfig({
   // Add `.readonly()` to generated schemas
   readonly: true,
 
-  // Resolve generated imports through a path alias instead of relative paths
-  // (matches the `paths` in your tsconfig, e.g. "@/*": ["src/*"])
+  // Generated files import one another relatively, under `pathAlias` when the target is in
+  // the directory of the app entry (matches the `paths` in your tsconfig, e.g. "@/*":
+  // ["src/*"]), and by the target's `package` from another package: the nearest
+  // package.json above an output delimits its package.
   pathAlias: '@/',
 
-  // Components (OpenAPI Components Object). `output` (single-file aggregate) and
-  // the per-type fields below are mutually exclusive — pick one mode.
+  // Components (OpenAPI Components Object). `output` (single file) and the per-type
+  // fields below are mutually exclusive — pick one mode.
   //
   // Single-file mode (the default, at `src/components/index.ts`): schemas and every
-  // other component kind in one module, schema types exported.
-  // components: { output: 'src/components.ts' },
+  // other component kind in one `.ts` module, schema types exported.
+  // components: { output: 'src/components/index.ts' },
   //
   // Per-type mode: only the configured kinds are generated (schemas always, at
   // `src/components/index.ts` unless configured). `split: true` makes `output` a
-  // directory (one file per entry + an index.ts barrel); omit it for a single
-  // `.ts` file. `import` overrides the auto-derived specifier. `exportTypes: true`
-  // adds inferred type aliases on schemas / parameters / headers / mediaTypes.
+  // directory (one file per entry + an index.ts barrel); omit it for a single `.ts`
+  // file. `exportTypes: true` adds inferred type aliases on schemas / parameters /
+  // headers / mediaTypes. `package` names the package an output is written into, for
+  // the files of other packages that import it; leave it out while everything is in
+  // one package.
   components: {
+    // package: '@packages/components', // with `output`, when it is a package of its own
     schemas: {
       output: 'src/components/schemas',
       split: true,
-      import: '../schemas',
       exportTypes: true,
+      // package: '@packages/schemas',
     },
     responses: {
       output: 'src/components/responses',
       split: true,
-      import: '../responses',
+      // package: '@packages/responses',
     },
     parameters: {
       output: 'src/components/parameters',
       split: true,
-      import: '../parameters',
       exportTypes: true,
+      // package: '@packages/parameters',
     },
     examples: {
       output: 'src/components/examples',
       split: true,
-      import: '../examples',
+      // package: '@packages/examples',
     },
     requestBodies: {
       output: 'src/components/requestBodies',
       split: true,
-      import: '../requestBodies',
+      // package: '@packages/requestBodies',
     },
     headers: {
       output: 'src/components/headers',
       split: true,
-      import: '../headers',
       exportTypes: true,
+      // package: '@packages/headers',
     },
     securitySchemes: {
       output: 'src/components/securitySchemes',
       split: true,
-      import: '../securitySchemes',
+      // package: '@packages/securitySchemes',
     },
     links: {
       output: 'src/components/links',
       split: true,
-      import: '../links',
+      // package: '@packages/links',
     },
     callbacks: {
       output: 'src/components/callbacks',
       split: true,
-      import: '../callbacks',
+      // package: '@packages/callbacks',
     },
     pathItems: {
       output: 'src/components/pathItems',
       split: true,
-      import: '../pathItems',
+      // package: '@packages/pathItems',
     },
     mediaTypes: {
       output: 'src/components/mediaTypes',
       split: true,
-      import: '../mediaTypes',
       exportTypes: true,
+      // package: '@packages/mediaTypes',
     },
   },
 

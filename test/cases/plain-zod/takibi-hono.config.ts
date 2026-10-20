@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'zod',
   basePath: '/api',
   output: '__generated__/plain-zod/src/handlers',
-  components: { output: '__generated__/plain-zod/src/components' },
+  components: { output: '__generated__/plain-zod/src/components/index.ts' },
 })

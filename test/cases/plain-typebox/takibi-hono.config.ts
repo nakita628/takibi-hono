@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'typebox',
   basePath: '/api',
   output: '__generated__/plain-typebox/src/handlers',
-  components: { output: '__generated__/plain-typebox/src/components' },
+  components: { output: '__generated__/plain-typebox/src/components/index.ts' },
 })

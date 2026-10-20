@@ -6,7 +6,8 @@ import { makeClients } from './client.js'
 import { writeComponents } from './components.js'
 import { writeApp, writeHandlers } from './handlers.js'
 import type { TakibiHonoConfig } from './layout.js'
-import { resolveLayout } from './layout.js'
+import { checkPackages, resolveLayout } from './layout.js'
+import { makePackageRoot } from './packages.js'
 
 /**
  * Parses the spec and writes components, handlers, the app entry and (opt-in) clients, in
@@ -16,7 +17,9 @@ import { resolveLayout } from './layout.js'
 export function hono(config: TakibiHonoConfig) {
   return Effect.gen(function* () {
     const openapi = yield* parseOpenAPI(config.input)
-    const layout = resolveLayout(config)
+    const shape = resolveLayout(config)
+    const layout = { ...shape, packageRoot: yield* makePackageRoot(shape) }
+    yield* checkPackages(openapi, layout)
     yield* writeComponents(openapi, config, layout)
     const handlerFileNames = yield* writeHandlers(openapi, config, layout)
     yield* writeApp(handlerFileNames, config, layout)

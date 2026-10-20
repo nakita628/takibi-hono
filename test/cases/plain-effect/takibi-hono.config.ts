@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'effect',
   basePath: '/api',
   output: '__generated__/plain-effect/src/handlers',
-  components: { output: '__generated__/plain-effect/src/components' },
+  components: { output: '__generated__/plain-effect/src/components/index.ts' },
 })

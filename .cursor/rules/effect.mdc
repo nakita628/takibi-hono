@@ -40,7 +40,7 @@ export function readFile(path: string) {
 ## Errors
 
 - Failures are tagged errors: `OpenAPIError` (`src/openapi`), `FormatError` (`src/format`),
-  `ClientError` (`src/core/client.ts`) as `Data.TaggedError`, and `ConfigError` (`src/config`) as
+  `ClientError` (`src/core/client.ts`), `LayoutError` (`src/core/layout.ts`) as `Data.TaggedError`, and `ConfigError` (`src/config`) as
   `Schema.TaggedError` because it comes out of a schema decode. Filesystem failures stay the
   platform's `PlatformError`.
 - An external result or an unexported error type (oas-truth's result, the client generator's

@@ -4,7 +4,7 @@ import { makeSpecifier, resolveLayout } from './layout.js'
 
 const base = { input: 'openapi.yaml', schema: 'zod' } as const
 
-const aggregateTarget = (file: string) => ({ output: file, split: false, import: undefined })
+const aggregateTarget = (file: string) => ({ output: file, split: false, package: undefined })
 
 describe('resolveLayout', () => {
   it('puts every component kind in src/components/index.ts by default', () => {
@@ -42,7 +42,7 @@ describe('resolveLayout', () => {
     const layout = resolveLayout({
       ...base,
       components: {
-        responses: { output: 'src/responses', split: true, import: '@/responses' },
+        responses: { output: 'src/responses', split: true, package: '@acme/responses' },
         parameters: { output: 'src/parameters.ts', split: true, exportTypes: true },
       },
     })
@@ -52,23 +52,26 @@ describe('resolveLayout', () => {
         output: 'src/components/index.ts',
         split: false,
         exportTypes: false,
-        import: undefined,
+        package: undefined,
       },
       responses: {
         output: 'src/responses',
         split: true,
         exportTypes: false,
-        import: '@/responses',
+        package: '@acme/responses',
       },
       parameters: {
         output: 'src/parameters.ts',
         split: false,
         exportTypes: true,
-        import: undefined,
+        package: undefined,
       },
     })
   })
 })
+
+// `packages/` is a package of its own; everything else is the app's.
+const twoPackages = (file: string) => (/(?:^|\/)packages\//u.test(file) ? '/pkg' : '/app')
 
 describe('makeSpecifier', () => {
   const layout = resolveLayout(base)
@@ -76,21 +79,49 @@ describe('makeSpecifier', () => {
     output: 'src/components/index.ts',
     split: false,
     exportTypes: false,
-    import: undefined,
+    package: undefined,
   }
 
   it.each([
     ['src/handlers', target, '../components'],
     ['src/components', target, '.'],
     ['src/handlers', { ...target, output: 'src/schemas', split: true }, '../schemas'],
-    ['src/handlers', { ...target, import: '#components' }, '#components'],
+    // `package` is for other packages: inside the same one the import stays relative.
+    ['src/handlers', { ...target, package: '@acme/components' }, '../components'],
   ])('from %s', (fromDir, t, expected) => {
     expect(makeSpecifier(layout, fromDir, t)).toBe(expected)
   })
 
-  it('resolves through the path alias from the app directory', () => {
-    expect(makeSpecifier({ ...layout, pathAlias: '@/' }, 'src/handlers', target)).toBe(
-      '@/components',
+  it('imports a target of another package by its package name', () => {
+    expect(
+      makeSpecifier({ ...layout, packageRoot: twoPackages }, 'src/handlers', {
+        ...target,
+        output: 'packages/components/src/index.ts',
+        package: '@acme/components',
+      }),
+    ).toBe('@acme/components')
+  })
+
+  it.each([
+    ['a target in the app directory', target, '@/components'],
+    [
+      'a split target in the app directory',
+      { ...target, output: 'src/schemas', split: true },
+      '@/schemas',
+    ],
+    [
+      'a target outside the app directory',
+      { ...target, output: 'shared/components.ts' },
+      '../../shared/components',
+    ],
+  ])('resolves %s through the path alias only inside the app directory', (_, t, expected) => {
+    expect(makeSpecifier({ ...layout, pathAlias: '@/' }, 'src/handlers', t)).toBe(expected)
+  })
+
+  it('does not use the path alias from a file of another package', () => {
+    const layoutWithAlias = { ...layout, pathAlias: '@/', packageRoot: twoPackages }
+    expect(makeSpecifier(layoutWithAlias, 'packages/kit/src', target)).toBe(
+      '../../../src/components',
     )
   })
 })

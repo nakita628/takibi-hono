@@ -6,5 +6,5 @@ export default defineConfig({
   openapi: true,
   basePath: '/api',
   output: '__generated__/openapi-valibot/src/handlers',
-  components: { output: '__generated__/openapi-valibot/src/components' },
+  components: { output: '__generated__/openapi-valibot/src/components/index.ts' },
 })

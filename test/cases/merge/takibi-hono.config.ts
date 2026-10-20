@@ -6,5 +6,5 @@ export default defineConfig({
   openapi: true,
   basePath: '/api',
   output: '__generated__/merge/src/handlers',
-  components: { output: '__generated__/merge/src/components' },
+  components: { output: '__generated__/merge/src/components/index.ts' },
 })

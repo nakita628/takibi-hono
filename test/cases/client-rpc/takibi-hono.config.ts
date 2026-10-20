@@ -8,7 +8,7 @@ export default defineConfig({
   schema: 'zod',
   openapi: true,
   output: '__generated__/client-rpc/src/handlers',
-  components: { output: '__generated__/client-rpc/src/components' },
+  components: { output: '__generated__/client-rpc/src/components/index.ts' },
   client: {
     rpc: {
       output: '__generated__/client-rpc/src/rpc.ts',
