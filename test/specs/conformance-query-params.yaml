@@ -1,0 +1,864 @@
+# Copied from nakita628/hono-takibi test/query-params/openapi.yaml for takibi-hono's conformance
+# scorecard, with the `format: trim` parameters taken out: schema-to-library writes them as
+# `z.trim()`, a bare check, and the generated module does not load (reported upstream).
+# Every parameter shape the generator supports, as a query parameter: each `type` and
+# `format`, once on its own and once as an array. HTTP delivers all of them as strings, so
+# what the generated schema has to prove is that each arrives as the right JavaScript type.
+#
+# `format: binary` is deliberately absent: it emits `z.file()`, which a query string cannot
+# carry — OpenAPI scopes it to request bodies.
+#
+# `/params`    every shape, scalar and array, each optional so a test sends one alone.
+#              The `tx_*` parameters are the `x-trim` / `x-toLowerCase` /
+#              `x-toUpperCase` / `x-normalize` extensions, alone and paired with a
+#              validation format — the pairing takes a `.pipe()` branch so the transform
+#              runs before the format's own check.
+# `/literals`  `enum` / `const` of every primitive type, a nullable and a `oneOf`.
+# `/optional`  absent parameters, and names that are not identifiers.
+# `/defaults`  what an absent parameter falls back to.
+# `/required`  what happens when a required parameter is missing.
+# `/limits`    constraints, on a scalar and on an array.
+# `/styles`    the serialisations other than the default `form` + `explode: true`.
+# `/objects`   a parameter that is an object, spread over the query in each of the ways
+#              OpenAPI serialises one.
+# `/absent`    `allowEmptyValue`, and a reference that carries a default.
+# `/refs`      a schema behind `$ref`: the component is written for a typed value, so the
+#              text is read before it reaches the component.
+# `/combinators`  `allOf`, `oneOf`, `anyOf`, `not`, a mixed `enum`, a typeless constraint and
+#              a tuple: the text is read once, around the whole schema.
+# `/content`   a parameter declared with `content: application/json`, one JSON document.
+#
+# 生成器が対応するすべてのパラメータ形状を、クエリパラメータとして宣言する。各 `type` と
+# `format` を、単独の場合と配列の場合の両方で宣言している。HTTP はすべてを文字列で運ぶため、
+# 生成されたスキーマが示すべきことは、各値が正しい JavaScript の型で届くことである。
+#
+# `format: binary` は意図的に含めていない。`z.file()` として生成されるが、クエリ文字列では
+# 運べない。OpenAPI でも、リクエストボディ専用とされている。
+#
+# `/params`    全形状のスカラーと配列。テストで1つだけ送信できるよう、すべて任意にしている。
+#              `tx_*` パラメータは、`x-trim` / `x-toLowerCase` / `x-toUpperCase` /
+#              `x-normalize` 拡張である。単独の場合と、検証フォーマットと組み合わせた場合の
+#              両方を宣言している。組み合わせた場合は `.pipe()` の分岐を通り、変換が
+#              フォーマット検証より先に実行される。
+# `/literals`  各プリミティブ型の `enum` / `const`、nullable、`oneOf`。
+# `/optional`  省略されたパラメータと、識別子でない名前。
+# `/defaults`  省略されたパラメータに適用されるデフォルト値。
+# `/required`  必須パラメータが欠落している場合の挙動。
+# `/limits`    スカラーと配列に対する制約。
+# `/styles`    デフォルトの `form` + `explode: true` 以外のシリアライズ形式。
+# `/objects`   オブジェクトであるパラメータ。OpenAPI が定める各シリアライズ形式で、
+#              クエリに分散して送られる。
+# `/absent`    `allowEmptyValue` と、デフォルト値を持つ参照。
+# `/refs`      `$ref` の先にあるスキーマ。コンポーネントは型付きの値を前提としているため、
+#              文字列はコンポーネントに渡る前に読み取られる。
+# `/combinators`  `allOf`・`oneOf`・`anyOf`・`not`・型混在の `enum`・型なしの制約・タプル。
+#              文字列は、スキーマ全体の外側で1度だけ読み取られる。
+# `/content`   `content: application/json` で宣言されたパラメータ。1つの JSON 文書である。
+openapi: 3.1.0
+info:
+  title: Query Parameter Matrix
+  version: 0.0.0
+paths:
+  /params:
+    get:
+      operationId: queryParams
+      parameters:
+        - { name: integer, in: query, schema: { type: integer } }
+        - { name: integer_arr, in: query, schema: { type: array, items: { type: integer } } }
+        - { name: int32, in: query, schema: { type: integer, format: int32 } }
+        - {
+            name: int32_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, format: int32 } },
+          }
+        - { name: int64, in: query, schema: { type: integer, format: int64 } }
+        - {
+            name: int64_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, format: int64 } },
+          }
+        - { name: bigint, in: query, schema: { type: integer, format: bigint } }
+        - {
+            name: bigint_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, format: bigint } },
+          }
+        - { name: uint32, in: query, schema: { type: integer, format: uint32 } }
+        - {
+            name: uint32_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, format: uint32 } },
+          }
+        - { name: uint64, in: query, schema: { type: integer, format: uint64 } }
+        - {
+            name: uint64_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, format: uint64 } },
+          }
+        - { name: number, in: query, schema: { type: number } }
+        - { name: number_arr, in: query, schema: { type: array, items: { type: number } } }
+        - { name: float, in: query, schema: { type: number, format: float } }
+        - {
+            name: float_arr,
+            in: query,
+            schema: { type: array, items: { type: number, format: float } },
+          }
+        - { name: float32, in: query, schema: { type: number, format: float32 } }
+        - {
+            name: float32_arr,
+            in: query,
+            schema: { type: array, items: { type: number, format: float32 } },
+          }
+        - { name: float64, in: query, schema: { type: number, format: float64 } }
+        - {
+            name: float64_arr,
+            in: query,
+            schema: { type: array, items: { type: number, format: float64 } },
+          }
+        - { name: double, in: query, schema: { type: number, format: double } }
+        - {
+            name: double_arr,
+            in: query,
+            schema: { type: array, items: { type: number, format: double } },
+          }
+        - { name: numpassword, in: query, schema: { type: number, format: password } }
+        - {
+            name: numpassword_arr,
+            in: query,
+            schema: { type: array, items: { type: number, format: password } },
+          }
+        - { name: boolean, in: query, schema: { type: boolean } }
+        - { name: boolean_arr, in: query, schema: { type: array, items: { type: boolean } } }
+        - { name: string, in: query, schema: { type: string } }
+        - { name: string_arr, in: query, schema: { type: array, items: { type: string } } }
+        - { name: email, in: query, schema: { type: string, format: email } }
+        - {
+            name: email_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: email } },
+          }
+        - { name: uuid, in: query, schema: { type: string, format: uuid } }
+        - {
+            name: uuid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: uuid } },
+          }
+        - { name: uuidv4, in: query, schema: { type: string, format: uuidv4 } }
+        - {
+            name: uuidv4_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: uuidv4 } },
+          }
+        - { name: uuidv7, in: query, schema: { type: string, format: uuidv7 } }
+        - {
+            name: uuidv7_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: uuidv7 } },
+          }
+        - { name: url, in: query, schema: { type: string, format: url } }
+        - {
+            name: url_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: url } },
+          }
+        - { name: uri, in: query, schema: { type: string, format: uri } }
+        - {
+            name: uri_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: uri } },
+          }
+        - { name: httpurl, in: query, schema: { type: string, format: httpUrl } }
+        - {
+            name: httpurl_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: httpUrl } },
+          }
+        - { name: hostname, in: query, schema: { type: string, format: hostname } }
+        - {
+            name: hostname_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: hostname } },
+          }
+        - { name: hex, in: query, schema: { type: string, format: hex } }
+        - {
+            name: hex_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: hex } },
+          }
+        - { name: emoji, in: query, schema: { type: string, format: emoji } }
+        - {
+            name: emoji_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: emoji } },
+          }
+        - { name: base64, in: query, schema: { type: string, format: base64 } }
+        - {
+            name: base64_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: base64 } },
+          }
+        - { name: base64url, in: query, schema: { type: string, format: base64url } }
+        - {
+            name: base64url_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: base64url } },
+          }
+        - { name: nanoid, in: query, schema: { type: string, format: nanoid } }
+        - {
+            name: nanoid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: nanoid } },
+          }
+        - { name: cuid2, in: query, schema: { type: string, format: cuid2 } }
+        - {
+            name: cuid2_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: cuid2 } },
+          }
+        - { name: ulid, in: query, schema: { type: string, format: ulid } }
+        - {
+            name: ulid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: ulid } },
+          }
+        - { name: ipv4, in: query, schema: { type: string, format: ipv4 } }
+        - {
+            name: ipv4_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: ipv4 } },
+          }
+        - { name: ipv6, in: query, schema: { type: string, format: ipv6 } }
+        - {
+            name: ipv6_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: ipv6 } },
+          }
+        - { name: cidrv4, in: query, schema: { type: string, format: cidrv4 } }
+        - {
+            name: cidrv4_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: cidrv4 } },
+          }
+        - { name: cidrv6, in: query, schema: { type: string, format: cidrv6 } }
+        - {
+            name: cidrv6_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: cidrv6 } },
+          }
+        - { name: date, in: query, schema: { type: string, format: date } }
+        - {
+            name: date_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: date } },
+          }
+        - { name: time, in: query, schema: { type: string, format: time } }
+        - {
+            name: time_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: time } },
+          }
+        - { name: datetime, in: query, schema: { type: string, format: date-time } }
+        - {
+            name: datetime_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: date-time } },
+          }
+        - { name: duration, in: query, schema: { type: string, format: duration } }
+        - {
+            name: duration_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: duration } },
+          }
+        - { name: byte, in: query, schema: { type: string, format: byte } }
+        - {
+            name: byte_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: byte } },
+          }
+        - { name: strpassword, in: query, schema: { type: string, format: password } }
+        - {
+            name: strpassword_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: password } },
+          }
+        - { name: mac, in: query, schema: { type: string, format: mac } }
+        - {
+            name: mac_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: mac } },
+          }
+        - { name: e164, in: query, schema: { type: string, format: e164 } }
+        - {
+            name: e164_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: e164 } },
+          }
+        - { name: creditcard, in: query, schema: { type: string, format: creditCard } }
+        - {
+            name: creditcard_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: creditCard } },
+          }
+        - { name: iban, in: query, schema: { type: string, format: iban } }
+        - {
+            name: iban_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: iban } },
+          }
+        - { name: currencycode, in: query, schema: { type: string, format: currencyCode } }
+        - {
+            name: currencycode_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: currencyCode } },
+          }
+        - { name: ksuid, in: query, schema: { type: string, format: ksuid } }
+        - {
+            name: ksuid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: ksuid } },
+          }
+        - { name: xid, in: query, schema: { type: string, format: xid } }
+        - {
+            name: xid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: xid } },
+          }
+        - { name: guid, in: query, schema: { type: string, format: guid } }
+        - {
+            name: guid_arr,
+            in: query,
+            schema: { type: array, items: { type: string, format: guid } },
+          }
+        - { name: tx_trim, in: query, schema: { type: string, x-trim: true } }
+        - { name: tx_lower, in: query, schema: { type: string, x-toLowerCase: true } }
+        - { name: tx_upper, in: query, schema: { type: string, x-toUpperCase: true } }
+        - { name: tx_normalize, in: query, schema: { type: string, x-normalize: NFKC } }
+        - { name: tx_email_trim, in: query, schema: { type: string, format: email, x-trim: true } }
+        - { name: tx_uuid_trim, in: query, schema: { type: string, format: uuid, x-trim: true } }
+        - {
+            name: tx_email_lower,
+            in: query,
+            schema: { type: string, format: email, x-toLowerCase: true },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  # A numeric or boolean `enum` / `const` and a numeric composition: each names a typed
+  # value, and the string on the wire has to be coerced before the literal is matched.
+  # 数値・真偽値の `enum` / `const` と、数値を含む合成スキーマ。いずれも型付きの値を指す
+  # ため、ワイヤ上の文字列は、リテラルと照合する前に coerce しなければならない。
+  /literals:
+    get:
+      operationId: queryLiterals
+      parameters:
+        - { name: ienum, in: query, schema: { type: integer, enum: [1, 2, 3] } }
+        - { name: nenum, in: query, schema: { type: number, enum: [1.5, 2.5] } }
+        - { name: benum, in: query, schema: { type: boolean, enum: [true] } }
+        - { name: iconst, in: query, schema: { type: integer, const: 7 } }
+        - { name: senum, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: sconst, in: query, schema: { type: string, const: fixed } }
+        - { name: numericsenum, in: query, schema: { type: string, enum: ['1', '02', 'true'] } }
+        # `null` has no spelling of its own in a parameter; the text `null` is read as the value
+        # by a schema that takes `null` and no string.
+        # パラメータには `null` 専用の表記がない。`null` を受理し、文字列を受理しないスキーマは、
+        # テキスト `null` を値として読む。
+        - { name: inull, in: query, schema: { type: [integer, 'null'] } }
+        - { name: bnull, in: query, schema: { type: [boolean, 'null'] } }
+        - { name: nullof, in: query, schema: { oneOf: [{ type: integer }, { type: 'null' }] } }
+        - {
+            name: inull_arr,
+            in: query,
+            schema: { type: array, items: { type: [integer, 'null'] } },
+          }
+        # An array that may be null, of elements that are no strings: the text `null` is no
+        # element, so it is the array that is null.
+        # null を取りうる配列で、要素が文字列でないもの。テキスト `null` は要素になりえない
+        # ため、null なのは配列そのものである。
+        - {
+            name: inull_list,
+            in: query,
+            schema: { type: [array, 'null'], items: { type: integer } },
+          }
+        # A string takes the text `null` as the text it is.
+        # 文字列は、テキスト `null` をそのままの文字列として受理する。
+        - { name: snull, in: query, schema: { type: [string, 'null'] } }
+        - {
+            name: ioneof,
+            in: query,
+            schema: { oneOf: [{ type: integer }, { type: string, enum: [all] }] },
+          }
+        - {
+            name: ienum_arr,
+            in: query,
+            schema: { type: array, items: { type: integer, enum: [1, 2, 3] } },
+          }
+        - {
+            name: senum_arr,
+            in: query,
+            schema: { type: array, items: { type: string, enum: [asc, desc] } },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /optional:
+    get:
+      operationId: queryOptional
+      parameters:
+        - { name: int_opt, in: query, schema: { type: integer } }
+        - { name: int64_opt, in: query, schema: { type: integer, format: int64 } }
+        - { name: num_opt, in: query, schema: { type: number } }
+        - { name: bool_opt, in: query, schema: { type: boolean } }
+        - { name: str_opt, in: query, schema: { type: string } }
+        - { name: uuid_opt, in: query, schema: { type: string, format: uuid } }
+        - { name: arr_opt, in: query, schema: { type: array, items: { type: integer } } }
+        # Names that are not JavaScript identifiers.
+        # JavaScript の識別子でない名前。
+        - { name: page-size, in: query, schema: { type: integer } }
+        - { name: 'filter[name]', in: query, schema: { type: string } }
+        - { name: '$top', in: query, schema: { type: integer } }
+        - { name: user.id, in: query, schema: { type: integer } }
+        - { name: 'ids[]', in: query, schema: { type: array, items: { type: integer } } }
+        # Differs from `int_opt` by case alone: names are case-sensitive.
+        # `int_opt` とは大文字小文字だけが異なる。名前は大文字小文字を区別する。
+        - { name: Int_Opt, in: query, schema: { type: string } }
+        # A name every JavaScript object inherits: the request object answers to it whether
+        # the parameter was sent or not.
+        # すべての JavaScript オブジェクトが継承する名前。パラメータが送信されたかどうかに
+        # かかわらず、リクエストオブジェクトはこの名前に応答する。
+        - { name: constructor, in: query, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /defaults:
+    get:
+      operationId: queryDefaults
+      parameters:
+        - { name: int_def, in: query, schema: { type: integer, default: 20 } }
+        - { name: int64_def, in: query, schema: { type: integer, format: int64, default: 5 } }
+        - { name: num_def, in: query, schema: { type: number, default: 0.5 } }
+        - { name: bool_def, in: query, schema: { type: boolean, default: false } }
+        - { name: bool_def_true, in: query, schema: { type: boolean, default: true } }
+        - { name: str_def, in: query, schema: { type: string, default: fallback } }
+        - { name: enum_def, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - {
+            name: arr_def,
+            in: query,
+            schema: { type: array, items: { type: string }, default: [] },
+          }
+        - {
+            name: arr_int_def,
+            in: query,
+            schema: { type: array, items: { type: integer }, default: [1, 2] },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /required:
+    get:
+      operationId: queryRequired
+      parameters:
+        - { name: id, in: query, required: true, schema: { type: integer } }
+        - { name: big, in: query, required: true, schema: { type: integer, format: int64 } }
+        - { name: flag, in: query, required: true, schema: { type: boolean } }
+        - { name: name, in: query, required: true, schema: { type: string } }
+        - {
+            name: tags,
+            in: query,
+            required: true,
+            schema: { type: array, items: { type: integer } },
+          }
+        # `required: false` written out is the same as leaving `required` off.
+        # `required: false` を明記した場合も、`required` を省略した場合と同じである。
+        - { name: note, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /limits:
+    get:
+      operationId: queryLimits
+      parameters:
+        - { name: range, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - {
+            name: exclusive,
+            in: query,
+            schema: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 1 },
+          }
+        - { name: multiple, in: query, schema: { type: integer, multipleOf: 5 } }
+        - {
+            name: int64range,
+            in: query,
+            schema: { type: integer, format: int64, minimum: 1, maximum: 100 },
+          }
+        - { name: length, in: query, schema: { type: string, minLength: 2, maxLength: 4 } }
+        - { name: pattern, in: query, schema: { type: string, pattern: '^[a-z]+-\d{1,3}$' } }
+        - {
+            name: items,
+            in: query,
+            schema: { type: array, items: { type: integer }, minItems: 2, maxItems: 3 },
+          }
+        - {
+            name: unique,
+            in: query,
+            schema: { type: array, items: { type: integer }, uniqueItems: true },
+          }
+        - {
+            name: ranged_items,
+            in: query,
+            schema: { type: array, items: { type: integer, minimum: 1, maximum: 9 } },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /styles:
+    get:
+      operationId: queryStyles
+      parameters:
+        - name: csv
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: integer } }
+        - name: pipes
+          in: query
+          style: pipeDelimited
+          explode: false
+          schema: { type: array, items: { type: integer } }
+        - name: spaces
+          in: query
+          style: spaceDelimited
+          explode: false
+          schema: { type: array, items: { type: integer } }
+        - name: filter
+          in: query
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              age: { type: integer }
+        - name: csv_str
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /objects:
+    get:
+      operationId: queryObjects
+      parameters:
+        # One key per property: deep[name]=bob&deep[age]=5.
+        # プロパティごとに1つのキーになる。deep[name]=bob&deep[age]=5。
+        - name: deep
+          in: query
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              age: { type: integer, minimum: 0 }
+              active: { type: boolean }
+              ids: { type: array, items: { type: integer } }
+              # A key names a path into the object, deep[range][min]=1, and an element of
+              # an array by an empty pair of brackets or by its index, deep[tags][]=a and
+              # deep[tags][0]=a. An element that is an object takes the keys written behind
+              # it, deep[points][][x]=1.
+              # キーはオブジェクト内のパスを表す(deep[range][min]=1)。配列の要素は、
+              # 空の角括弧またはインデックスで表す(deep[tags][]=a、deep[tags][0]=a)。
+              # オブジェクトである要素は、その後ろに書かれたキーを受け取る
+              # (deep[points][][x]=1)。
+              points:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    x: { type: integer }
+                    y: { type: integer }
+              tags: { type: array, items: { type: string } }
+              range:
+                type: object
+                properties:
+                  min: { type: integer }
+                  max: { type: integer }
+        # The object is a component.
+        # オブジェクトがコンポーネントである。
+        - name: deep_ref
+          in: query
+          style: deepObject
+          schema: { $ref: '#/components/schemas/Range' }
+        # `style: form` with `explode: true`, the default: the properties are keys of the
+        # query themselves, sort=asc&size=5.
+        # デフォルトである `style: form` + `explode: true`。プロパティ自体がクエリのキーに
+        # なる。sort=asc&size=5。
+        - name: spread
+          in: query
+          schema:
+            type: object
+            properties:
+              sort: { type: string, enum: [asc, desc] }
+              size: { type: integer }
+              page: { type: integer }
+        # `explode: false`: one value alternating names and values, pairs=name,bob,age,5.
+        # `explode: false`。名前と値を交互に並べた1つの値になる。pairs=name,bob,age,5。
+        - name: pairs
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              age: { type: integer }
+        # A parameter of its own, named like a property of `spread`. It is never read as that
+        # property.
+        # `spread` のプロパティと同じ名前を持つ、独立したパラメータ。そのプロパティとして
+        # 読み取られることはない。
+        - { name: page, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  # Two exploded objects that declare the same property: a key of that name is a property of
+  # each of them.
+  # 同じプロパティを宣言する、explode された2つのオブジェクト。その名前のキーは、両方の
+  # プロパティになる。
+  /shared:
+    get:
+      operationId: queryShared
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              age: { type: integer }
+        - name: sort
+          in: query
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              dir: { type: string, enum: [asc, desc] }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  # An exploded object that declares `additionalProperties` takes the keys nothing else
+  # declares. `page` is a parameter of its own and stays one.
+  # `additionalProperties` を宣言する explode されたオブジェクトは、他のどこにも宣言されて
+  # いないキーを受け取る。`page` は独立したパラメータであり、そのまま扱われる。
+  /open:
+    get:
+      operationId: queryOpen
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - name: extra
+          in: query
+          schema:
+            type: object
+            properties:
+              known: { type: string }
+            additionalProperties: { type: integer }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  # `date-time` and `time` with the extensions that narrow them. An offset is valid by
+  # default, and `x-isoOffset: false` takes it back.
+  # `date-time` と `time` を、絞り込み用の拡張とともに宣言する。オフセットはデフォルトで
+  # 有効であり、`x-isoOffset: false` で無効に戻せる。
+  /iso:
+    get:
+      operationId: queryIso
+      parameters:
+        - {
+            name: datetime_z,
+            in: query,
+            schema: { type: string, format: date-time, x-isoOffset: false },
+          }
+        - {
+            name: datetime_p3,
+            in: query,
+            schema: { type: string, format: date-time, x-isoPrecision: 3 },
+          }
+        - {
+            name: datetime_local,
+            in: query,
+            schema: { type: string, format: date-time, x-isoLocal: true },
+          }
+        - { name: time_any, in: query, schema: { type: string, format: time } }
+        - { name: time_z, in: query, schema: { type: string, format: time, x-isoOffset: false } }
+        - { name: time_p0, in: query, schema: { type: string, format: time, x-isoPrecision: 0 } }
+        - { name: time_p3, in: query, schema: { type: string, format: time, x-isoPrecision: 3 } }
+        - {
+            name: time_minute,
+            in: query,
+            schema: { type: string, format: time, x-isoPrecision: -1 },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  # Parameters named like what every JavaScript object inherits. The request object answers
+  # to these names whether the parameter was sent or not.
+  # すべての JavaScript オブジェクトが継承するものと同じ名前のパラメータ。リクエスト
+  # オブジェクトは、パラメータが送信されたかどうかにかかわらず、これらの名前に応答する。
+  /inherited:
+    get:
+      operationId: queryInherited
+      parameters:
+        - { name: toString, in: query, required: true, schema: { type: string } }
+        - { name: valueOf, in: query, schema: { type: integer, default: 3 } }
+        - { name: hasOwnProperty, in: query, schema: { type: boolean } }
+        - { name: isPrototypeOf, in: query, schema: { type: array, items: { type: integer } } }
+        - { name: toLocaleString, in: query, allowEmptyValue: true, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /absent:
+    get:
+      operationId: queryAbsent
+      parameters:
+        # `allowEmptyValue: true` lets `?empty_ok=` say the same as leaving the parameter out.
+        # `allowEmptyValue: true` の場合、`?empty_ok=` はパラメータを省略したのと同じ意味になる。
+        - { name: empty_ok, in: query, allowEmptyValue: true, schema: { type: integer } }
+        - {
+            name: empty_def,
+            in: query,
+            allowEmptyValue: true,
+            schema: { type: integer, default: 7 },
+          }
+        - { name: empty_str, in: query, allowEmptyValue: true, schema: { type: string } }
+        # A reference that carries a default of its own.
+        # 独自のデフォルト値を持つ参照。
+        - { name: ref_def, in: query, schema: { $ref: '#/components/schemas/Count', default: 3 } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /refs:
+    get:
+      operationId: queryRefs
+      parameters:
+        - { name: ref_int, in: query, schema: { $ref: '#/components/schemas/Count' } }
+        - { name: ref_big, in: query, schema: { $ref: '#/components/schemas/Big' } }
+        - { name: ref_num, in: query, schema: { $ref: '#/components/schemas/Ratio' } }
+        - { name: ref_bool, in: query, schema: { $ref: '#/components/schemas/Flag' } }
+        - { name: ref_enum, in: query, schema: { $ref: '#/components/schemas/Level' } }
+        - { name: ref_str, in: query, schema: { $ref: '#/components/schemas/Name' } }
+        # The component is the array itself.
+        # コンポーネントが配列そのものである。
+        - { name: ref_arr, in: query, schema: { $ref: '#/components/schemas/Counts' } }
+        # The component is the element of an inline array.
+        # コンポーネントが、インライン配列の要素である。
+        - {
+            name: arr_ref,
+            in: query,
+            schema: { type: array, items: { $ref: '#/components/schemas/Count' } },
+          }
+        # A reference wrapped in `allOf`, the usual way to add a description to one.
+        # `allOf` で包んだ参照。参照に description を付ける際の一般的な書き方である。
+        - {
+            name: allof_ref,
+            in: query,
+            schema: { allOf: [{ $ref: '#/components/schemas/Count' }], description: A count. },
+          }
+        # A reference to a reference.
+        # 参照への参照。
+        - { name: ref_ref, in: query, schema: { $ref: '#/components/schemas/CountAlias' } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /combinators:
+    get:
+      operationId: queryCombinators
+      parameters:
+        - { name: allof, in: query, schema: { allOf: [{ type: integer }, { minimum: 5 }] } }
+        - {
+            name: allof_range,
+            in: query,
+            schema: { allOf: [{ type: integer, minimum: 1 }, { type: integer, maximum: 10 }] },
+          }
+        - { name: oneof_is, in: query, schema: { oneOf: [{ type: integer }, { type: string }] } }
+        - { name: oneof_ib, in: query, schema: { oneOf: [{ type: integer }, { type: boolean }] } }
+        - { name: anyof_ns, in: query, schema: { anyOf: [{ type: number }, { type: string }] } }
+        - { name: mixed, in: query, schema: { enum: [1, a, '2'] } }
+        - { name: not_zero, in: query, schema: { type: integer, not: { const: 0 } } }
+        - { name: not_enum, in: query, schema: { not: { enum: [1, 2] } } }
+        - { name: not_string, in: query, schema: { not: { type: string } } }
+        - { name: typeless_min, in: query, schema: { minimum: 1 } }
+        - { name: typeless_len, in: query, schema: { minLength: 3 } }
+        - { name: nconst, in: query, schema: { type: number, const: 2 } }
+        - { name: multi, in: query, schema: { type: [integer, string] } }
+        - { name: multi_nb, in: query, schema: { type: [number, boolean] } }
+        - {
+            name: tuple,
+            in: query,
+            schema:
+              {
+                type: array,
+                prefixItems: [{ type: integer }, { type: string }],
+                items: { type: boolean },
+              },
+          }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /content:
+    get:
+      operationId: queryContent
+      parameters:
+        - name: filter
+          in: query
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page: { type: integer }
+                  name: { type: string }
+        - name: list
+          in: query
+          content:
+            application/json:
+              schema: { type: array, items: { type: integer } }
+        # One value that holds a form-encoded document, form=a%3D1%26b%3Dtrue. Its fields
+        # are text, read like those of a form body.
+        # フォームエンコードされた文書を保持する1つの値(form=a%3D1%26b%3Dtrue)。
+        # フィールドは文字列であり、フォームボディのフィールドと同じように読まれる。
+        - name: form
+          in: query
+          content:
+            application/x-www-form-urlencoded:
+              schema:
+                type: object
+                required: [a]
+                properties:
+                  a: { type: integer }
+                  b: { type: boolean }
+                  tags: { type: array, items: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+components:
+  schemas:
+    Count:
+      type: integer
+      minimum: 0
+    CountAlias:
+      $ref: '#/components/schemas/Count'
+    Big:
+      type: integer
+      format: int64
+    Ratio:
+      type: number
+    Flag:
+      type: boolean
+    Level:
+      type: integer
+      enum: [1, 2, 3]
+    Name:
+      type: string
+      minLength: 2
+    Counts:
+      type: array
+      items: { type: integer }
+    Range:
+      type: object
+      required: [from]
+      properties:
+        from: { type: integer }
+        to: { type: integer }
+  responses:
+    Fields:
+      description: Every validated parameter, by name, as the runtime typeof and the text of its value.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

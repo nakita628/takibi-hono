@@ -9,8 +9,9 @@ alwaysApply: false
 ## The workflows
 
 - `test.yml` (Test): `vp install --frozen-lockfile` → `vp run takibi-hono#build` → the package
-  tests → `vp run check`, which ends in `pnpm lint` and so runs every linter. A new check goes into
-  the root `package.json` scripts, so local and CI cannot disagree about what "clean" means.
+  tests → the end-to-end suite in `test/` (which drives `dist`) → `vp run check`, which ends in
+  `pnpm lint` and so runs every linter. A new check goes into the root `package.json` scripts, so
+  local and CI cannot disagree about what "clean" means.
 - `release.yml` runs after Test succeeds on a push to `main`; see Releasing.
 - **Actions are pinned to a commit digest with the tag kept as a comment**:
   `uses: actions/checkout@3d3c42e… # v7.0.1`. A floating tag is a mutable dependency with access to
@@ -34,7 +35,11 @@ alwaysApply: false
 `scripts/actionlint.ts`, `scripts/zizmor.ts`. The docs rule says how to live with the three prose
 linters.
 
-- The npm-based linters are root devDependencies, **pinned exactly**; Renovate moves them.
+- The npm-based linters are root devDependencies, **pinned exactly**; Renovate moves them. The
+  host libraries the end-to-end suite compiles and runs generated code against are
+  `test/package.json` devDependencies, pinned exactly for the same reason: `hono`, `hono-openapi`,
+  the five schema libraries, the two validators, `typescript` and `vite`. Its `effect` is the
+  package's release candidate.
 - actionlint and zizmor have no npm distribution. Their scripts download the pinned release for
   the platform, verify its sha256 and cache it under `node_modules/.cache`. Bumping one means
   changing `VERSION` and **every checksum** together: actionlint's from the release's
@@ -78,10 +83,11 @@ itself to, and its comments explain the choices.
 
 - `pnpm-lock.yaml` is written by `pnpm install`. Never edit it by hand. CI installs with
   `--frozen-lockfile`.
-- `effect` and `@effect/platform-node` are pinned exactly to the release candidate oas-truth's
-  schema-to-library uses; `@effect/platform-node-shared` is forced to the same one by `overrides` in
-  `pnpm-workspace.yaml` (its caret range would otherwise resolve a later RC that imports modules
-  the pinned `effect` lacks). They move together, in one change.
+- `effect` and `@effect/platform-node` are pinned exactly to the release `hono-takibi` uses, whose
+  Effects the package composes. oas-truth's schema-to-library still pins a release candidate, and
+  its `@effect/platform-node` would take `@effect/platform-node-shared` at a caret that resolves to
+  the release, which imports modules that RC lacks; the `overrides` entry in `pnpm-workspace.yaml`
+  is scoped to that one parent and keeps its tree on the RC. They move together, in one change.
 - The `@typespec/*` packages move together, to one TypeSpec release: TypeSpec publishes them
   together (`compiler`, `http`, `openapi` and `openapi3` on 1.x, `rest` and `versioning` on 0.x)
   and each declares the others as peers at its own release; `scripts/typespec.ts` fails when

@@ -81,11 +81,14 @@ For a change to the Vite plugin, the handler / app output or the merge:
 
 ## Bump effect
 
-1. Find the release candidate oas-truth's schema-to-library now uses; that is the target.
+1. Find the `effect` release the client-generation dependency (`hono-takibi`) pins; that is the
+   target, because its Effects are composed in `src/core/client.ts`.
 2. Change `effect` and `@effect/platform-node` in `packages/takibi-hono/package.json` (both exact)
-   and the `@effect/platform-node-shared` override in `pnpm-workspace.yaml` together, then
-   `pnpm install`.
-3. `pnpm check`. The RC moves the Schema and CLI APIs, so expect errors in `config/` and `cli/`.
+   and in `test/package.json`, then `pnpm install`. The `@effect/platform-node-shared` override in
+   `pnpm-workspace.yaml` is scoped to schema-to-library's release candidate and stays as it is
+   until oas-truth moves off it.
+3. `pnpm check`. A release moves the Schema and CLI APIs, so expect errors in `config/` and
+   `cli/`.
 4. `pnpm test`, and read every behavior difference rather than adjusting an assertion to match.
 5. Say in the commit body which upstream changes forced code changes.
 

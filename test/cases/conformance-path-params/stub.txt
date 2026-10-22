@@ -1,0 +1,1 @@
+async (c) => c.json((await import('../echo')).echoFields(Object.assign({}, ...(['param', 'query', 'header', 'cookie', 'json', 'form'] as const).map((target) => c.req.valid(target as never)))))

@@ -31,6 +31,16 @@ ignorePaths:
   - pnpm-lock.yaml
   - project-words.txt
   - assets/**
+  # The API reference hono-takibi's docs generator writes, pinned as golden output in test/: its
+  # anchors are slugs made of an operation id glued to a prefix, not words. The generated
+  # TypeScript beside it is checked.
+  - test/cases/*/expected/src/docs
+  # hono-takibi's conformance documents and suites, copied as they are: their spelling is
+  # hono-takibi's, and a word changed here would be a test changed.
+  - test/specs/conformance-*.yaml
+  - test/conformance/*/valid.test.ts
+  - test/conformance/*/invalid.test.ts
+  - test/cases/conformance-*/expected/**
 
 # A misspelling inside a fenced code block is still a misspelling — the code blocks in the
 # README are what users copy — so code is not excluded. URLs, base64 blobs and commit digests

@@ -1,53 +1,57 @@
-import { ts } from 'ts-morph'
+import type { Node, Program, Span } from 'oxc-parser'
+
+import { parseModule, walk } from '../syntax/index.js'
 
 /**
- * Identifier handling on generated source goes through the TypeScript parser, so
- * identifier-shaped text inside strings, regex literals and object keys is never
- * mistaken for a reference.
+ * Identifier handling on generated source goes through the parser, so identifier-shaped
+ * text inside strings, regex literals and object keys is never mistaken for a reference.
  */
-function parse(code: string) {
-  return ts.createSourceFile('generated.ts', code, ts.ScriptTarget.Latest, true)
-}
 
-/** A declaration's own name, an object key or a member name is not a reference. */
-function isReference(node: ts.Identifier) {
-  const parent = node.parent
-  if (ts.isQualifiedName(parent)) return parent.left === node
-  if (
-    ts.isVariableDeclaration(parent) ||
-    ts.isTypeAliasDeclaration(parent) ||
-    ts.isPropertyAssignment(parent) ||
-    ts.isPropertySignature(parent) ||
-    ts.isPropertyAccessExpression(parent)
-  ) {
-    return parent.name !== node
+/**
+ * The identifier `node` names rather than refers to: a declared variable or type alias, an
+ * object or type-member key, a member name (`a.b`), or the right half of a qualified type
+ * name (`z.infer`). A shorthand property (`{ a }`) is a reference to `a` and names nothing.
+ */
+function named(node: Node): Span | undefined {
+  if (node.type === 'MemberExpression') return node.computed ? undefined : node.property
+  if (node.type === 'Property') {
+    return node.computed || node.shorthand || node.key.type !== 'Identifier' ? undefined : node.key
   }
-  return true
+  if (node.type === 'TSPropertySignature') {
+    return node.computed || node.key.type !== 'Identifier' ? undefined : node.key
+  }
+  if (node.type === 'TSQualifiedName') return node.right
+  if (node.type === 'VariableDeclarator') return node.id.type === 'Identifier' ? node.id : undefined
+  if (node.type === 'TSTypeAliasDeclaration') return node.id
+  return undefined
 }
 
-function collectReferences(source: ts.SourceFile) {
-  const visit = (node: ts.Node): readonly ts.Identifier[] => [
-    ...(ts.isIdentifier(node) && isReference(node) ? [node] : []),
-    ...node.getChildren(source).flatMap(visit),
-  ]
-  return visit(source)
+/** Every identifier that refers to something, in source order. */
+function collectReferences(program: Program) {
+  const naming = new Set<number>()
+  const identifiers: { readonly name: string; readonly start: number }[] = []
+  walk(program, (node) => {
+    const name = named(node)
+    if (name) naming.add(name.start)
+    if (node.type === 'Identifier') identifiers.push({ name: node.name, start: node.start })
+  })
+  return identifiers.filter((identifier) => !naming.has(identifier.start))
 }
 
 /** Identifiers the code reads but does not declare at the top level. */
 export function collectFreeIdentifiers(code: string): ReadonlySet<string> {
-  const source = parse(code)
+  const program = parseModule(code)
   const declared = new Set(
-    source.statements.flatMap((statement) => {
-      if (ts.isTypeAliasDeclaration(statement)) return [statement.name.text]
-      if (!ts.isVariableStatement(statement)) return []
-      return statement.declarationList.declarations.flatMap((d) =>
-        ts.isIdentifier(d.name) ? [d.name.text] : [],
-      )
+    program.body.flatMap((statement) => {
+      const node = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement
+      if (node?.type === 'TSTypeAliasDeclaration') return [node.id.name]
+      if (node?.type !== 'VariableDeclaration') return []
+      return node.declarations.flatMap((d) => (d.id.type === 'Identifier' ? [d.id.name] : []))
     }),
   )
   return new Set(
-    collectReferences(source)
-      .map((node) => node.text)
+    collectReferences(program)
+      .map((identifier) => identifier.name)
       .filter((name) => !declared.has(name)),
   )
 }

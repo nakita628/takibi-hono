@@ -61,10 +61,13 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
       entry: STANDARD_VALIDATOR,
       wrap: (expr) => `Schema.toStandardSchemaV1(${expr})`,
     },
-    reserved: ['Schema', 'Effect'],
+    reserved: ['Schema', 'Effect', 'SchemaTransformation'],
     imports: [
       { name: 'Effect', from: 'effect' },
       { name: 'Schema', from: 'effect' },
+      // schema-to-library spells the string transforms (`x-toLowerCase`, `x-toUpperCase`,
+      // the boolean decode) through `SchemaTransformation`.
+      { name: 'SchemaTransformation', from: 'effect' },
     ],
   },
 }

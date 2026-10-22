@@ -75,7 +75,9 @@ function makeDescribeRoute(
 ) {
   const doc = Object.fromEntries(
     Object.entries(operation)
-      .filter(([key]) => DESCRIBE_ROUTE_KEYS.has(key))
+      // A TypeSpec document compiles to an Operation that carries `summary: undefined`;
+      // `describeRoute` types the field as `string`, so an undefined one is left out.
+      .filter(([key, value]) => DESCRIBE_ROUTE_KEYS.has(key) && value !== undefined)
       // YAML reads an unquoted `operationId: true` (or `404`) as a boolean (or number).
       .map(([key, value]) => [
         key,
@@ -128,6 +130,9 @@ function makeValidators(
         .filter((parameter) => location === 'path' || parameter.required === true)
         .map((parameter) => parameter.name),
     }
+    // Every location arrives as text, but oas-truth's adapter (and schema-to-library behind
+    // it) coerces only `query` and `path`; a header or cookie parameter of another type is
+    // validated as the string it arrived as until that widens upstream.
     const paramIn = location === 'path' || location === 'query' ? location : undefined
     return [
       [location === 'path' ? 'param' : location, adapter.toExpression(schema, paramIn)] as const,

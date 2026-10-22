@@ -59,33 +59,69 @@ const FileOutputSchema = Schema.String.pipe(
 })
 
 /**
+ * A key this package does not support. Naming it fails with the reason, where an unknown key
+ * would only say "Expected no excess property": each is a key a user may well reach for —
+ * one hono-takibi retired, or one hono-takibi has never offered here.
+ */
+function removed(message: string) {
+  return Schema.optionalKey(Schema.Never.annotate({ message }))
+}
+
+/**
+ * The name other packages import an output by: the package it is written into. A generated
+ * file imports a target of its own package relatively (or under `pathAlias`), one of another
+ * package by that package's name.
+ */
+const PackageSchema = Schema.String.check(
+  Schema.isPattern(/^[^\s'"`\\]+$/u, {
+    message: 'must be a module specifier, with no whitespace or quotes',
+  }),
+)
+
+/**
+ * What every component target shares with hono-takibi's: `package` for the files of other
+ * packages, and no `import` — the specifier is derived from where the files are.
+ */
+const TARGET_FIELDS = {
+  package: Schema.optionalKey(PackageSchema),
+  import: removed(
+    'import was removed: a generated file imports another one relatively, under pathAlias inside the directory of the app entry, or by package from another package.',
+  ),
+}
+
+/**
  * Every component target is the same two-branch union: `split: true` writes one file per
  * entry into a directory, anything else writes a single file. Each member pins `split`,
  * so the failure reported is the one inside the matching branch.
  */
 function splitUnion<Fields extends Schema.Struct.Fields>(shared: Fields) {
   return Schema.Union([
-    Schema.Struct({ split: Schema.Literal(true), output: DirectorySchema, ...shared }),
+    Schema.Struct({
+      split: Schema.Literal(true),
+      output: DirectorySchema,
+      ...TARGET_FIELDS,
+      ...shared,
+    }),
     Schema.Struct({
       split: Schema.optionalKey(Schema.Literal(false)),
       output: FileOutputSchema,
+      ...TARGET_FIELDS,
       ...shared,
     }),
   ])
 }
 
-const OutputSchema = splitUnion({ import: Schema.optionalKey(Schema.String) })
+const OutputSchema = splitUnion({})
 
-const ExportTypesOutputSchema = splitUnion({
-  import: Schema.optionalKey(Schema.String),
-  exportTypes: Schema.optionalKey(Schema.Boolean),
-})
+const ExportTypesOutputSchema = splitUnion({ exportTypes: Schema.optionalKey(Schema.Boolean) })
 
 const ClientQuerySchema = Schema.Struct({
-  output: Schema.String,
+  output: FileOutputSchema,
   import: Schema.String,
-  split: Schema.optionalKey(Schema.Boolean),
   client: Schema.optionalKey(Schema.String),
+  split: removed(
+    'split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
+  ),
 })
 
 const ClientSchema = Schema.Struct({
@@ -118,7 +154,8 @@ const ClientSchema = Schema.Struct({
 }).annotate({ description: 'Client-code generators delegated to hono-takibi. Each is opt-in.' })
 
 const ComponentsSchema = Schema.Struct({
-  output: Schema.optionalKey(Schema.String),
+  output: Schema.optionalKey(TypeScriptPathSchema),
+  package: Schema.optionalKey(PackageSchema),
   schemas: Schema.optionalKey(ExportTypesOutputSchema),
   responses: Schema.optionalKey(OutputSchema),
   parameters: Schema.optionalKey(ExportTypesOutputSchema),
@@ -138,6 +175,13 @@ const ComponentsSchema = Schema.Struct({
     {
       message:
         'components.output is mutually exclusive with per-type component outputs (schemas, responses, ...). Use output for single-file mode, or per-type fields for split mode.',
+    },
+  ),
+  Schema.makeFilter(
+    (components) => components.package === undefined || components.output !== undefined,
+    {
+      message:
+        'components.package goes with components.output: a per-type output names its package in its own block.',
     },
   ),
 )
@@ -161,6 +205,13 @@ const ConfigSchema = Schema.Struct({
   client: Schema.optionalKey(ClientSchema),
   pathAlias: Schema.optionalKey(Schema.String),
   components: Schema.optionalKey(ComponentsSchema),
+  // Test generation is not provided. hono-takibi once scaffolded a test file per handler and
+  // retired it (its config rejects `test` / `testFramework` the same way); takibi-hono never
+  // took it on, and says so to a config that asks.
+  test: removed(
+    'test is not provided: takibi-hono generates no test files. Write them against the handlers it generates.',
+  ),
+  testFramework: removed('testFramework is not provided: takibi-hono generates no test files.'),
 }).annotate({ title: 'takibi-hono config' })
 
 /** A validated config: component outputs normalized. */

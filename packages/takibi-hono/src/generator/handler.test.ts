@@ -200,6 +200,34 @@ export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.
   )
 })
 
+describe('makeHandlerCode: describeRoute fields', () => {
+  it('leaves out an Operation field that is present but undefined, as TypeSpec output carries', () => {
+    const route = {
+      method: 'get',
+      path: '/todos',
+      parameters: [],
+      operation: {
+        operationId: 'Todos_list',
+        summary: undefined,
+        description: undefined,
+        responses: { '200': { description: 'ok' } },
+      },
+    }
+    expect(
+      makeHandlerCode('todosHandler', [route] as never, {
+        lib: 'zod',
+        openapi: true,
+        components: undefined,
+        responseRefs: false,
+        imports: [],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{describeRoute}from'hono-openapi'
+
+export const todosHandler=new Hono().get('/todos',describeRoute({operationId:"Todos_list",responses:{"200":{description:"ok"}}}),(c)=>{})`)
+  })
+})
+
 describe('toHandlerVarName', () => {
   it.each([
     ['users', 'usersHandler'],

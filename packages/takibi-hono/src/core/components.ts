@@ -7,7 +7,7 @@ import { emitFiles } from '../emit/index.js'
 import { COMPONENT_KINDS, makeComponentCode } from '../generator/components.js'
 import { makeSchemaDeclarations, makeSchemasPrologue } from '../generator/schemas.js'
 import type { ImportEntry } from '../helper/imports.js'
-import { withImports } from '../helper/imports.js'
+import { makeBarrel, withImports } from '../helper/imports.js'
 import { makeInlineAdapter, makeLibraryImports } from '../helper/library.js'
 import type { Layout, TakibiHonoConfig, Target } from './layout.js'
 import { makeSpecifier } from './layout.js'
@@ -31,10 +31,7 @@ function placeEntries(
     const file = path.join(target.output, `${entry.fileName}.ts`)
     return { path: file, code: module(entry.code, file) }
   })
-  const barrel = entries
-    .map((entry) => `export*from'./${entry.fileName}'`)
-    .toSorted()
-    .join('\n')
+  const barrel = makeBarrel(entries.map((entry) => entry.fileName))
   return [...files, { path: path.join(target.output, 'index.ts'), code: barrel }]
 }
 
