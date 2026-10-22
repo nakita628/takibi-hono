@@ -4,5 +4,12 @@
     "allowJs": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["runtime", "scripts", "vite-plugin/*.test.ts", "vite.config.ts"]
+  "include": [
+    "runtime",
+    "scripts",
+    "conformance/host.ts",
+    "conformance/*/app.ts",
+    "vite-plugin/*.test.ts",
+    "vite.config.ts"
+  ]
 }

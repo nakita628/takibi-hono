@@ -92,6 +92,10 @@ It runs on request, `pnpm -F @takibi-hono/test conformance`, and it is red: it m
 schema-to-library's coercion is from hono-takibi's, parameter by parameter, and is the list of
 what to report upstream. Nothing in it is adjusted to pass; a suite that cannot load is noted at
 the top of its document (the `format: trim` parameters). It is not part of `pnpm test` or CI.
+`TAKIBI_HONO_CONFORMANCE_LIB=valibot` (or `arktype`, `effect`) runs the suites against the
+`cases/conformance-<name>-<library>` apps instead of zod's; `TAKIBI_HONO_CONFORMANCE_DEBUG=1`
+prints what each rejected request was told. The generated output of every library's case is
+pinned as golden like any other case.
 
 ## Coverage of behavior
 
