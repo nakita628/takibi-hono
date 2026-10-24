@@ -10,8 +10,8 @@ catalog:
   '@typespec/http': ^1.16.0
   '@typespec/openapi': ^1.16.0
   '@typespec/openapi3': ^1.16.0
-  '@typespec/rest': ^0.86.0
-  '@typespec/versioning': ^0.86.0
+  '@typespec/rest': ^0.87.0
+  '@typespec/versioning': ^0.87.0
 allowBuilds:
   esbuild: false
   # Optional native accelerator pulled in through oas-truth -> schema-to-library -> effect ->
