@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@acme/components": ["../../__app__/monorepo/packages/components/src/index.ts"]
+    }
+  },
+  "include": ["../../__app__/monorepo/**/*.ts"]
+}

@@ -29,6 +29,9 @@ packages/takibi-hono/          the published package (the only npm artifact)
   src/                         implementation; see the architecture rule for the layering
   vite.config.ts               pack (build), test and lint; the lint section is the standard
 fixtures/vite-plugin/          a real Hono app driving the Vite plugin; its src/ is takibi-hono output
+test/                          the end-to-end suite over the packaged CLI: cases/<name> (a config and
+                               the golden copy of its output in expected/), specs/, runtime tests and
+                               the Vite plugin case; see the testing rule
 vite.config.ts                 fmt only: the formatting style every workspace inherits
 pnpm-workspace.yaml            workspaces, the @typespec catalog, the Effect override, allowBuilds,
                                minimumReleaseAgeExclude
@@ -58,8 +61,11 @@ Run these from the repository root.
 | Everything CI checks except the tests: oxfmt, oxlint (type-aware), the type check, then `pnpm lint` | `pnpm check` |
 | Autofix formatting, oxlint, markdownlint and textlint | `pnpm fix` |
 | The repository linters: markdownlint, textlint, cspell, secretlint, the TypeSpec release check, actionlint, zizmor | `pnpm lint` |
-| Unit tests | `pnpm test` |
+| Unit tests, then the end-to-end suite (which needs `dist`) | `pnpm test` |
 | One test file | `pnpm -F takibi-hono test src/<path>.test.ts` |
+| The end-to-end suite alone (after a build) | `pnpm -F @takibi-hono/test test` |
+| Accept changed generator output as the golden copy, after reading the diff | `pnpm -F @takibi-hono/test update-expected` |
+| hono-takibi's parameter conformance suites, as a scorecard (red by design; see the testing rule) | `pnpm -F @takibi-hono/test conformance` |
 | Coverage | `pnpm coverage` |
 | Build `dist` | `vp run takibi-hono#build` |
 | Run the fixture app (after a build) | `pnpm -F fixture-vite-plugin dev` |
@@ -67,8 +73,8 @@ Run these from the repository root.
 - `pnpm lint` needs no global tool: the linters are root devDependencies, and actionlint / zizmor
   are downloaded once at a pinned, checksummed release into `node_modules/.cache` (so the first
   run needs the network). The scripts are TypeScript run by `node` directly.
-- The fixture and the published entry points run from `dist`: build before using them, never
-  judge a change against a stale build.
+- The fixture, the end-to-end suite and the published entry points run from `dist`: build before
+  using them, never judge a change against a stale build.
 
 ## Definition of done
 
@@ -77,6 +83,8 @@ the build, the tests and the check. One failure means not done. If you only ran 
 which part.
 
 - A behavior change ships with a test that fails before it and passes after.
+- A change in generated output shows up as a golden diff in `test/`; it is accepted with
+  `update-expected` only after the diff has been read and judged right, and the commit carries it.
 - A change to the config, the CLI, the Vite plugin or the generated output updates the README in
   the same change (both copies; see the docs rule).
 - Report results as they are. Never call a task complete while hiding a failing command, and
@@ -103,11 +111,10 @@ which part.
   architecture rule.
 - **Never hand-edit generated files:** `pnpm-lock.yaml` (let `pnpm install` write it), `dist/`,
   `coverage/`, and the generated parts of `fixtures/vite-plugin/src` (regenerate them).
-- **`effect` and `@effect/platform-node` are pinned exactly** to the release candidate
-  `oas-truth`'s schema-to-library uses, and `@effect/platform-node-shared` is overridden to the
-  same one in `pnpm-workspace.yaml`. They move together, in one change.
+- **`effect` and `@effect/platform-node` are pinned exactly** to the release `hono-takibi` uses
+  (its Effects are composed in `src/core/client.ts`). They move together, in one change.
 - **The C-layer `x-*` extensions (code injection) stay unsupported.** `unsafeCodeExtensions` is
-  never passed to schema-to-library. See the architecture rule before touching vendor extensions.
+  never passed to schema-truth. See the architecture rule before touching vendor extensions.
 - **Never bump `version` in `packages/takibi-hono/package.json`** unless the task is a release that
   was asked for: pushing a new version to `main` is what publishes it. Never `npm publish`,
   `pnpm publish` or push a `v*` tag by hand, and never rename `release.yml` or its `release`

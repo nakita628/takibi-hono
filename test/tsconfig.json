@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "runtime",
+    "scripts",
+    "conformance/host.ts",
+    "conformance/*/app.ts",
+    "vite-plugin/*.test.ts",
+    "vite.config.ts"
+  ]
+}

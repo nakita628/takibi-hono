@@ -180,7 +180,7 @@ describe('makeSchemaDeclarations', () => {
     ).toStrictEqual([])
   })
 
-  // x-* policy: message (A) and transform (B) keys pass through to schema-to-library;
+  // x-* policy: message (A) and transform (B) keys pass through to schema-truth;
   // code-injection (C) keys are dropped because `unsafeCodeExtensions` is never enabled.
   it.each([
     ['zod', 'export const NameSchema=z.string({error:"bad name"}).trim()'],
@@ -189,10 +189,7 @@ describe('makeSchemaDeclarations', () => {
       'typebox',
       'export const NameSchema=Codec(Type.String({errorMessage:"bad name"})).Decode((value: string) => value.trim()).Encode((value: string) => value)',
     ],
-    [
-      'arktype',
-      'export const NameSchema=type("string").pipe((data: string) => data.trim()).describe("bad name")',
-    ],
+    ['arktype', 'export const NameSchema=type("string.trim").describe("bad name")'],
     ['effect', 'export const NameSchema=Schema.Trim.annotate({message:"bad name"})'],
   ] as const)(
     '%s: honors x-error-message / x-trim and drops x-refine / x-transform',

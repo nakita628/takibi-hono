@@ -16,15 +16,15 @@ type ClientOpenAPI = Parameters<typeof rpc>[0]
 // takibi-hono's config keys stay camelCase; hono-takibi's `hooks` takes the
 // library as a kebab-case literal. `satisfies` makes a hono-takibi rename of a
 // library surface here as a build error instead of a silent runtime miss.
-const HOOK_LIBRARIES = {
-  swr: 'swr',
-  tanstackQuery: 'tanstack-query',
-  svelteQuery: 'svelte-query',
-  vueQuery: 'vue-query',
-  preactQuery: 'preact-query',
-  solidQuery: 'solid-query',
-  angularQuery: 'angular-query',
-} as const satisfies Record<string, Parameters<typeof hooks>[3]>
+const HOOKS = [
+  ['swr', 'swr'],
+  ['tanstackQuery', 'tanstack-query'],
+  ['svelteQuery', 'svelte-query'],
+  ['vueQuery', 'vue-query'],
+  ['preactQuery', 'preact-query'],
+  ['solidQuery', 'solid-query'],
+  ['angularQuery', 'angular-query'],
+] as const satisfies readonly (readonly [keyof ClientOptions, Parameters<typeof hooks>[3]])[]
 
 const isTsPath = (output: string): output is `${string}.ts` => output.endsWith('.ts')
 
@@ -67,27 +67,20 @@ export function makeClients(
     // hono-takibi declares its own (structurally equivalent) OpenAPI document type.
     // oxlint-disable-next-line typescript/consistent-type-assertions, typescript/no-unsafe-type-assertion -- see above
     const oa = openapi as ClientOpenAPI
-    const queries = [
-      { library: HOOK_LIBRARIES.swr, cfg: client.swr },
-      { library: HOOK_LIBRARIES.tanstackQuery, cfg: client.tanstackQuery },
-      { library: HOOK_LIBRARIES.svelteQuery, cfg: client.svelteQuery },
-      { library: HOOK_LIBRARIES.vueQuery, cfg: client.vueQuery },
-      { library: HOOK_LIBRARIES.preactQuery, cfg: client.preactQuery },
-      { library: HOOK_LIBRARIES.solidQuery, cfg: client.solidQuery },
-      { library: HOOK_LIBRARIES.angularQuery, cfg: client.angularQuery },
-    ] as const
     yield* Effect.forEach(
-      queries,
-      ({ library, cfg }) =>
-        cfg
+      HOOKS,
+      ([key, library]) => {
+        const cfg = client[key]
+        return cfg
           ? Effect.gen(function* () {
               const output = yield* resolveWithin(baseDir, cfg.output)
               yield* hooks(oa, output, cfg.import, library, {
-                ...(cfg.split !== undefined && { split: cfg.split }),
                 ...(cfg.client !== undefined && { clientName: cfg.client }),
+                ...(basePath !== undefined && { basePath }),
               })
             })
-          : Effect.void,
+          : Effect.void
+      },
       { discard: true },
     )
     if (client.rpc) {
@@ -96,7 +89,6 @@ export function makeClients(
         oa,
         output,
         client.rpc.import,
-        client.rpc.split,
         client.rpc.client,
         client.rpc.parseResponse,
         basePath,

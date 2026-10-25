@@ -32,6 +32,14 @@ export function makeImports(code: string, candidates: readonly ImportEntry[]) {
   return [...modules].map(([from, entries]) => renderImport(from, entries))
 }
 
+/** The `index.ts` of a split directory: one `export * from` per file, sorted by file name. */
+export function makeBarrel(fileNames: readonly string[]) {
+  return fileNames
+    .toSorted()
+    .map((name) => `export*from'./${name}'`)
+    .join('\n')
+}
+
 /** Prepends the import block (if any) to a generated module body. */
 export function withImports(body: string, candidates: readonly ImportEntry[]) {
   const imports = makeImports(body, candidates)

@@ -1,14 +1,15 @@
 ---
-description: Test conventions for the Vitest suite (vite-plus/test) in packages/takibi-hono
-globs: **/*.test.ts
+description: Test conventions for the Vitest suites (vite-plus/test) in packages/takibi-hono and the end-to-end suite in test/
+globs: **/*.test.ts,test/**
 alwaysApply: false
 ---
 
 # Tests
 
-Tests run on **Vitest through vite-plus** and live next to what they cover
-(`src/core/index.test.ts`). Run them with `pnpm test`, one file with
-`pnpm -F takibi-hono test src/<path>.test.ts`, coverage with `pnpm coverage`.
+Two suites, both on **Vitest through vite-plus**. The unit tests live next to what they cover
+(`src/core/index.test.ts`); run them with `pnpm -F takibi-hono test`, one file with
+`pnpm -F takibi-hono test src/<path>.test.ts`, coverage with `pnpm coverage`. The end-to-end
+suite in `test/` drives the packaged CLI from `dist` (build first); `pnpm test` runs both.
 
 ## Shape
 
@@ -45,6 +46,57 @@ everything else in the TypeScript rule still applies.
   awaited with `vi.waitFor` on its observable result, never a fixed sleep, and must finish before
   the test ends or its writes land in the next test's directory.
 
+## The end-to-end suite (`test/`)
+
+Modeled on nakita628/hono-takibi's `test` workspace. Before the suite runs, `scripts/generate.mjs`
+(the vitest `globalSetup`) runs `dist/index.js --config cases/<name>/takibi-hono.config.ts` from
+the workspace root for every case and writes two trees per case:
+
+- `__generated__/<name>`: exactly what the CLI wrote. `runtime/golden.test.ts` holds it, file by
+  file, to the committed `cases/<name>/expected/` — the same files, the same bytes.
+- `__app__/<name>`: the same output made runnable — every `(c) => {}` stub filled with a handler
+  that answers the validated data by target, plus the case's `overlay/` (what the generated code
+  imports but the generator does not write). `runtime/typecheck.test.ts` runs `tsc -p` on every
+  case that has a `tsconfig.json`, and the runtime tests import the apps from here.
+
+A case is `cases/<name>/takibi-hono.config.ts` with `input` under `specs/` and every output under
+`__generated__/<name>/`; a `seed/` is copied in before the CLI runs (the merge case). A case
+without a `tsconfig.json` is golden only, and its config says why (the typebox + hono-openapi
+bridge). The Vite plugin case is self-contained in `vite-plugin/`
+because the plugin reads its config from the working directory.
+
+- A change in generated output fails `golden.test.ts` with a diff of the generated source. Read
+  it; if the new output is right, `pnpm -F @takibi-hono/test update-expected` regenerates and
+  copies `__generated__` over `expected/`, and the commit carries the change. Never edit
+  `expected/` by hand.
+- `TAKIBI_HONO_SKIP_GENERATE=1` runs one file against what is already generated; regeneration
+  rewrites both trees, so two runs at once would read each other's half-written files.
+- Runtime tests assert the shape the spec promises (an integer parameter arrives as a number, a
+  value out of bounds is rejected with 400), through `toStrictEqual` on the validated data, never
+  a library's error payload. What a library gets wrong upstream is left out with a comment saying
+  what and why, not pinned as a contract.
+- `scripts/copy.mjs` copies trees file by file: `fs.cpSync` drops the read bits on a devcontainer
+  bind mount.
+
+## The conformance scorecard (`test/conformance/`)
+
+hono-takibi's parameter suites — query, path, header and cookie parameters, form and JSON
+bodies — copied as they are (`conformance/<name>/{valid,invalid}.test.ts`, their documents as
+`specs/conformance-<name>.yaml`) and run against the app takibi-hono generates from the same
+document (`cases/conformance-<name>`, zod with hono-openapi). The handler stubs there answer
+hono-takibi's description of the validated values (`stub.txt` and the `overlay/src/echo.ts` of
+each case), and `conformance/<name>/app.ts` reshapes a validation failure into the 422 and issue
+paths the suites expect of their own host.
+
+It runs on request, `pnpm -F @takibi-hono/test conformance`, and it is red: it measures how far
+schema-truth's coercion is from hono-takibi's, parameter by parameter, and is the list of
+what to report upstream. Nothing in it is adjusted to pass; a suite that cannot load is noted at
+the top of its document (the `format: trim` parameters). It is not part of `pnpm test` or CI.
+`TAKIBI_HONO_CONFORMANCE_LIB=valibot` (or `arktype`, `effect`) runs the suites against the
+`cases/conformance-<name>-<library>` apps instead of zod's; `TAKIBI_HONO_CONFORMANCE_DEBUG=1`
+prints what each rejected request was told. The generated output of every library's case is
+pinned as golden like any other case.
+
 ## Coverage of behavior
 
 - A bugfix ships with a test that fails before it and passes after. Prove it: revert the fix,
@@ -53,5 +105,6 @@ everything else in the TypeScript rule still applies.
   log lines — rather than internals. A test is not a reason to export a function.
 - The `x-*` transparency tests in `generator/schemas.test.ts` and `helper/library.test.ts` guard
   a security decision (see the architecture rule). Do not weaken them.
-- For a change to the Vite plugin or the generated handlers, also check it end-to-end in
-  `fixtures/vite-plugin` (see the playbooks).
+- For a change to the Vite plugin or the generated handlers, the end-to-end suite covers the
+  running app; `fixtures/vite-plugin` remains the place to watch the dev server by hand (see the
+  playbooks).

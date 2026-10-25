@@ -6,15 +6,17 @@ arktype
 artipacked
 asphodelos
 bsdtar
+checksummed
 codegen
 Elysia
 GOARCH
 hekireki
 Metavar
-msgpackr
 msvc
 nakita
 openssf
+petstore
+picklist
 pipefail
 rhysd
 sapegin
@@ -26,6 +28,7 @@ Tarjan
 textlint
 textlintrc
 typebox
+unvalidated
 voidzero
 zizmor
 zizmorcore

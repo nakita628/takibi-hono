@@ -1,0 +1,199 @@
+# Every request shape the handler generator covers, in one store: a root path, a Path Item
+# level header parameter, a $ref parameter, query / path / cookie parameters, a JSON body
+# behind a $ref request body, a form body, a $ref response, a HEAD operation, a path that
+# starts with a digit, and a webhook. The runtime tests send requests against the app
+# generated from it; the golden tests pin the generated source.
+openapi: 3.1.0
+info:
+  title: Petstore
+  version: 1.0.0
+tags:
+  - name: pets
+    description: Everything about pets
+paths:
+  /:
+    get:
+      operationId: health
+      summary: Health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+  /pets:
+    parameters:
+      - $ref: '#/components/parameters/RequestId'
+    get:
+      operationId: listPets
+      summary: List pets
+      description: Lists the pets, newest first.
+      tags: [pets]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - name: tag
+          in: query
+          schema: { $ref: '#/components/schemas/Tag' }
+        - name: session
+          in: cookie
+          schema: { type: string }
+      responses:
+        '200':
+          description: The pets
+          headers:
+            X-Total-Count: { $ref: '#/components/headers/TotalCount' }
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Pet' }
+    post:
+      operationId: createPet
+      summary: Create a pet
+      tags: [pets]
+      security:
+        - apiKey: []
+      requestBody: { $ref: '#/components/requestBodies/NewPet' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pet' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    head:
+      operationId: pingPets
+      responses:
+        '200':
+          description: OK
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      deprecated: true
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: The pet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pet' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deletePet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Deleted
+  /pets/{petId}/photos:
+    post:
+      operationId: uploadPhoto
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [caption]
+              properties:
+                caption: { type: string, minLength: 1 }
+                featured: { type: boolean }
+      responses:
+        '201':
+          description: Uploaded
+  /2024-01/reports:
+    get:
+      operationId: listReports
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+webhooks:
+  petAdded:
+    post:
+      operationId: onPetAdded
+      summary: A pet was added
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Pet' }
+      responses:
+        '200':
+          description: Acknowledged
+components:
+  schemas:
+    Tag:
+      type: string
+      enum: [dog, cat, bird]
+    Pet:
+      type: object
+      description: A pet in the store
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string, minLength: 1 }
+        tag: { $ref: '#/components/schemas/Tag' }
+    NewPet:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        tag: { $ref: '#/components/schemas/Tag' }
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: How many pets to return
+      schema: { type: integer, minimum: 1, maximum: 100 }
+    RequestId:
+      name: X-Request-Id
+      in: header
+      schema: { type: string }
+  headers:
+    TotalCount:
+      description: Total number of pets
+      schema: { type: integer }
+  requestBodies:
+    NewPet:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/NewPet' }
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Bad request
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key

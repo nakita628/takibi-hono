@@ -1,0 +1,185 @@
+# Copied from nakita628/hono-takibi test/header-params/openapi.yaml for takibi-hono's conformance
+# scorecard, with the `format: trim` parameters taken out: schema-to-library writes them as
+# `z.trim()`, a bare check, and the generated module does not load (reported upstream).
+# Every parameter shape the generator supports, as a header. Headers reach the handler as
+# strings exactly like query and path values, but they took a different branch in the
+# generator and every non-string one used to reject its own input.
+#
+# `format: emoji` is absent because a header value is a ByteString: HTTP cannot carry one.
+# `format: binary` is absent because it emits `z.file()`.
+#
+# `/headers`   every shape, each optional so a test sends one alone. `x-ids` is the array.
+# `/optional`  absent headers, literals, constraints, and names declared in the mixed case
+#              the wire never preserves.
+# `/defaults`  what an absent header falls back to.
+# `/required`  what happens when a required header is missing.
+#
+# 生成器が対応するすべてのパラメータ形状を、ヘッダーとして宣言する。ヘッダーも、クエリや
+# パスの値と同じく文字列としてハンドラに届く。しかし生成器内では別の分岐を通っており、
+# かつては文字列以外の形状がすべて、自身の入力を拒否していた。
+#
+# `format: emoji` は含めていない。ヘッダー値は ByteString であり、HTTP では絵文字を運べない。
+# `format: binary` は、`z.file()` として生成されるため含めていない。
+#
+# `/headers`   全形状。テストで1つだけ送信できるよう、すべて任意にしている。`x-ids` は配列。
+# `/optional`  省略されたヘッダー、リテラル、制約、および大文字小文字混在で宣言された名前
+#              (ワイヤ上では、大文字小文字は保持されない)。
+# `/defaults`  省略されたヘッダーに適用されるデフォルト値。
+# `/required`  必須ヘッダーが欠落している場合の挙動。
+openapi: 3.1.0
+info:
+  title: Header Parameter Matrix
+  version: 0.0.0
+paths:
+  /headers:
+    get:
+      operationId: headerParams
+      parameters:
+        - { name: x-integer, in: header, schema: { type: integer } }
+        - { name: x-int32, in: header, schema: { type: integer, format: int32 } }
+        - { name: x-int64, in: header, schema: { type: integer, format: int64 } }
+        - { name: x-bigint, in: header, schema: { type: integer, format: bigint } }
+        - { name: x-uint32, in: header, schema: { type: integer, format: uint32 } }
+        - { name: x-uint64, in: header, schema: { type: integer, format: uint64 } }
+        - { name: x-number, in: header, schema: { type: number } }
+        - { name: x-float, in: header, schema: { type: number, format: float } }
+        - { name: x-float32, in: header, schema: { type: number, format: float32 } }
+        - { name: x-float64, in: header, schema: { type: number, format: float64 } }
+        - { name: x-double, in: header, schema: { type: number, format: double } }
+        - { name: x-numpassword, in: header, schema: { type: number, format: password } }
+        - { name: x-boolean, in: header, schema: { type: boolean } }
+        - { name: x-string, in: header, schema: { type: string } }
+        - { name: x-email, in: header, schema: { type: string, format: email } }
+        - { name: x-uuid, in: header, schema: { type: string, format: uuid } }
+        - { name: x-uuidv4, in: header, schema: { type: string, format: uuidv4 } }
+        - { name: x-uuidv7, in: header, schema: { type: string, format: uuidv7 } }
+        - { name: x-url, in: header, schema: { type: string, format: url } }
+        - { name: x-uri, in: header, schema: { type: string, format: uri } }
+        - { name: x-httpurl, in: header, schema: { type: string, format: httpUrl } }
+        - { name: x-hostname, in: header, schema: { type: string, format: hostname } }
+        - { name: x-hex, in: header, schema: { type: string, format: hex } }
+        - { name: x-base64, in: header, schema: { type: string, format: base64 } }
+        - { name: x-base64url, in: header, schema: { type: string, format: base64url } }
+        - { name: x-nanoid, in: header, schema: { type: string, format: nanoid } }
+        - { name: x-cuid2, in: header, schema: { type: string, format: cuid2 } }
+        - { name: x-ulid, in: header, schema: { type: string, format: ulid } }
+        - { name: x-ipv4, in: header, schema: { type: string, format: ipv4 } }
+        - { name: x-ipv6, in: header, schema: { type: string, format: ipv6 } }
+        - { name: x-cidrv4, in: header, schema: { type: string, format: cidrv4 } }
+        - { name: x-cidrv6, in: header, schema: { type: string, format: cidrv6 } }
+        - { name: x-date, in: header, schema: { type: string, format: date } }
+        - { name: x-time, in: header, schema: { type: string, format: time } }
+        - { name: x-datetime, in: header, schema: { type: string, format: date-time } }
+        - { name: x-duration, in: header, schema: { type: string, format: duration } }
+        - { name: x-byte, in: header, schema: { type: string, format: byte } }
+        - { name: x-strpassword, in: header, schema: { type: string, format: password } }
+        - { name: x-mac, in: header, schema: { type: string, format: mac } }
+        - { name: x-e164, in: header, schema: { type: string, format: e164 } }
+        - { name: x-creditcard, in: header, schema: { type: string, format: creditCard } }
+        - { name: x-iban, in: header, schema: { type: string, format: iban } }
+        - { name: x-currencycode, in: header, schema: { type: string, format: currencyCode } }
+        - { name: x-ksuid, in: header, schema: { type: string, format: ksuid } }
+        - { name: x-xid, in: header, schema: { type: string, format: xid } }
+        - { name: x-guid, in: header, schema: { type: string, format: guid } }
+        - { name: x-ids, in: header, schema: { type: array, items: { type: integer } } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /optional:
+    get:
+      operationId: headerOptional
+      parameters:
+        - { name: x-int-opt, in: header, schema: { type: integer } }
+        - { name: x-int64-opt, in: header, schema: { type: integer, format: int64 } }
+        - { name: x-bool-opt, in: header, schema: { type: boolean } }
+        - { name: x-str-opt, in: header, schema: { type: string } }
+        - { name: x-ienum, in: header, schema: { type: integer, enum: [1, 2, 3] } }
+        - { name: x-benum, in: header, schema: { type: boolean, enum: [true] } }
+        - { name: x-iconst, in: header, schema: { type: integer, const: 7 } }
+        - { name: x-senum, in: header, schema: { type: string, enum: [asc, desc] } }
+        - {
+            name: x-ioneof,
+            in: header,
+            schema: { oneOf: [{ type: integer }, { type: string, enum: [all] }] },
+          }
+        - { name: x-range, in: header, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: x-length, in: header, schema: { type: string, minLength: 2, maxLength: 4 } }
+        - { name: x-pattern, in: header, schema: { type: string, pattern: '^[a-z]+-\d{1,3}$' } }
+        - { name: x-tx-lower, in: header, schema: { type: string, x-toLowerCase: true } }
+        - {
+            name: x-tx-email,
+            in: header,
+            schema: { type: string, format: email, x-toLowerCase: true },
+          }
+        # A schema behind `$ref`: the component is written for a typed value.
+        # `$ref` の先にあるスキーマ。コンポーネントは型付きの値を前提としている。
+        - { name: x-ref-int, in: header, schema: { $ref: '#/components/schemas/Count' } }
+        - { name: x-str-arr, in: header, schema: { type: array, items: { type: string } } }
+        # An object is one header of alternating names and values, a,1,b,x, or of assignments
+        # with `explode: true`, a=1,b=x.
+        # オブジェクトは、名前と値を交互に並べた1つのヘッダー(a,1,b,x)になる。
+        # `explode: true` では、代入を並べた形(a=1,b=x)になる。
+        - {
+            name: x-obj,
+            in: header,
+            schema: { type: object, properties: { a: { type: integer }, b: { type: string } } },
+          }
+        - {
+            name: x-objx,
+            in: header,
+            explode: true,
+            schema: { type: object, properties: { a: { type: integer }, b: { type: string } } },
+          }
+        # Declared in mixed case; a header name is case-insensitive on the wire.
+        # 大文字小文字混在で宣言している。ヘッダー名は、ワイヤ上では大文字小文字を区別しない。
+        - { name: X-Request-Id, in: header, schema: { type: string, format: uuid } }
+        - { name: X-Rate-Limit, in: header, schema: { type: integer } }
+        # No `x-` prefix, and an underscore.
+        # `x-` 接頭辞のない名前と、アンダースコアを含む名前。
+        - { name: accept-version, in: header, schema: { type: integer } }
+        - { name: x_underscore, in: header, schema: { type: integer } }
+        # `null` has no spelling of its own in a parameter; the text `null` is read as the value
+        # by a schema that takes `null` and no string.
+        # パラメータには `null` 専用の表記がない。`null` を受理し、文字列を受理しないスキーマは、
+        # テキスト `null` を値として読む。
+        - { name: x-inull, in: header, schema: { type: [integer, 'null'] } }
+        # A name every JavaScript object inherits: the request object answers to it whether
+        # the parameter was sent or not.
+        # すべての JavaScript オブジェクトが継承する名前。パラメータが送信されたかどうかに
+        # かかわらず、リクエストオブジェクトはこの名前に応答する。
+        - { name: constructor, in: header, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /defaults:
+    get:
+      operationId: headerDefaults
+      parameters:
+        - { name: x-int-def, in: header, schema: { type: integer, default: 20 } }
+        - { name: x-int64-def, in: header, schema: { type: integer, format: int64, default: 5 } }
+        - { name: x-bool-def, in: header, schema: { type: boolean, default: false } }
+        - { name: x-str-def, in: header, schema: { type: string, default: fallback } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+  /required:
+    get:
+      operationId: headerRequired
+      parameters:
+        - { name: x-id, in: header, required: true, schema: { type: integer } }
+        - { name: x-big, in: header, required: true, schema: { type: integer, format: int64 } }
+        - { name: x-flag, in: header, required: true, schema: { type: boolean } }
+        - { name: x-name, in: header, required: true, schema: { type: string } }
+        - { name: x-note, in: header, schema: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/Fields' }
+components:
+  schemas:
+    Count:
+      type: integer
+      minimum: 0
+  responses:
+    Fields:
+      description: Every validated parameter, by name, as the runtime typeof and the text of its value.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true

@@ -1,5 +1,7 @@
 import path from 'node:path'
 
+import { Data, Effect } from 'effect'
+import type { OpenAPI } from 'oas-truth'
 import type { FormatConfig } from 'oxfmt'
 
 import type { ComponentKind } from '../generator/components.js'
@@ -7,9 +9,9 @@ import { COMPONENT_KINDS } from '../generator/components.js'
 
 /** Shared shape for the framework query-hook generators (swr / tanstack / vue / ...). */
 type ClientQueryOptions = {
+  /** One `.ts` file (`parseConfig` normalizes a directory to `<dir>/index.ts`). */
   readonly output: string
   readonly import: string
-  readonly split?: boolean | undefined
   readonly client?: string | undefined
 }
 
@@ -43,7 +45,8 @@ export type ClientOptions = {
 type TargetConfig = {
   readonly output: string
   readonly split?: boolean | undefined
-  readonly import?: string | undefined
+  /** The name other packages import this output by: the package it is written into. */
+  readonly package?: string | undefined
   readonly exportTypes?: boolean | undefined
 }
 
@@ -59,7 +62,7 @@ export type TakibiHonoConfig = {
   readonly pathAlias?: string | undefined
   readonly client?: ClientOptions | undefined
   readonly components?:
-    | ({ readonly output?: string | undefined } & {
+    | ({ readonly output?: string | undefined; readonly package?: string | undefined } & {
         readonly [K in 'schemas' | ComponentKind]?: TargetConfig | undefined
       })
     | undefined
@@ -70,7 +73,7 @@ export type Target = {
   readonly output: string
   readonly split: boolean
   readonly exportTypes: boolean
-  readonly import: string | undefined
+  readonly package: string | undefined
 }
 
 export type Layout = {
@@ -80,7 +83,19 @@ export type Layout = {
   /** Set when every component kind lives in one module. */
   readonly aggregate: string | undefined
   readonly targets: { readonly [K in 'schemas' | ComponentKind]?: Target }
+  /**
+   * The package a generated file belongs to: the directory of the nearest `package.json`
+   * above it, or `undefined` when there is none. `resolveLayout` knows no package; `hono()`
+   * fills this in from the filesystem.
+   */
+  readonly packageRoot: (file: string) => string | undefined
 }
+
+/** A generated file would import another package that names no `package`. */
+export class LayoutError extends Data.TaggedError('LayoutError')<{ readonly message: string }> {}
+
+/** Every component kind the layout places: the schemas, then the other Components kinds. */
+const KINDS = ['schemas', ...COMPONENT_KINDS] as const
 
 function toFile(output: string) {
   return output.endsWith('.ts') ? output : path.join(output, 'index.ts')
@@ -93,8 +108,18 @@ function toTarget(entry: TargetConfig): Target {
     output: split ? entry.output : toFile(entry.output),
     split,
     exportTypes: entry.exportTypes ?? false,
-    import: entry.import,
+    package: entry.package,
   }
+}
+
+/** The directory a target's files are written into. */
+export function targetDirectory(target: Target) {
+  return target.split ? target.output : path.dirname(target.output)
+}
+
+/** The module a target is imported by: its file, or the `index.ts` barrel of a split directory. */
+function targetModule(target: Target) {
+  return target.split ? path.join(target.output, 'index.ts') : target.output
 }
 
 /**
@@ -109,22 +134,18 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
     handlersDir,
     appDir: path.dirname(handlersDir),
     pathAlias: config.pathAlias,
+    packageRoot: () => undefined,
   }
   const components = config.components
-  const configured = (['schemas', ...COMPONENT_KINDS] as const).filter(
-    (kind) => components?.[kind] !== undefined,
-  )
+  const configured = KINDS.filter((kind) => components?.[kind] !== undefined)
   if (configured.length === 0) {
     const file = toFile(components?.output ?? 'src/components')
-    const target = { output: file, split: false, import: undefined }
+    const target = { output: file, split: false, package: components?.package }
     return {
       ...layout,
       aggregate: file,
       targets: Object.fromEntries(
-        (['schemas', ...COMPONENT_KINDS] as const).map((kind) => [
-          kind,
-          { ...target, exportTypes: kind === 'schemas' },
-        ]),
+        KINDS.map((kind) => [kind, { ...target, exportTypes: kind === 'schemas' }]),
       ),
     }
   }
@@ -151,15 +172,68 @@ function toSpecifier(file: string) {
     .replace(/(?:^|\/)index$/u, '')
 }
 
-/** The specifier a module in `fromDir` imports a target with: `import` override, path alias, or relative. */
+/**
+ * The specifier a module in `fromDir` imports a target with: the target's `package` from
+ * another package; the path alias when both sit in the app's package and the target is in
+ * the app directory; relative otherwise.
+ */
 export function makeSpecifier(layout: Layout, fromDir: string, target: Target) {
-  if (target.import) return target.import
-  const file = target.split ? path.join(target.output, 'index.ts') : target.output
-  if (layout.pathAlias) {
-    const alias = layout.pathAlias.replace(/\/$/u, '')
-    const rel = toSpecifier(path.relative(layout.appDir, file))
-    return rel === '' ? alias : `${alias}/${rel}`
+  const file = targetModule(target)
+  const from = path.join(fromDir, 'index.ts')
+  const sameRoot = layout.packageRoot(from) === layout.packageRoot(file)
+  if (!sameRoot && target.package !== undefined) return target.package
+  const inside = toSpecifier(path.relative(layout.appDir, file))
+  if (
+    layout.pathAlias &&
+    sameRoot &&
+    layout.packageRoot(from) === layout.packageRoot(path.join(layout.appDir, 'index.ts')) &&
+    inside !== '' &&
+    !inside.startsWith('..')
+  ) {
+    return `${layout.pathAlias.replace(/\/$/u, '')}/${inside}`
   }
   const rel = toSpecifier(path.relative(fromDir, file))
   return rel === '' ? '.' : rel.startsWith('.') ? rel : `./${rel}`
+}
+
+/**
+ * Fails when a generated file would import a component output of another package that
+ * names no `package`: the import could not be written. The handlers import the schemas and
+ * the responses; every other component kind imports the schemas — each only when the
+ * document declares some.
+ */
+export function checkPackages(openapi: OpenAPI, layout: Layout) {
+  const declared = (kind: 'schemas' | 'responses') =>
+    Object.keys(openapi.components?.[kind] ?? {}).length > 0
+  const schemas = layout.targets.schemas
+  const responses = layout.targets.responses
+  const edges = [
+    ...(schemas && declared('schemas')
+      ? [['handlers', layout.handlersDir, 'schemas', schemas] as const]
+      : []),
+    ...(responses && declared('responses')
+      ? [['handlers', layout.handlersDir, 'responses', responses] as const]
+      : []),
+    ...(schemas && declared('schemas')
+      ? COMPONENT_KINDS.flatMap((kind) => {
+          const target = layout.targets[kind]
+          return target
+            ? [[`components.${kind}`, targetDirectory(target), 'schemas', schemas] as const]
+            : []
+        })
+      : []),
+  ]
+  const missing = edges.find(
+    ([, fromDir, , target]) =>
+      target.package === undefined &&
+      layout.packageRoot(path.join(fromDir, 'index.ts')) !==
+        layout.packageRoot(targetModule(target)),
+  )
+  if (missing === undefined) return Effect.void
+  const [from, , name, target] = missing
+  return Effect.fail(
+    new LayoutError({
+      message: `${from} imports components.${name} from another package: set components.${name}.package to the name of the package ${target.output} is written into.`,
+    }),
+  )
 }

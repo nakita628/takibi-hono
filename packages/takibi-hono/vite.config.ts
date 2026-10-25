@@ -307,7 +307,7 @@ export default defineConfig({
     // Regexes match relative specifiers only, so packages never collide with a directory name.
     overrides: [
       {
-        files: ['src/format/**', 'src/file/**', 'src/merge/**', 'src/config/**', 'src/openapi/**'],
+        files: ['src/format/**', 'src/file/**', 'src/config/**', 'src/openapi/**', 'src/syntax/**'],
         rules: {
           'no-restricted-imports': [
             'error',
@@ -337,6 +337,23 @@ export default defineConfig({
         },
       },
       {
+        files: ['src/merge/**'],
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            {
+              patterns: [
+                {
+                  regex:
+                    '^(\\.\\./)+(cli|config|core|emit|file|format|generator|helper|openapi|vite-plugin)(/.*)?$',
+                  message: 'merge may only import syntax',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
         files: ['src/helper/**'],
         rules: {
           'no-restricted-imports': [
@@ -346,7 +363,7 @@ export default defineConfig({
                 {
                   regex:
                     '^(\\.\\./)+(cli|config|core|emit|file|format|generator|merge|openapi|vite-plugin)(/.*)?$',
-                  message: 'helper may only import helper',
+                  message: 'helper may only import helper, syntax',
                 },
               ],
             },
@@ -395,7 +412,8 @@ export default defineConfig({
             {
               patterns: [
                 {
-                  regex: '^(\\.\\./)+(emit|file|format|generator|helper|merge|openapi)(/.*)?$',
+                  regex:
+                    '^(\\.\\./)+(emit|file|format|generator|helper|merge|openapi|syntax)(/.*)?$',
                   message: 'cli may only import config, core',
                 },
               ],
@@ -411,7 +429,8 @@ export default defineConfig({
             {
               patterns: [
                 {
-                  regex: '^(\\.\\./)+(cli|emit|format|generator|helper|merge|openapi)(/.*)?$',
+                  regex:
+                    '^(\\.\\./)+(cli|emit|format|generator|helper|merge|openapi|syntax)(/.*)?$',
                   message: 'vite-plugin may only import config, core, file',
                 },
               ],

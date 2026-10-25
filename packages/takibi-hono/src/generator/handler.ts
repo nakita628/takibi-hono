@@ -75,7 +75,9 @@ function makeDescribeRoute(
 ) {
   const doc = Object.fromEntries(
     Object.entries(operation)
-      .filter(([key]) => DESCRIBE_ROUTE_KEYS.has(key))
+      // A TypeSpec document compiles to an Operation that carries `summary: undefined`;
+      // `describeRoute` types the field as `string`, so an undefined one is left out.
+      .filter(([key, value]) => DESCRIBE_ROUTE_KEYS.has(key) && value !== undefined)
       // YAML reads an unquoted `operationId: true` (or `404`) as a boolean (or number).
       .map(([key, value]) => [
         key,
@@ -100,9 +102,17 @@ function makeDescribeRoute(
 }
 
 /**
+ * The key Hono's validator reads a parameter under: header names are case-insensitive and Hono
+ * hands them over lowercased, so `X-Rate-Limit` is read as `x-rate-limit`.
+ */
+function wireName(parameter: { readonly name: string; readonly in: string }) {
+  return parameter.in === 'header' ? parameter.name.toLowerCase() : parameter.name
+}
+
+/**
  * `[target, expression]` per Hono validator: one object schema per parameter
- * location (schema-to-library applies the wire coercion for `query` / `path`),
- * then one per body target (`application/json` wins over other JSON types).
+ * location (schema-truth applies the wire coercion), then one per body target
+ * (`application/json` wins over other JSON types; a form body is coerced as `formData`).
  */
 function makeValidators(
   route: Route,
@@ -113,7 +123,9 @@ function makeValidators(
     [...route.parameters, ...(route.operation.parameters ?? [])].flatMap((raw) => {
       const parameter = resolveRef(raw, components?.parameters)
       // An operation-level parameter overrides the Path Item's one with the same name and location.
-      return parameter?.schema ? [[`${parameter.in}:${parameter.name}`, parameter] as const] : []
+      return parameter?.schema
+        ? [[`${parameter.in}:${wireName(parameter)}`, parameter] as const]
+        : []
     }),
   )
   const parameterValidators = PARAMETER_LOCATIONS.flatMap((location) => {
@@ -122,15 +134,17 @@ function makeValidators(
     const schema: Schema = {
       type: 'object',
       properties: Object.fromEntries(
-        group.map((parameter) => [parameter.name, parameter.schema ?? {}]),
+        group.map((parameter) => [wireName(parameter), parameter.schema ?? {}]),
       ),
       required: group
         .filter((parameter) => location === 'path' || parameter.required === true)
-        .map((parameter) => parameter.name),
+        .map(wireName),
     }
-    const paramIn = location === 'path' || location === 'query' ? location : undefined
+    // Every location arrives as text, and schema-truth coerces each one from it. A parameter's
+    // `style` / `explode` / `allowEmptyValue` are not passed: they apply to the expression's
+    // root, which is this synthesized object, not the parameter.
     return [
-      [location === 'path' ? 'param' : location, adapter.toExpression(schema, paramIn)] as const,
+      [location === 'path' ? 'param' : location, adapter.toExpression(schema, location)] as const,
     ]
   })
   const body = resolveRef(route.operation.requestBody, components?.requestBodies)
@@ -143,7 +157,9 @@ function makeValidators(
   const bodyValidators = (['json', 'form'] as const).flatMap((target) => {
     const candidates = media.filter((entry) => entry.target === target)
     const chosen = candidates.find((entry) => entry.type === 'application/json') ?? candidates[0]
-    return chosen ? [[target, adapter.toExpression(chosen.schema)] as const] : []
+    // A form body's fields arrive as text (or a `File`), so they are coerced as `formData`.
+    const paramIn = target === 'form' ? 'formData' : undefined
+    return chosen ? [[target, adapter.toExpression(chosen.schema, paramIn)] as const] : []
   })
   return [...parameterValidators, ...bodyValidators]
 }

@@ -3,12 +3,11 @@ import os from 'node:os'
 import path from 'node:path'
 
 import * as NodeServices from '@effect/platform-node/NodeServices'
-import { Console, Effect, Exit } from 'effect'
+import { Console, Effect, Exit, Stdio } from 'effect'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
 
 import { takibiHono } from './index.js'
 
-const ENTRY_URL = new URL('../index.ts', import.meta.url).href
 // oxlint-disable-next-line no-control-regex -- the help renderer colors its output
 const ANSI = /\u001B\[[0-9;]*m/gu
 
@@ -22,10 +21,12 @@ paths:
 `
 
 /**
- * Runs the command against argv the way the executable does. `--help`, the error block
- * and the success message all go through `Console`, so this captures what a user sees.
+ * Runs the command the way the executable does — same command, same platform services —
+ * with the arguments supplied through `Stdio` and the `Console` service swapped for a
+ * recorder. `--help`, the error block and the success message all go through `Console`, so
+ * this captures what a user sees.
  */
-async function runCli(argv: readonly string[], entryUrl: string = ENTRY_URL) {
+async function runCli(argv: readonly string[]) {
   const stdout: string[] = []
   const stderr: string[] = []
   const recorder: Console.Console = Object.assign(Object.create(console), {
@@ -33,8 +34,9 @@ async function runCli(argv: readonly string[], entryUrl: string = ENTRY_URL) {
     error: (...args: readonly unknown[]) => stderr.push(args.map(String).join(' ')),
   })
   const exit = await Effect.runPromiseExit(
-    takibiHono(argv, entryUrl).pipe(
+    takibiHono().pipe(
       Effect.provideService(Console.Console, recorder),
+      Effect.provide(Stdio.layerTest({ args: Effect.succeed(argv) })),
       Effect.provide(NodeServices.layer),
     ),
   )
@@ -180,14 +182,5 @@ export const pingHandler = new Hono().get('/ping', (c) => {})
     const result = await runCli(['--version'])
 
     expect(result).toStrictEqual({ ok: true, stdout: `takibi-hono v${version}`, stderr: '' })
-  })
-
-  it('reports a broken install when package.json cannot be read', async () => {
-    const dir = useTmpDir()
-
-    const result = await runCli(['--version'], new URL(`file://${dir}/bin/index.js`).href)
-
-    expect(result.ok).toBe(false)
-    expect(result.stderr.includes('Cannot read the version from package.json')).toBe(true)
   })
 })

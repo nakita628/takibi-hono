@@ -43,6 +43,14 @@ export function readdir(dir: string) {
   })
 }
 
+/** Whether a path is there. A path that cannot be looked at reads as absent. */
+export function exists(path: string) {
+  return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
+  })
+}
+
 /** Contents of a UTF-8 file, or `null` when the file does not exist. */
 export function readFile(path: string) {
   return Effect.gen(function* () {

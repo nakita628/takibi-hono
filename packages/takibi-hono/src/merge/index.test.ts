@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { mergeAppFile, mergeBarrelFile, mergeHandlerFile } from './index.js'
+import { mergeAppFile, mergeHandlerFile } from './index.js'
 
 describe('mergeHandlerFile', () => {
   it('preserves handler body while updating route metadata', () => {
@@ -1356,38 +1356,6 @@ describe('mergeAppFile', () => {
   })
 })
 
-describe('mergeBarrelFile', () => {
-  it('always returns generated', () => {
-    expect(
-      mergeBarrelFile(
-        "export * from './users'\n",
-        "export * from './users'\nexport * from './posts'\n",
-      ),
-    ).toBe("export * from './users'\nexport * from './posts'\n")
-  })
-
-  it('removes deleted exports', () => {
-    expect(
-      mergeBarrelFile(
-        "export * from './users'\nexport * from './deleted'\n",
-        "export * from './users'\n",
-      ),
-    ).toBe("export * from './users'\n")
-  })
-
-  it('replaces entire barrel content', () => {
-    const existing = "export * from './users'\nexport * from './posts'\n"
-    const generated = "export * from './pets'\nexport * from './users'\n"
-    expect(mergeBarrelFile(existing, generated)).toBe(generated)
-  })
-
-  it('handles empty generated barrel', () => {
-    const existing = "export * from './users'\n"
-    const generated = ''
-    expect(mergeBarrelFile(existing, generated)).toBe('')
-  })
-})
-
 // ===================================================================
 // Robustness: external imports, user-added code, async handlers
 // ===================================================================
@@ -1770,6 +1738,38 @@ describe('mergeHandlerFile: human/generator boundary edge cases', () => {
   })
 })
 
+describe('a file that does not parse', () => {
+  // A hand edit in progress — an unclosed brace — would read as a file with no handlers,
+  // no routes and no imports, and the generated file would be written over it.
+  const broken = [
+    "import { Hono } from 'hono'",
+    '',
+    "export const petsHandler = new Hono().get('/pets', (c) => {",
+    "  return c.json({ half: 'written'",
+    '',
+  ].join('\n')
+  const generated = [
+    "import { Hono } from 'hono'",
+    '',
+    "export const petsHandler = new Hono().get('/pets', (c) => {})",
+    '',
+  ].join('\n')
+
+  it('is kept as it is by mergeHandlerFile', () => {
+    expect(mergeHandlerFile(broken, generated)).toBe(broken)
+  })
+
+  it('is kept as it is by mergeAppFile', () => {
+    const app = "import { Hono } from 'hono'\n\nconst app = new Hono(\n\nexport const api = app\n"
+    expect(
+      mergeAppFile(
+        app,
+        "import { Hono } from 'hono'\n\nconst app = new Hono()\n\nexport const api = app\n",
+      ),
+    ).toBe(app)
+  })
+})
+
 describe('mergeHandlerFile: import type relative path preservation', () => {
   it('preserves user-added `import type { Pet }` from a relative path', () => {
     const existing = [
@@ -1795,6 +1795,39 @@ describe('mergeHandlerFile: import type relative path preservation', () => {
     expect(result.includes("import type { Pet } from '../components/schemas'")).toBe(true)
     // user-written non-stub body is also preserved.
     expect(result.includes('c.json([] satisfies Pet[])')).toBe(true)
+  })
+
+  it('keeps a type-only import from a module the generator also imports from', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import * as z from 'zod'",
+      "import type { Pet } from '../components'",
+      "import { PetSchema } from '../components'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => c.json([] satisfies Pet[]))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { sValidator } from '@hono/standard-validator'",
+      "import * as z from 'zod'",
+      "import { PetSchema } from '../components'",
+      '',
+      "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => {})",
+      '',
+    ].join('\n')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { sValidator } from '@hono/standard-validator'",
+        "import * as z from 'zod'",
+        "import { PetSchema } from '../components'",
+        "import type { Pet } from '../components'",
+        '',
+        "export const petsHandler = new Hono().get('/pets', sValidator('json', PetSchema), (c) => c.json([] satisfies Pet[]))",
+        '',
+      ].join('\n'),
+    )
   })
 
   it('drops a non-type relative import (treated as generator-managed)', () => {

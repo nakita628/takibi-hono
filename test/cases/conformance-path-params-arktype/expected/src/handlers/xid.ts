@@ -1,0 +1,11 @@
+import { Hono } from 'hono'
+import { describeRoute, validator } from 'hono-openapi'
+import { type } from 'arktype'
+import { EchoResponse } from '../components'
+
+export const xidHandler = new Hono().get(
+  '/xid/:value',
+  describeRoute({ operationId: 'xidParam', responses: { '200': EchoResponse } }),
+  validator('param', type({ value: type(/^[0-9a-vA-V]{20}$/) })),
+  (c) => {},
+)

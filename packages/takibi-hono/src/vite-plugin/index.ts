@@ -35,13 +35,11 @@ function isInputFile(filePath: string, inputDirectory: string) {
 }
 
 function debounce(delayMs: number, callback: () => void) {
-  const timerStorage = new WeakMap<() => void, ReturnType<typeof setTimeout>>()
-  const wrapped = () => {
-    const prev = timerStorage.get(wrapped)
-    if (prev !== undefined) clearTimeout(prev)
-    timerStorage.set(wrapped, setTimeout(callback, delayMs))
+  const pending: { timer: ReturnType<typeof setTimeout> | undefined } = { timer: undefined }
+  return () => {
+    clearTimeout(pending.timer)
+    pending.timer = setTimeout(callback, delayMs)
   }
-  return wrapped
 }
 
 function toConfigError(error: unknown) {
@@ -173,21 +171,17 @@ function cleanupStaleOutputs(previousConfig: Config, currentConfig: Config) {
 }
 
 /**
- * Empties the split component and client directories so an entry the spec no longer names
- * does not survive, then runs the generators. The handlers directory is not emptied: the
- * handler bodies in it survive only through `writeHandlers`' merge with the existing files.
- * A failure is reported as a log line rather than raised, so the dev server keeps running.
+ * Empties the split component directories so an entry the spec no longer names does not
+ * survive, then runs the generators. Client outputs are single files, rewritten whole. The
+ * handlers directory is not emptied: the handler bodies in it survive only through
+ * `writeHandlers`' merge with the existing files. A failure is reported as a log line rather
+ * than raised, so the dev server keeps running.
  */
 function runGeneration(config: Config) {
   return Effect.gen(function* () {
-    const splitDirs = [
-      ...Object.entries(config.components ?? {}).flatMap(([key, value]) =>
-        key !== 'output' && isSplitOutput(value) ? [[key, value.output] as const] : [],
-      ),
-      ...Object.entries(config.client ?? {}).flatMap(([key, value]) =>
-        isSplitOutput(value) ? [[key, value.output] as const] : [],
-      ),
-    ]
+    const splitDirs = Object.entries(config.components ?? {}).flatMap(([key, value]) =>
+      key !== 'output' && isSplitOutput(value) ? [[key, value.output] as const] : [],
+    )
     const cleaned = yield* Effect.all(
       splitDirs.map(([name, output]) => cleanupSplitDir(name, output)),
       { concurrency: 'unbounded' },
@@ -273,10 +267,6 @@ export function takibiHonoVite(): any {
         console.error('❌ hot-update error:', error)
       })
       return []
-    },
-    buildStart() {
-      // Dev-only: handled by configureServer
-      return Promise.resolve()
     },
     configureServer(server: ViteDevServer) {
       const start = Effect.gen(function* () {

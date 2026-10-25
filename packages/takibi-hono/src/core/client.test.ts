@@ -125,24 +125,25 @@ export default routes
 `)
   })
 
-  it.concurrent('generates split client output as a directory of per-operation files', async () => {
-    const d = tmpDir('split')
+  it.concurrent('hands the client name and the base path to the rpc generator', async () => {
+    const d = tmpDir('rpc_named')
     await runGenerator(
       makeClients(
         await openapi(),
-        {
-          rpc: { output: 'rpc', import: './index', split: true },
-          tanstackQuery: { output: 'tq', import: './index', split: true },
-        },
+        { rpc: { output: 'rpc.ts', import: './lib', client: 'api', parseResponse: true } },
         d,
+        '/v1',
       ),
     )
-    expect(fs.readdirSync(path.join(d, 'rpc')).sort()).toStrictEqual(['getPing.ts', 'index.ts'])
-    expect(fs.readdirSync(path.join(d, 'tq')).sort()).toStrictEqual([
-      'getPing.ts',
-      'index.ts',
-      'keys.ts',
-    ])
+    expect(await fsp.readFile(path.join(d, 'rpc.ts'), 'utf-8'))
+      .toBe(`import type { ClientRequestOptions } from 'hono/client'
+import { parseResponse } from 'hono/client'
+import { api } from './lib'
+
+export async function getPing(options?: ClientRequestOptions) {
+  return await parseResponse(api.ping.$get(undefined, options))
+}
+`)
   })
 
   it.concurrent('writes nothing and returns ok when no client target is configured', async () => {

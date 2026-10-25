@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { makeImports, withImports } from './imports.js'
+import { makeBarrel, makeImports, withImports } from './imports.js'
 
 const candidates = [
   { name: 'Type', from: 'typebox' },
@@ -37,6 +37,18 @@ describe('makeImports', () => {
     expect(makeImports('export type A=Static<typeof B>', candidates)).toStrictEqual([
       "import type{Static}from'typebox'",
     ])
+  })
+})
+
+describe('makeBarrel', () => {
+  it('re-exports every file, sorted by name', () => {
+    expect(makeBarrel(['users', '__root', 'pets'])).toBe(
+      "export*from'./__root'\nexport*from'./pets'\nexport*from'./users'",
+    )
+  })
+
+  it('is empty for no files', () => {
+    expect(makeBarrel([])).toBe('')
   })
 })
 

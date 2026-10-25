@@ -1,0 +1,137 @@
+import { Hono } from 'hono'
+import { describeRoute, resolver, validator } from 'hono-openapi'
+import { type } from 'arktype'
+import {
+  TagSchema,
+  PetSchema,
+  NewPetSchema,
+  NotFoundResponse,
+  BadRequestResponse,
+} from '../components'
+
+export const petsHandler = new Hono()
+  .get(
+    '/pets',
+    describeRoute({
+      operationId: 'listPets',
+      summary: 'List pets',
+      description: 'Lists the pets, newest first.',
+      tags: ['pets'],
+      responses: {
+        '200': {
+          description: 'The pets',
+          headers: { 'X-Total-Count': { $ref: '#/components/headers/TotalCount' } },
+          content: { 'application/json': { schema: resolver(type(PetSchema).array()) } },
+        },
+      },
+    }),
+    validator(
+      'query',
+      type({
+        'limit?': type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1 & number.integer <= 100'),
+        'tag?': TagSchema,
+      }),
+    ),
+    validator('header', type({ 'x-request-id?': 'string' })),
+    validator('cookie', type({ 'session?': 'string' })),
+    (c) => {},
+  )
+  .post(
+    '/pets',
+    describeRoute({
+      operationId: 'createPet',
+      summary: 'Create a pet',
+      tags: ['pets'],
+      security: [{ apiKey: [] }],
+      responses: {
+        '201': {
+          description: 'Created',
+          content: { 'application/json': { schema: resolver(PetSchema) } },
+        },
+        '400': BadRequestResponse,
+      },
+    }),
+    validator('header', type({ 'x-request-id?': 'string' })),
+    validator('json', NewPetSchema),
+    (c) => {},
+  )
+  .on(
+    'HEAD',
+    '/pets',
+    describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
+    validator('header', type({ 'x-request-id?': 'string' })),
+    (c) => {},
+  )
+  .get(
+    '/pets/:petId',
+    describeRoute({
+      operationId: 'getPet',
+      deprecated: true,
+      responses: {
+        '200': {
+          description: 'The pet',
+          content: { 'application/json': { schema: resolver(PetSchema) } },
+        },
+        '404': NotFoundResponse,
+      },
+    }),
+    validator(
+      'param',
+      type({
+        petId: type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1'),
+      }),
+    ),
+    (c) => {},
+  )
+  .delete(
+    '/pets/:petId',
+    describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    (c) => {},
+  )
+  .post(
+    '/pets/:petId/photos',
+    describeRoute({
+      operationId: 'uploadPhoto',
+      responses: { '201': { description: 'Uploaded' } },
+    }),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    validator(
+      'form',
+      type({
+        caption: type('string').narrow(
+          (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+        ),
+        'featured?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+          /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+        ),
+      }),
+    ),
+    (c) => {},
+  )

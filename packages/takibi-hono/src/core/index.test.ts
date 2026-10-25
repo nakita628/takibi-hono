@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
 
 import { runGenerator, runGeneratorError } from '../testing/index.js'
 import { hono } from './index.js'
+import { LayoutError } from './layout.js'
 
 const SPEC = `openapi: 3.1.0
 info: { title: Pets, version: 1.0.0 }
@@ -199,7 +200,7 @@ export const petsHandler = new Hono()
     sValidator(
       'query',
       v.partial(
-        v.object({ limit: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+        v.object({ limit: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
       ),
     ),
     (c) => {},
@@ -262,6 +263,39 @@ export const api = app.route('/', petsHandler).route('/', usersHandler)
 
 export default app
 `)
+  })
+
+  it('imports components of another package by its package name', async () => {
+    await fsp.mkdir('apps/api', { recursive: true })
+    await fsp.mkdir('packages/components', { recursive: true })
+    await fsp.writeFile('apps/api/package.json', '{ "name": "api" }\n')
+    await fsp.writeFile('packages/components/package.json', '{ "name": "@acme/components" }\n')
+    const config = {
+      input: 'openapi.yaml',
+      schema: 'zod',
+      output: 'apps/api/src/handlers',
+      components: { output: 'packages/components/src/index.ts', package: '@acme/components' },
+    } as const
+    await runGenerator(hono(config))
+    expect(read('apps/api/src/handlers/pets.ts').split('\n\n')[0]).toBe(`import { Hono } from 'hono'
+import { sValidator } from '@hono/standard-validator'
+import * as z from 'zod'
+import { PetSchema } from '@acme/components'`)
+
+    // The same layout without the package name has no way to write that import, and
+    // nothing is written before that is known.
+    await fsp.rm('apps', { recursive: true })
+    await fsp.rm('packages/components/src', { recursive: true })
+    const error = await runGeneratorError(
+      hono({ ...config, components: { output: config.components.output } }),
+    )
+    expect(error).toStrictEqual(
+      new LayoutError({
+        message:
+          'handlers imports components.schemas from another package: set components.schemas.package to the name of the package packages/components/src/index.ts is written into.',
+      }),
+    )
+    expect(list('.')).toStrictEqual([])
   })
 
   it('fails with OpenAPIError for a missing input and writes nothing', async () => {

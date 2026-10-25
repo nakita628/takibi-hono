@@ -7,6 +7,7 @@ import { makeSchemaIdentifiers, toIdentifierPascalCase } from 'oas-truth'
 import { emit } from '../emit/index.js'
 import { readdir, readFile, unlink } from '../file/index.js'
 import { makeAppCode, makeHandlerCode, toHandlerVarName } from '../generator/handler.js'
+import { makeBarrel } from '../helper/imports.js'
 import { collectRoutes, collectWebhookRoutes } from '../helper/operations.js'
 import { mergeAppFile, mergeHandlerFile } from '../merge/index.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'
@@ -74,11 +75,7 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
     )
     const names = [...groups.keys()]
     if (names.length > 0) {
-      const barrel = names
-        .toSorted()
-        .map((name) => `export*from'./${name}'`)
-        .join('\n')
-      yield* emit(barrel, handlersDir, path.join(handlersDir, 'index.ts'))
+      yield* emit(makeBarrel(names), handlersDir, path.join(handlersDir, 'index.ts'))
     }
     const expected = new Set([...files.map((file) => `${file.name}.ts`), 'index.ts'])
     const entries = yield* readdir(handlersDir)
