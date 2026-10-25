@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { Effect, Schema } from 'effect'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const absentHandler = new Hono().get(
   '/absent',
@@ -15,7 +15,10 @@ export const absentHandler = new Hono().get(
           Schema.withDecodingDefaultType(Effect.succeed(7)),
         ),
         empty_str: Schema.optional(Schema.String),
-        ref_def: CountSchema.pipe(Schema.withDecodingDefaultType(Effect.succeed(3))),
+        ref_def: Schema.FiniteFromString.check(
+          Schema.isInt(),
+          Schema.isGreaterThanOrEqualTo(0),
+        ).pipe(Schema.withDecodingDefaultType(Effect.succeed(3))),
       }),
     ),
   ),

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as v from 'valibot'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const optionalHandler = new Hono().get(
   '/optional',
@@ -58,7 +58,13 @@ export const optionalHandler = new Hono().get(
           ),
           length: v.pipe(v.string(), v.minCodePoints(2), v.maxCodePoints(4)),
           pattern: v.pipe(v.string(), v.regex(/^[a-z]+-\d{1,3}$/)),
-          ref_int: CountSchema,
+          ref_int: v.pipe(
+            v.string(),
+            v.transform(Number),
+            v.number(),
+            v.safeInteger(),
+            v.minValue(0),
+          ),
           prefs: v.partial(
             v.object({
               theme: v.string(),

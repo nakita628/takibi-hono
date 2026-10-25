@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { type } from 'arktype'
-import { CountSchema, FlagSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const urlencodedHandler = new Hono().post(
   '/urlencoded',
@@ -49,8 +49,15 @@ export const urlencodedHandler = new Hono().post(
             const value = Number(data)
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
-          'count?': CountSchema,
-          'flag?': FlagSchema,
+          'count?': type('string')
+            .pipe((data, ctx) => {
+              const value = Number(data)
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+            })
+            .to('number.integer >= 0'),
+          'flag?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+            /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+          ),
           'tags?': type('unknown')
             .pipe((data) => (data === undefined || Array.isArray(data) ? data : [data]))
             .to('string[]'),

@@ -1,4 +1,4 @@
-import type { ComponentAdapter, Components, Operation, Schema, SchemaLib } from 'oas-truth'
+import type { ComponentAdapter, Components, Operation, ParamIn, Schema, SchemaLib } from 'oas-truth'
 import {
   makeSchemaIdentifiers,
   makeSchemaReplacements,
@@ -109,6 +109,75 @@ function wireName(parameter: { readonly name: string; readonly in: string }) {
   return parameter.in === 'header' ? parameter.name.toLowerCase() : parameter.name
 }
 
+type TextRefContext = {
+  readonly paramIn: ParamIn
+  readonly adapter: ComponentAdapter
+  readonly schemas: Components['schemas']
+  readonly seen: ReadonlySet<string>
+}
+
+/**
+ * `schema` with every `#/components/schemas/*` reference whose component reads differently
+ * from text replaced by that component. A component is declared once, without `paramIn`, so
+ * a parameter or form field pointing at an integer component would be validated as a number
+ * it never arrives as. A component whose expression is the same either way (a string enum)
+ * stays a reference, and so keeps its `$ref` in the document; a recursive one stays too.
+ */
+function inlineTextRefs(schema: Schema, context: TextRefContext): Schema {
+  const name = schema.$ref?.startsWith('#/components/schemas/') && schemaRefToName(schema.$ref)
+  const target = name ? context.schemas?.[name] : undefined
+  if (name && target && !context.seen.has(name)) {
+    const inlined = inlineTextRefs(target, { ...context, seen: new Set([...context.seen, name]) })
+    const { adapter, paramIn } = context
+    if (adapter.toExpression(inlined, paramIn) !== adapter.toExpression(inlined)) {
+      const { $ref: _, ...siblings } = schema
+      return { ...inlined, ...inlineChildren(siblings, context) }
+    }
+  }
+  return inlineChildren(schema, context)
+}
+
+/** `inlineTextRefs` over every keyword of `schema` that holds a schema. */
+function inlineChildren(schema: Schema, context: TextRefContext): Schema {
+  const one = (child: Schema) => inlineTextRefs(child, context)
+  const oneOrBoolean = (child: Schema | boolean) =>
+    typeof child === 'boolean' ? child : one(child)
+  const many = (children: readonly Schema[]) => children.map(one)
+  const byKey = (children: { readonly [k: string]: Schema }) =>
+    Object.fromEntries(Object.entries(children).map(([key, child]) => [key, one(child)]))
+  const { items } = schema
+  return {
+    ...schema,
+    ...(schema.properties && { properties: byKey(schema.properties) }),
+    ...(schema.patternProperties && { patternProperties: byKey(schema.patternProperties) }),
+    ...(schema.dependentSchemas && { dependentSchemas: byKey(schema.dependentSchemas) }),
+    ...(schema.$defs && { $defs: byKey(schema.$defs) }),
+    ...(items !== undefined && {
+      items: typeof items === 'boolean' || !('length' in items) ? oneOrBoolean(items) : many(items),
+    }),
+    ...(schema.prefixItems && { prefixItems: many(schema.prefixItems) }),
+    ...(schema.allOf && { allOf: many(schema.allOf) }),
+    ...(schema.anyOf && { anyOf: many(schema.anyOf) }),
+    ...(schema.oneOf && { oneOf: many(schema.oneOf) }),
+    ...(schema.not && { not: one(schema.not) }),
+    ...(schema.if && { if: one(schema.if) }),
+    // oxlint-disable-next-line unicorn/no-thenable -- JSON Schema's `then`, not a Promise
+    ...(schema.then && { then: one(schema.then) }),
+    ...(schema.else && { else: one(schema.else) }),
+    ...(schema.contains && { contains: one(schema.contains) }),
+    ...(schema.propertyNames && { propertyNames: one(schema.propertyNames) }),
+    ...(schema.additionalProperties !== undefined && {
+      additionalProperties: oneOrBoolean(schema.additionalProperties),
+    }),
+    ...(schema.unevaluatedProperties !== undefined && {
+      unevaluatedProperties: oneOrBoolean(schema.unevaluatedProperties),
+    }),
+    ...(schema.unevaluatedItems !== undefined && {
+      unevaluatedItems: oneOrBoolean(schema.unevaluatedItems),
+    }),
+  }
+}
+
 /**
  * `[target, expression]` per Hono validator: one object schema per parameter
  * location (schema-truth applies the wire coercion), then one per body target
@@ -143,8 +212,14 @@ function makeValidators(
     // Every location arrives as text, and schema-truth coerces each one from it. A parameter's
     // `style` / `explode` / `allowEmptyValue` are not passed: they apply to the expression's
     // root, which is this synthesized object, not the parameter.
+    const coerced = inlineTextRefs(schema, {
+      paramIn: location,
+      adapter,
+      schemas: components?.schemas,
+      seen: new Set(),
+    })
     return [
-      [location === 'path' ? 'param' : location, adapter.toExpression(schema, location)] as const,
+      [location === 'path' ? 'param' : location, adapter.toExpression(coerced, location)] as const,
     ]
   })
   const body = resolveRef(route.operation.requestBody, components?.requestBodies)
@@ -159,7 +234,16 @@ function makeValidators(
     const chosen = candidates.find((entry) => entry.type === 'application/json') ?? candidates[0]
     // A form body's fields arrive as text (or a `File`), so they are coerced as `formData`.
     const paramIn = target === 'form' ? 'formData' : undefined
-    return chosen ? [[target, adapter.toExpression(chosen.schema, paramIn)] as const] : []
+    if (!chosen) return []
+    const schema = paramIn
+      ? inlineTextRefs(chosen.schema, {
+          paramIn,
+          adapter,
+          schemas: components?.schemas,
+          seen: new Set(),
+        })
+      : chosen.schema
+    return [[target, adapter.toExpression(schema, paramIn)] as const]
   })
   return [...parameterValidators, ...bodyValidators]
 }

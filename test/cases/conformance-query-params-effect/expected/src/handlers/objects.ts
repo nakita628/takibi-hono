@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { Schema, SchemaTransformation } from 'effect'
-import { RangeSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const objectsHandler = new Hono().get(
   '/objects',
@@ -83,7 +83,12 @@ export const objectsHandler = new Hono().get(
             ),
           }),
         ),
-        deep_ref: Schema.optional(RangeSchema),
+        deep_ref: Schema.optional(
+          Schema.Struct({
+            from: Schema.FiniteFromString.check(Schema.isInt()),
+            to: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+          }),
+        ),
         spread: Schema.optional(
           Schema.Struct({
             sort: Schema.optional(Schema.Literals(['asc', 'desc'])),
