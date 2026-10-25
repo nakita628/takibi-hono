@@ -8,6 +8,7 @@
 
 - OpenAPI schemas to validation schemas (`zod` | `valibot` | `typebox` | `arktype` | `effect`)
 - [hono-openapi](https://hono.dev/examples/hono-openapi) route definitions with `describeRoute`
+- Hono's [`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) (Hono 5): one handler per operation, validating the request and the response
 - App entry point + handler stubs with [handler merge](#handler-merge)
 - Component splitting into separate files (schemas, parameters, headers, etc.)
 - A typed [Hono client](https://hono.dev/docs/guides/rpc), with RPC functions and query hooks over it
@@ -56,6 +57,17 @@ export default defineConfig({
 
   // Enable hono-openapi style output (@see https://hono.dev/examples/hono-openapi)
   openapi: true,
+
+  // Hono's `defineHandler` (hono/factory, Hono 5), laid out as hono-takibi lays out its routes.
+  // `output` takes the definitions, one `<method><Path>Handler = defineHandler({...})` per
+  // operation (`postPetsHandler`) validating the request targets and the response: a file,
+  // which also holds the components unless `components` says where they go, or a directory
+  // with one file per definition (`split`); `package` names it for the files of other
+  // packages. With `template`, the handler files calling the definitions and the app entry
+  // are written too, as hono-takibi's template; without it the definitions stand alone. Not
+  // combined with `openapi` (hono-openapi reads validators in front of a handler) nor with
+  // `schema: 'typebox'` (no Standard Schema interface). See [defineHandler](#definehandler).
+  // defineHandler: { output: 'src/routes.ts', template: true },
 
   // oxfmt FormatConfig for generated code output
   // format: {},
@@ -207,9 +219,20 @@ export default defineConfig({
 ```bash
 npx takibi-hono                               # runs ./takibi-hono.config.ts
 npx takibi-hono --config config/api.config.ts # runs another config file (-c)
+npx takibi-hono openapi.yaml -o src/routes.ts # one-shot: one file, no config
+npx takibi-hono -o src/routes.ts --schema valibot
 ```
 
 `--help`, `--version` and `--completions <bash|zsh|fish|sh>` are also available.
+
+The one-shot mode is `defineHandler: { output }` without a config file: a single file with the
+document's components and the [`defineHandler`](#definehandler) definition of every operation
+(`getPetsHandler`), as hono-takibi's `-o` writes the route definitions its handlers import. The
+input defaults to the one of `openapi.yaml`, `openapi.json` or `main.tsp` in the current
+directory, and the library (`-s`) to `zod`. Nothing in the file is yours, so it is written
+over; your app calls each definition with its handler, `app.get('/pets',
+getPetsHandler(async (c, { query }) => ...))`. To have the handlers and the app written too,
+move to a config with `template: true`: the file stays the same.
 
 ### Vite Plugin
 
@@ -225,12 +248,92 @@ export default defineConfig({
 
 The plugin watches your OpenAPI/TypeSpec files and config, automatically regenerating code on changes.
 
+## defineHandler
+
+`defineHandler` generates Hono 5's
+[`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) from `hono/factory`, laid
+out as hono-takibi lays out its routes and handlers:
+
+|                                  | hono-takibi                                 | takibi-hono                                  |
+| -------------------------------- | ------------------------------------------- | -------------------------------------------- |
+| One file, no config              | `hono-takibi openapi.yaml -o src/routes.ts` | `takibi-hono openapi.yaml -o src/routes.ts`  |
+| The same from a config           | `output: './src/routes.ts'`                 | `defineHandler: { output: 'src/routes.ts' }` |
+| Plus the handlers and the app    | `output` + `template`                       | `defineHandler: { output, template: true }`  |
+| Definitions and components apart | `routes` + `components`                     | `defineHandler` + `components`               |
+
+`output` takes the **definitions**: one per operation, named by its method and path
+(`postPetsHandler` where hono-takibi has `postPetsRoute`). A definition is `defineHandler({...})`
+with the options and without the handler: it is the function that takes the handler.
+
+```ts
+// src/routes.ts
+import { defineHandler } from 'hono/factory'
+import * as z from 'zod'
+
+export const NewPetSchema = z.object({ name: z.string().min(1) })
+export const PetSchema = z.object({ id: z.int(), name: z.string().min(1) })
+
+export const postPetsHandler = defineHandler({
+  header: z.object({ 'x-request-id': z.string().exactOptional() }),
+  json: NewPetSchema,
+  response: PetSchema,
+})
+
+export const getPetsPetIdHandler = defineHandler({
+  param: z.object({ petId: z.coerce.number().int().min(1) }),
+  response: PetSchema,
+})
+```
+
+Each request target the operation declares (`param`, `query`, `header`, `cookie`, `form`,
+`json`) is a Standard Schema option, and `response` is the JSON schema of its success
+responses (`anyOf` them when they differ), so the value the handler returns is validated too.
+The components sit in this file unless `components` names a module of their own; `split: true`
+makes `output` a directory with one file per definition (`getPets.ts`) and an `index.ts`
+barrel, and `package` the name the files of other packages import them by. Nothing here is
+yours: the file is written over on every run.
+
+Without `template`, that is all: your app calls each definition with its handler. With
+`template: true`, takibi-hono writes the handler files and the app entry around it, as it does
+without `defineHandler`. Each handler file imports its definitions and calls each with the
+stub, which takes the validated targets apart; fill it in, set the status with `c.status()`,
+and return the value. Middleware goes before the handler.
+
+```ts
+// src/handlers/pets.ts
+import { Hono } from 'hono'
+
+import { getPetsPetIdHandler, postPetsHandler } from '../routes'
+
+export const petsHandler = new Hono()
+  .post(
+    '/pets',
+    postPetsHandler(async (c, { header, json }) => {}),
+  )
+  .get(
+    '/pets/:petId',
+    getPetsPetIdHandler(async (c, { param }) => {}),
+  )
+```
+
+On regeneration a call you gave a handler, or middleware before it, is kept as it is
+(`postPetsHandler(auth, async (c, { json }) => ...)`); a call that still holds the stub is
+written again, so a definition whose targets changed gets a stub that matches. The client, rpc
+and the hooks import the app entry, so they need `template`.
+
+`defineHandler` validates with Standard Schema, so `schema` is `zod`, `valibot`, `arktype`
+or `effect`; an arktype `Type` is handed over as its `~standard` object, which keeps Hono's
+types from overflowing on it. hono-openapi's `describeRoute` reads validators in front of a
+handler, so `openapi` and `defineHandler` do not combine. Hono 5 is a release candidate while
+this is written, and `defineHandler` is marked experimental there.
+
 ## Handler Merge
 
 When regenerating, takibi-hono **preserves your hand-written code**:
 
 - Handler bodies `(c) => { ... }` — your implementation logic is kept
-- User-added imports — only generator-managed imports are updated
+- A `defineHandler` definition's call with your handler, and the middleware before it — one still holding the stub is written again
+- User-added imports — only generator-managed imports are updated; of one the generator also writes (`hono`, `hono/factory`), the names it does not import are kept
 - Non-handler code (helpers, constants, middleware) — left untouched
 - JSDoc comments on routes — restored after regeneration
 

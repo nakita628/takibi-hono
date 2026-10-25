@@ -23,7 +23,21 @@ type HandlerContext = {
   readonly responseRefs: boolean
   /** Component identifiers the handler may reference, with their module specifier. */
   readonly imports: readonly ImportEntry[]
+  /**
+   * Hono's `defineHandler` (`hono/factory`): the definitions module declares one
+   * `<method><Path>Handler = defineHandler({...})` per operation, and the handler file calls
+   * each with its handler (`getPetsHandler(async (c, { query }) => {})`) in place of the
+   * validator middleware. `names` is the definition of each route, `from` the module.
+   */
+  readonly defineHandler?: {
+    readonly from: string
+    /** The definition of each route, by {@link routeKey}. */
+    readonly names: ReadonlyMap<string, string>
+  }
 }
+
+/** The request targets `defineHandler` validates, in the order its options are written. */
+const DEFINE_HANDLER_TARGETS = ['param', 'query', 'header', 'cookie', 'form', 'json'] as const
 
 /** The Operation Object fields `describeRoute` documents; parameters and bodies come from the validators. */
 const DESCRIBE_ROUTE_KEYS: ReadonlySet<string> = new Set([
@@ -249,6 +263,141 @@ function makeValidators(
   return [...parameterValidators, ...bodyValidators]
 }
 
+/**
+ * The schema `defineHandler` validates the returned value with: the JSON content of the
+ * success responses (`2XX`), as one schema when they agree and `anyOf` them when they do
+ * not. An operation whose success responses carry no JSON validates no response, and its
+ * handler answers whatever it returns (`null` as 204).
+ */
+function makeResponseSchema(
+  operation: Operation,
+  components: Components | undefined,
+  adapter: ComponentAdapter,
+) {
+  const schemas = Object.entries(operation.responses ?? {})
+    .filter(([status]) => /^2(?:\d\d|XX)$/u.test(status))
+    .flatMap(([, raw]) => {
+      const response = resolveRef(raw, components?.responses)
+      return Object.entries(response?.content ?? {}).flatMap(([type, media]) =>
+        bodyTarget(type) === 'json' && 'schema' in media && media.schema ? [media.schema] : [],
+      )
+    })
+  // Two responses that spell the same schema (`200` and `201` both `Pet`) are one schema.
+  const distinct = [...new Map(schemas.map((s) => [adapter.toExpression(s), s])).values()]
+  const [first] = distinct
+  if (first === undefined) return undefined
+  return adapter.toExpression(distinct.length === 1 ? first : { anyOf: distinct })
+}
+
+/**
+ * The handler of one operation, as hono-takibi names a route: the method, then the path in
+ * PascalCase. `('post', '/users/:id')` → `postUsersIdHandler`, `('get', '/')` → `getHandler`,
+ * and a trailing slash adds `Index`.
+ */
+export function toOperationVarName(method: string, path: string) {
+  const index = path !== '/' && path.endsWith('/') ? 'Index' : ''
+  const words = path
+    .replaceAll(/[^A-Za-z0-9]+/gu, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')
+  return `${method}${words}${index}Handler`
+}
+
+/**
+ * The definition of an operation, `export const <name>=defineHandler({...})`: its validators as
+ * `defineHandler` options, each a Standard Schema, and the response schema under `response`.
+ * It is the function that takes the handler, which the handler file calls; an operation that
+ * validates nothing is `defineHandler({})`, so that every operation is called the same way.
+ */
+function makeDefinitionCode(
+  name: string,
+  route: Route,
+  context: HandlerContext,
+  adapter: ComponentAdapter,
+) {
+  const { toDefineHandlerSchema } = getLibrary(context.lib)
+  if (toDefineHandlerSchema === undefined) {
+    throw new Error(
+      `defineHandler takes Standard Schema validators, which ${context.lib} has none of`,
+    )
+  }
+  const byTarget = new Map(makeValidators(route, context.components, adapter))
+  const response = makeResponseSchema(route.operation, context.components, adapter)
+  const options = [
+    ...DEFINE_HANDLER_TARGETS.flatMap((target) => {
+      const expr = byTarget.get(target)
+      return expr === undefined ? [] : [`${target}:${toDefineHandlerSchema(expr)}`]
+    }),
+    ...(response === undefined ? [] : [`response:${toDefineHandlerSchema(response)}`]),
+  ]
+  return `export const ${name}=defineHandler({${options.join(',')}})`
+}
+
+/** The request targets a definition validates: what its handler takes apart. */
+function validatedTargets(route: Route, context: HandlerContext, adapter: ComponentAdapter) {
+  const byTarget = new Map(makeValidators(route, context.components, adapter))
+  return DEFINE_HANDLER_TARGETS.filter((target) => byTarget.has(target))
+}
+
+/**
+ * The definition name of every route, in order: its method and path, numbered when a name is
+ * taken (`postCommentsHandler2` beside the group export of `/post-comments`, which the handler
+ * file that imports the definition exports) or already given to an earlier route.
+ */
+export function nameOperations(routes: readonly Route[], taken: Iterable<string>) {
+  const names = new Set(taken)
+  return new Map(
+    routes.map((route) => {
+      const name = freeName(toOperationVarName(route.method, route.path), names)
+      names.add(name)
+      return [routeKey(route), name] as const
+    }),
+  )
+}
+
+/** What a route is known by across the generators: its method and path. */
+export function routeKey(route: Route) {
+  return `${route.method} ${route.path}`
+}
+
+/** What a definitions module is built from: the library and the schemas it may refer to. */
+export type DefinitionsContext = Omit<HandlerContext, 'defineHandler' | 'responseRefs' | 'openapi'>
+
+/**
+ * The definition of every route, by the name `names` gives it, without imports: `fileName` is
+ * the file a split target writes it to (`getPets.ts` for `getPetsHandler`). Nothing in a
+ * definition is the user's, so a definitions module is written over.
+ */
+export function makeDefinitionEntries(
+  routes: readonly Route[],
+  names: ReadonlyMap<string, string>,
+  context: DefinitionsContext,
+) {
+  const full: HandlerContext = { ...context, openapi: false, responseRefs: false }
+  const adapter = makeInlineAdapter(context.lib, { resolver: false })
+  return routes.map((route) => {
+    const name = names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path)
+    return {
+      name,
+      fileName: name.replace(/Handler(\d*)$/u, '$1'),
+      code: makeDefinitionCode(name, route, full, adapter),
+    }
+  })
+}
+
+/** The definitions as one module, importing the schemas it refers to. */
+export function makeDefinitionsCode(
+  routes: readonly Route[],
+  names: ReadonlyMap<string, string>,
+  context: DefinitionsContext,
+) {
+  const body = makeDefinitionEntries(routes, names, context).map((entry) => entry.code)
+  return withImports(body.join('\n\n'), [...makeLibraryImports(context.lib), ...context.imports])
+}
+
 /** `/users` → `usersHandler`, `__root` → `rootHandler`. */
 export function toHandlerVarName(fileName: string) {
   const [first = '', ...rest] = (fileName === '__root' ? 'root' : fileName)
@@ -272,6 +421,26 @@ export function makeHandlerCode(
     ...(context.openapi && { slots: ['response-content'] as const }),
   })
   const identifiers = makeSchemaIdentifiers(context.components?.schemas ?? {})
+  const definitions = context.defineHandler
+  if (definitions) {
+    // Each route call takes the definition with the stub handler, which takes the validated
+    // targets apart for the merge to fill; the definitions are imported from their module.
+    const calls = routes.map((route) => {
+      const name =
+        definitions.names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path)
+      const targets = validatedTargets(route, context, adapter)
+      const input = targets.length > 0 ? `,{${targets.join(',')}}` : ''
+      return makeRouteCall(route.method, [`'${route.path}'`, `${name}(async(c${input})=>{})`])
+    })
+    const body = `export const ${varName}=new Hono()${calls.join('')}`
+    const imported = routes
+      .map((route) => definitions.names.get(routeKey(route)))
+      .filter((n) => n !== undefined)
+    return withImports(body, [
+      { name: 'Hono', from: 'hono' },
+      ...[...new Set(imported)].map((name) => ({ name, from: definitions.from })),
+    ])
+  }
   const validator = context.openapi
     ? { name: 'validator', wrap: library.toStandardSchema }
     : { name: library.validator.entry.name, wrap: library.validator.wrap }

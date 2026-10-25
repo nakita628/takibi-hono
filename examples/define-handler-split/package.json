@@ -1,0 +1,21 @@
+{
+  "name": "example-define-handler-split",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "takibi-hono",
+    "dev": "vite --host",
+    "check": "tsc -p tsconfig.json",
+    "test": "vp test run"
+  },
+  "dependencies": {
+    "hono": "5.0.0-rc.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@hono/vite-dev-server": "0.26.1",
+    "takibi-hono": "workspace:^",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
+}

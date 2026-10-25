@@ -1,0 +1,1 @@
+(c) => c.body(JSON.stringify(Object.fromEntries((['param', 'query', 'header', 'cookie', 'json', 'form'] as const).map((target) => [target, c.req.valid(target as never)]))), 200, { 'Content-Type': 'application/json' })

@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../../__app__/define-split/src/*"]
+    }
+  },
+  "include": ["../../__app__/define-split/**/*"]
+}

@@ -36,6 +36,38 @@ function placeEntries(
 }
 
 /**
+ * Every component of the aggregate module, as code without imports: the schemas, then every
+ * other kind. `prologue` is what the schemas need before them (arktype's `ref` augmentation).
+ */
+export function makeAggregateCode(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout) {
+  const lib = config.schema
+  const useOpenAPI = config.openapi === true
+  const readonly = config.readonly ?? false
+  const components = openapi.components ?? {}
+  const adapter = makeInlineAdapter(lib, { resolver: useOpenAPI })
+  const schemaOptions = {
+    lib,
+    exportTypes: layout.targets.schemas?.exportTypes ?? false,
+    readonly,
+    registerRef: useOpenAPI,
+  }
+  const declarations = makeSchemaDeclarations(components.schemas ?? {}, schemaOptions)
+  return {
+    prologue: declarations.length > 0 ? makeSchemasPrologue(schemaOptions) : '',
+    parts: [
+      ...declarations.map((d) => d.code),
+      ...COMPONENT_KINDS.flatMap((kind) =>
+        makeComponentCode(kind, components, adapter, {
+          exportTypes: false,
+          readonly,
+          split: false,
+        }).map((e) => e.code),
+      ),
+    ],
+  }
+}
+
+/**
  * `components.schemas` through oas-truth's `makeSchemaDeclarations` (`ref: true`
  * for hono-openapi registration), every other kind through its declarations. In
  * hono-openapi mode each `schema:` slot is wrapped in `resolver(...)` and each
@@ -58,16 +90,9 @@ export function writeComponents(openapi: OpenAPI, config: TakibiHonoConfig, layo
   const prologue = declarations.length > 0 ? makeSchemasPrologue(schemaOptions) : ''
 
   if (layout.aggregate) {
-    const parts = [
-      ...declarations.map((d) => d.code),
-      ...COMPONENT_KINDS.flatMap((kind) =>
-        makeComponentCode(kind, components, adapter, {
-          exportTypes: false,
-          readonly,
-          split: false,
-        }).map((e) => e.code),
-      ),
-    ]
+    // The definitions file holds the components: the definitions writer writes them together.
+    if (layout.aggregate === layout.definitions?.output) return Effect.void
+    const { parts } = makeAggregateCode(openapi, config, layout)
     if (parts.length === 0) return Effect.void
     return emitFiles([
       {

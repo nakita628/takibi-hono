@@ -70,6 +70,51 @@ describe('resolveLayout', () => {
   })
 })
 
+describe('resolveLayout: defineHandler', () => {
+  it('has no definitions without defineHandler, and scaffolds', () => {
+    const layout = resolveLayout(base)
+    expect(layout.definitions).toBe(undefined)
+    expect(layout.scaffold).toBe(true)
+  })
+
+  it('shares the definitions file with the components, and stands alone without template', () => {
+    const layout = resolveLayout({ ...base, defineHandler: { output: 'src/routes.ts' } })
+    expect(layout.definitions).toStrictEqual({
+      output: 'src/routes.ts',
+      split: false,
+      exportTypes: false,
+      package: undefined,
+    })
+    expect(layout.aggregate).toBe('src/routes.ts')
+    expect(layout.targets.schemas?.output).toBe('src/routes.ts')
+    expect(layout.scaffold).toBe(false)
+  })
+
+  it('keeps the components apart when components names a module, and scaffolds with template', () => {
+    const layout = resolveLayout({
+      ...base,
+      defineHandler: { output: 'src/routes.ts', template: true },
+      components: { output: 'src/components.ts' },
+    })
+    expect(layout.aggregate).toBe('src/components.ts')
+    expect(layout.scaffold).toBe(true)
+  })
+
+  it('takes a split target of their own, as a component kind, with the components apart', () => {
+    const layout = resolveLayout({
+      ...base,
+      defineHandler: { output: 'packages/routes/src', split: true, package: '@acme/routes' },
+    })
+    expect(layout.definitions).toStrictEqual({
+      output: 'packages/routes/src',
+      split: true,
+      exportTypes: false,
+      package: '@acme/routes',
+    })
+    expect(layout.aggregate).toBe('src/components/index.ts')
+  })
+})
+
 // `packages/` is a package of its own; everything else is the app's.
 const twoPackages = (file: string) => (/(?:^|\/)packages\//u.test(file) ? '/pkg' : '/app')
 

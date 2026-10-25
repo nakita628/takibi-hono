@@ -20,7 +20,7 @@
     "@typespec/openapi": "catalog:",
     "arktype": "2.2.9",
     "effect": "4.0.5",
-    "hono": "4.13.13",
+    "hono": "5.0.0-rc.1",
     "hono-openapi": "1.5.0",
     "takibi-hono": "workspace:*",
     "typebox": "1.4.3",
