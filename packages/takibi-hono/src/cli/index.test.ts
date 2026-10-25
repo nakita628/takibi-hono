@@ -175,12 +175,13 @@ export const pingHandler = new Hono().get('/ping', (c) => {})
     const PING = `import { Hono } from 'hono'
 import { defineHandler } from 'hono/factory'
 
-export const getPingHandler = defineHandler(async (c) => {})
-
-export const api = new Hono().get('/ping', getPingHandler)
+export const api = new Hono().get(
+  '/ping',
+  defineHandler(async (c) => {}),
+)
 `
 
-    it('writes the schemas, a defineHandler per operation and the api to -o', async () => {
+    it('writes the schemas and the api, with each defineHandler inline, to -o', async () => {
       useTmpDir({ 'spec/openapi.yaml': SPEC })
 
       const result = await runCli(['spec/openapi.yaml', '-o', 'src/api.ts'])
@@ -238,9 +239,10 @@ export const PetSchema = v.object({ name: v.string() })
 
 export type Pet = v.InferOutput<typeof PetSchema>
 
-export const postPetsHandler = defineHandler({ json: PetSchema })(async (c, { json }) => {})
-
-export const api = new Hono().post('/pets', postPetsHandler)
+export const api = new Hono().post(
+  '/pets',
+  defineHandler({ json: PetSchema })(async (c, { json }) => {}),
+)
 `)
     })
 
@@ -250,9 +252,7 @@ export const api = new Hono().post('/pets', postPetsHandler)
         'api.ts': `import { Hono } from 'hono'
 import { defineHandler } from 'hono/factory'
 
-export const getPingHandler = defineHandler(async (c) => ({ pong: true }))
-
-export const api = new Hono().get('/ping', getPingHandler)
+export const api = new Hono().get('/ping', defineHandler(async (c) => ({ pong: true })))
 `,
       })
 

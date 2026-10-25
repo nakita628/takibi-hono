@@ -573,7 +573,7 @@ export const itemsHandler=new Hono().put('/items/:id',putItemsIdHandler)`,
 })
 
 describe('makeSingleFileCode', () => {
-  it('writes the schemas, a defineHandler per operation and the api in one module', () => {
+  it('writes the schemas and the api, each defineHandler inline in its route call', () => {
     const openapi = {
       openapi: '3.1.0',
       info: { title: 'Pets', version: '1' },
@@ -607,10 +607,6 @@ export const PetSchema=v.object({name:v.string()})
 
 export type Pet=v.InferOutput<typeof PetSchema>
 
-export const postPetsHandler=defineHandler({json:PetSchema,response:PetSchema})(async(c,{json})=>{})
-
-export const getHandler=defineHandler(async(c)=>{})
-
-export const api=new Hono().post('/pets',postPetsHandler).get('/',getHandler)`)
+export const api=new Hono().post('/pets',defineHandler({json:PetSchema,response:PetSchema})(async(c,{json})=>{})).get('/',defineHandler(async(c)=>{}))`)
   })
 })

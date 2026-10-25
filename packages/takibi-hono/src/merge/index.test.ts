@@ -2252,3 +2252,41 @@ describe('mergeHandlerFile: the user’s names of a generator-managed import', (
     )
   })
 })
+
+describe('mergeHandlerFile: an inline defineHandler in a route call', () => {
+  it('keeps the handler and the middleware before it; the options are the spec’s again', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { defineHandler } from 'hono/factory'",
+      "import * as z from 'zod'",
+      '',
+      'export const api = new Hono()',
+      '  /** Lists the pets. */',
+      "  .get('/pets', defineHandler({ query: z.object({}) })(count, async (c, { query }) => []))",
+      "  .post('/pets', defineHandler({ json: PetSchema })(async (c, { json }) => {}))",
+      "  .on('HEAD', '/pets', defineHandler(async (c) => c.body(null, 200)))",
+      '',
+    ].join('\n')
+    // The generated code as the generator hands it to the merge: one line, formatted after.
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { defineHandler } from 'hono/factory'",
+      "import * as z from 'zod'",
+      '',
+      "export const api = new Hono().get('/pets', defineHandler({ query: z.object({ limit: z.string() }) })(async (c, { query }) => {})).post('/pets', defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {})).on('HEAD', '/pets', defineHandler({ header: z.object({}) })(async (c, { header }) => {}))",
+      '',
+    ].join('\n')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { defineHandler } from 'hono/factory'",
+        "import * as z from 'zod'",
+        '',
+        'export const api = new Hono()',
+        '  /** Lists the pets. */',
+        "  .get('/pets', defineHandler({ query: z.object({ limit: z.string() }) })(count, async (c, { query }) => [])).post('/pets', defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {})).on('HEAD', '/pets', defineHandler({ header: z.object({}) })(async (c) => c.body(null, 200)))",
+        '',
+      ].join('\n'),
+    )
+  })
+})

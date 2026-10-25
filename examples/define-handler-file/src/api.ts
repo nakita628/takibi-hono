@@ -25,49 +25,51 @@ export const ErrorSchema = z.object({ message: z.string() })
 
 export type Error = z.infer<typeof ErrorSchema>
 
-export const getHealthHandler = defineHandler({ response: z.object({ status: z.literal('ok') }) })(
-  async (c) => ({ status: 'ok' as const }),
-)
-
-export const getUsersHandler = defineHandler({
-  query: z.object({ limit: z.coerce.number().int().min(1).max(100).default(20).exactOptional() }),
-  response: z.array(UserSchema),
-})(async (c, { query }) => store.users().slice(0, query.limit ?? 20))
-
-export const postUsersHandler = defineHandler({ json: NewUserSchema, response: UserSchema })(async (
-  c,
-  { json },
-) => {
-  c.status(201)
-  return store.addUser(json.name)
-})
-
-export const getUsersUserIdHandler = defineHandler({
-  param: z.object({ userId: z.coerce.number().int().min(1) }),
-  response: UserSchema,
-})(async (c, { param }) => {
-  const user = store.user(param.userId)
-  if (!user) throw new HTTPException(404, { res: c.json({ message: 'user not found' }, 404) })
-  return user
-})
-
-export const getPostsHandler = defineHandler({
-  query: z.object({ authorId: z.coerce.number().int().min(1).exactOptional() }),
-  response: z.array(PostSchema),
-})(async (c, { query }) => store.posts(query.authorId))
-
-export const postPostsHandler = defineHandler({ json: NewPostSchema, response: PostSchema })(async (
-  c,
-  { json },
-) => {
-  c.status(201)
-  return store.addPost(json.authorId, json.title)
-})
-
 export const api = new Hono()
-  .get('/health', getHealthHandler)
-  .get('/users', getUsersHandler)
-  .post('/users', postUsersHandler)
-  .get('/users/:userId', getUsersUserIdHandler)
-  .get('/posts', getPostsHandler)
-  .post('/posts', postPostsHandler)
+  .get(
+    '/health',
+    defineHandler({ response: z.object({ status: z.literal('ok') }) })(async (c) => ({
+      status: 'ok' as const,
+    })),
+  )
+  .get(
+    '/users',
+    defineHandler({
+      query: z.object({
+        limit: z.coerce.number().int().min(1).max(100).default(20).exactOptional(),
+      }),
+      response: z.array(UserSchema),
+    })(async (c, { query }) => store.users().slice(0, query.limit ?? 20)),
+  )
+  .post(
+    '/users',
+    defineHandler({ json: NewUserSchema, response: UserSchema })(async (c, { json }) => {
+      c.status(201)
+      return store.addUser(json.name)
+    }),
+  )
+  .get(
+    '/users/:userId',
+    defineHandler({
+      param: z.object({ userId: z.coerce.number().int().min(1) }),
+      response: UserSchema,
+    })(async (c, { param }) => {
+      const user = store.user(param.userId)
+      if (!user) throw new HTTPException(404, { res: c.json({ message: 'user not found' }, 404) })
+      return user
+    }),
+  )
+  .get(
+    '/posts',
+    defineHandler({
+      query: z.object({ authorId: z.coerce.number().int().min(1).exactOptional() }),
+      response: z.array(PostSchema),
+    })(async (c, { query }) => store.posts(query.authorId)),
+  )
+  .post(
+    '/posts',
+    defineHandler({ json: NewPostSchema, response: PostSchema })(async (c, { json }) => {
+      c.status(201)
+      return store.addPost(json.authorId, json.title)
+    }),
+  )

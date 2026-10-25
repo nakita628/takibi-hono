@@ -221,12 +221,12 @@ npx takibi-hono -o src/api.ts --schema valibot
 
 `--help`, `--version` and `--completions <bash|zsh|fish|sh>` are also available.
 
-The one-shot mode writes a single file: the document's `components.schemas`, one
-[`defineHandler`](#definehandler) per operation (`getPetsHandler`), and `api`, a Hono that
-registers every operation. The input defaults to the one of `openapi.yaml`, `openapi.json` or
-`main.tsp` in the current directory, and the library (`-s`) to `zod`. Mount `api` on your app
-(`new Hono().route('/', api)`), and run it again after a spec change: the handlers you wrote
-survive, as in [handler merge](#handler-merge).
+The one-shot mode writes a single file: the document's `components.schemas` and `api`, a
+Hono that registers every operation with its [`defineHandler`](#definehandler) written inline
+in the route call, as Hono's own example writes it. The input defaults to the one of
+`openapi.yaml`, `openapi.json` or `main.tsp` in the current directory, and the library (`-s`)
+to `zod`. Mount `api` on your app (`new Hono().route('/', api)`), and run it again after a
+spec change: the handlers you wrote survive, as in [handler merge](#handler-merge).
 
 ### Vite Plugin
 
@@ -244,10 +244,11 @@ The plugin watches your OpenAPI/TypeSpec files and config, automatically regener
 
 ## defineHandler
 
-`defineHandler: true` (or the one-shot `-o`) generates Hono 5's
-[`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) from `hono/factory`: one
-export per operation, named by its method and path as hono-takibi names a route (`postPetsHandler`
-where hono-takibi has `postPetsRoute`), and the group's Hono registering them.
+`defineHandler: true` generates Hono 5's
+[`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) from `hono/factory`. A
+handler file is a file of its own beside the app, so, as hono-takibi's `-o` writes the route
+definitions, it declares each operation's handler by name, its method and path (`postPetsHandler`
+where hono-takibi has `postPetsRoute`), and the group's Hono registers them:
 
 ```ts
 // src/handlers/pets.ts
@@ -273,6 +274,16 @@ export const petsHandler = new Hono()
   .get('/pets/:petId', getPetsPetIdHandler)
 ```
 
+The one-shot `-o` splits nothing into files, so it writes each `defineHandler` inline in the
+route call instead:
+
+```ts
+export const api = new Hono().post(
+  '/pets',
+  defineHandler({ json: NewPetSchema, response: PetSchema })(async (c, { json }) => {}),
+)
+```
+
 Each request target the operation declares (`param`, `query`, `header`, `cookie`, `form`,
 `json`) is a Standard Schema option, and `response` is the JSON schema of its success
 responses (`anyOf` them when they differ), so the value the handler returns is validated too.
@@ -292,7 +303,7 @@ this is written, and `defineHandler` is marked experimental there.
 When regenerating, takibi-hono **preserves your hand-written code**:
 
 - Handler bodies `(c) => { ... }` — your implementation logic is kept
-- `defineHandler` handlers, by name, with the middleware before them — their options are regenerated
+- `defineHandler` handlers, declared by name or inline in a route call, with the middleware before them — their options are regenerated
 - User-added imports — only generator-managed imports are updated; of one the generator also writes (`hono`, `hono/factory`), the names it does not import are kept
 - Non-handler code (helpers, constants, middleware) — left untouched
 - JSDoc comments on routes and `defineHandler` declarations — restored after regeneration

@@ -313,13 +313,12 @@ export function toOperationVarName(method: string, path: string) {
 }
 
 /**
- * `export const <name>=defineHandler({...})(async(c,{...})=>{})`: the validators of the
- * operation as `defineHandler` options, each a Standard Schema, the response schema under
- * `response`, and a stub handler that takes the validated targets apart for the merge to
- * fill. An operation that validates nothing is `defineHandler(async(c)=>{})`.
+ * `defineHandler({...})(async(c,{...})=>{})`: the validators of the operation as
+ * `defineHandler` options, each a Standard Schema, the response schema under `response`, and
+ * a stub handler that takes the validated targets apart for the merge to fill. An operation
+ * that validates nothing is `defineHandler(async(c)=>{})`.
  */
-function makeDefineHandlerCode(
-  name: string,
+function makeDefineHandlerExpression(
   route: Route,
   context: HandlerContext,
   adapter: ComponentAdapter,
@@ -340,9 +339,19 @@ function makeDefineHandlerCode(
   ]
   const input = targets.length > 0 ? `,{${targets.join(',')}}` : ''
   const stub = `async(c${input})=>{}`
-  const call =
-    options.length > 0 ? `defineHandler({${options.join(',')}})(${stub})` : `defineHandler(${stub})`
-  return `export const ${name}=${call}`
+  return options.length > 0
+    ? `defineHandler({${options.join(',')}})(${stub})`
+    : `defineHandler(${stub})`
+}
+
+/** The operation's `defineHandler` as a declaration of its own, `export const <name>=...`. */
+function makeDefineHandlerCode(
+  name: string,
+  route: Route,
+  context: HandlerContext,
+  adapter: ComponentAdapter,
+) {
+  return `export const ${name}=${makeDefineHandlerExpression(route, context, adapter)}`
 }
 
 /**
@@ -373,9 +382,11 @@ function makeDefineHandlerModule(
 
 /**
  * The one-shot output (`takibi-hono <input> -o <output.ts>`): the document's
- * `components.schemas`, one `defineHandler` per operation and `api`, a Hono registering every
- * operation, in one file. `api` is mounted by the app (`new Hono().route('/', api)`), so that
- * middleware and a base path stay the app's own.
+ * `components.schemas` and `api`, a Hono registering every operation, in one file. Nothing
+ * here is split into files, so each `defineHandler` is written inline in the route call, as
+ * Hono's own example writes it; a handler file of a config, which is a file of its own beside
+ * the app, declares each operation's handler by name instead. `api` is mounted by the app
+ * (`new Hono().route('/', api)`), so that middleware and a base path stay the app's own.
  */
 export function makeSingleFileCode(openapi: OpenAPI, lib: SchemaLib) {
   const components = openapi.components
@@ -395,11 +406,17 @@ export function makeSingleFileCode(openapi: OpenAPI, lib: SchemaLib) {
     defineHandler: true,
   }
   const adapter = makeInlineAdapter(lib, { resolver: false })
+  const calls = routes.map((route) =>
+    makeRouteCall(route.method, [
+      `'${route.path}'`,
+      makeDefineHandlerExpression(route, context, adapter),
+    ]),
+  )
   const body = [
     ...schemas.map((schema) => schema.code),
-    makeDefineHandlerModule('api', routes, context, adapter),
-  ].join('\n\n')
-  return withImports(body, makeLibraryImports(lib))
+    `export const api=new Hono()${calls.join('')}`,
+  ]
+  return withImports(body.join('\n\n'), makeLibraryImports(lib))
 }
 
 /** `/users` → `usersHandler`, `__root` → `rootHandler`. */

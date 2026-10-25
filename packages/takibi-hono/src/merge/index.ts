@@ -33,6 +33,8 @@ type RouteInfo = {
   readonly body: string
   /** The JSDoc right above the call, if any. */
   readonly comment: string | undefined
+  /** When the handler is an inline `defineHandler(...)`: the arguments of the call that takes the handler. */
+  readonly handler: DefineHandlerInfo | undefined
 }
 
 /** A `.get('/path', ...)` or `.on('METHOD', '/path', ...)` call, by the name it is called by. */
@@ -152,7 +154,10 @@ function variableStatements(source: Source): readonly VariableStatement[] {
 }
 
 /** Applied right-to-left so earlier indices are not invalidated. */
-function applyRangeOps(code: string, ops: readonly [start: number, end: number, text: string][]) {
+function applyRangeOps(
+  code: string,
+  ops: readonly (readonly [start: number, end: number, text: string])[],
+) {
   return [...ops]
     .toSorted(([a], [b]) => b - a)
     .reduce((acc, [start, end, text]) => acc.slice(0, start) + text + acc.slice(end), code)
@@ -192,24 +197,15 @@ function commentBefore(code: string, end: number) {
 }
 
 /**
- * Every top-level `defineHandler` declaration: `const x=defineHandler({...})(h)` (validated)
- * or `const x=defineHandler(h)` (plain), with the arguments of the call that takes the
- * handler. A declaration whose handler is still the stub has nothing of the user's.
+ * The arguments of the call that takes the handler, when `node` is a `defineHandler`:
+ * `defineHandler({...})(<args>)` (validated) or `defineHandler(<args>)` (plain). Middleware
+ * the user put before the handler is among them.
  */
-function defineHandlerCalls(source: Source): readonly DefineHandlerCall[] {
-  const { body } = source.program
-  return variableStatements(source).flatMap((statement) => {
-    const node = body.find((s) => s.start === statement.start)
-    const declaration = node?.type === 'ExportNamedDeclaration' ? node.declaration : node
-    if (declaration?.type !== 'VariableDeclaration') return []
-    const [declarator] = declaration.declarations
-    const name = declarator?.id.type === 'Identifier' ? declarator.id.name : undefined
-    const init = declarator?.init
-    if (name === undefined || init?.type !== 'CallExpression') return []
-    const callee = init.callee.type === 'CallExpression' ? init.callee.callee : init.callee
-    if (callee.type !== 'Identifier' || callee.name !== 'defineHandler') return []
-    return init.arguments.length > 0 ? [{ name, statement, args: init.arguments }] : []
-  })
+function handlerArguments(node: Node | undefined): readonly Node[] | undefined {
+  if (node?.type !== 'CallExpression') return undefined
+  const callee = node.callee.type === 'CallExpression' ? node.callee.callee : node.callee
+  if (callee.type !== 'Identifier' || callee.name !== 'defineHandler') return undefined
+  return node.arguments.length > 0 ? node.arguments : undefined
 }
 
 /** `async (c, { json }) => {}` or `(c) => {}`: a handler with nothing in it yet. */
@@ -221,20 +217,56 @@ function isEmptyHandler(node: Node) {
   )
 }
 
+/** What a `defineHandler` contributes: its handler arguments as written, and whether they are the stub. */
+function defineHandlerInfo(
+  source: Source,
+  args: readonly Node[],
+  commentEnd: number,
+): DefineHandlerInfo {
+  const first = args[0]
+  const last = args.at(-1)
+  return {
+    args: first && last ? source.code.slice(first.start, last.end) : '',
+    stub: args.length === 1 && first !== undefined && isEmptyHandler(first),
+    comment: commentBefore(source.code, commentEnd),
+  }
+}
+
+/** The span of the handler arguments, for the regenerated ones to take the user's. */
+function handlerArgumentsOp(
+  args: readonly Node[],
+  existing: DefineHandlerInfo | undefined,
+): readonly [start: number, end: number, text: string] | undefined {
+  const first = args[0]
+  const last = args.at(-1)
+  if (!existing || existing.stub || !first || !last) return undefined
+  return [first.start, last.end, existing.args]
+}
+
+/**
+ * Every top-level `defineHandler` declaration, `const x=defineHandler(...)`, with the
+ * arguments of the call that takes the handler. A declaration whose handler is still the
+ * stub has nothing of the user's.
+ */
+function defineHandlerCalls(source: Source): readonly DefineHandlerCall[] {
+  const { body } = source.program
+  return variableStatements(source).flatMap((statement) => {
+    const node = body.find((s) => s.start === statement.start)
+    const declaration = node?.type === 'ExportNamedDeclaration' ? node.declaration : node
+    if (declaration?.type !== 'VariableDeclaration') return []
+    const [declarator] = declaration.declarations
+    const name = declarator?.id.type === 'Identifier' ? declarator.id.name : undefined
+    const args = handlerArguments(declarator?.init ?? undefined)
+    return name !== undefined && args ? [{ name, statement, args }] : []
+  })
+}
+
 function extractDefineHandlers(source: Source) {
   return new Map(
-    defineHandlerCalls(source).map(({ name, statement, args }) => {
-      const first = args[0]
-      const last = args.at(-1)
-      return [
-        name,
-        {
-          args: first && last ? source.code.slice(first.start, last.end) : '',
-          stub: args.length === 1 && first !== undefined && isEmptyHandler(first),
-          comment: commentBefore(source.code, statement.start),
-        } satisfies DefineHandlerInfo,
-      ]
-    }),
+    defineHandlerCalls(source).map(({ name, statement, args }) => [
+      name,
+      defineHandlerInfo(source, args, statement.start),
+    ]),
   )
 }
 
@@ -246,15 +278,10 @@ function replaceDefineHandlers(
   generated: Source,
   existingHandlers: ReadonlyMap<string, DefineHandlerInfo>,
 ) {
-  const ops: [start: number, end: number, text: string][] = defineHandlerCalls(generated).flatMap(
-    ({ name, args }) => {
-      const existing = existingHandlers.get(name)
-      const first = args[0]
-      const last = args.at(-1)
-      if (!existing || existing.stub || !first || !last) return []
-      return [[first.start, last.end, existing.args]]
-    },
-  )
+  const ops = defineHandlerCalls(generated).flatMap(({ name, args }) => {
+    const op = handlerArgumentsOp(args, existingHandlers.get(name))
+    return op ? [op] : []
+  })
   return applyRangeOps(generated.code, ops)
 }
 
@@ -306,11 +333,13 @@ function extractRouteInfo(source: Source) {
   const result = new Map<string, RouteInfo>()
   for (const { args, name, method, routePath } of routeCalls(source)) {
     const last = args.at(-1)
+    const handlerArgs = handlerArguments(last)
     result.set(`${method}:${routePath}`, {
       method,
       routePath,
       body: last ? textOf(source.code, last) : '',
       comment: commentBefore(source.code, name.start - 1),
+      handler: handlerArgs && last ? defineHandlerInfo(source, handlerArgs, last.start) : undefined,
     })
   }
   return result
@@ -318,14 +347,22 @@ function extractRouteInfo(source: Source) {
 
 function replaceRouteParts(generated: Source, existingRoutes: ReadonlyMap<string, RouteInfo>) {
   const seenPositions = new Set<number>()
-  const ops: [start: number, end: number, text: string][] = []
+  const ops: (readonly [start: number, end: number, text: string])[] = []
   for (const { args, name, method, routePath } of routeCalls(generated)) {
     if (seenPositions.has(name.start)) continue
     seenPositions.add(name.start)
     const existing = existingRoutes.get(`${method}:${routePath}`)
     if (!existing) continue
-    if (existing.body.replaceAll(/\s/gu, '') === STUB) continue
     const last = args.at(-1)
+    // An inline `defineHandler` keeps its handler and takes the regenerated options; a handler
+    // that is still the stub is regenerated whole.
+    const generatedHandlerArgs = handlerArguments(last)
+    if (generatedHandlerArgs && existing.handler) {
+      const op = handlerArgumentsOp(generatedHandlerArgs, existing.handler)
+      if (op) ops.push(op)
+      continue
+    }
+    if (existing.body.replaceAll(/\s/gu, '') === STUB) continue
     if (last) ops.push([last.start, last.end, existing.body])
   }
   return applyRangeOps(generated.code, ops)
