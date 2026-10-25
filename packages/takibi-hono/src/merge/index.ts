@@ -89,6 +89,21 @@ function extractImportSection(source: Source) {
   return end === 0 ? '' : `${source.code.slice(0, end)}\n`
 }
 
+/**
+ * Whether `code` refers to a name a declaration binds. Every identifier counts, a member name
+ * (`x.store`) included: keeping an import that is not needed is a lint warning, dropping one
+ * that is is a broken file.
+ */
+function isReferenced(decl: ImportDeclaration, code: string) {
+  const locals = new Set(decl.specifiers.map((specifier) => specifier.local.name))
+  const { program } = parseSource(code)
+  return descendantsWhere(
+    program,
+    (node): node is Node & { readonly name: string } =>
+      (node.type === 'Identifier' || node.type === 'JSXIdentifier') && 'name' in node,
+  ).some((node) => locals.has(node.name))
+}
+
 /** The name an import specifier imports (`a` in `{ a as b }`). */
 function importedName(specifier: ImportDeclaration['specifiers'][number]) {
   if (specifier.type !== 'ImportSpecifier') return undefined
@@ -210,9 +225,13 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
 
   const mergedGeneratedFile = parseSnippet(mergedGenerated)
   const generatedImportText = extractImportSection(mergedGeneratedFile)
-  const mergedImports = mergeImports(existingFile, generatedImportText)
   const mergedGeneratedBody = mergedGenerated.slice(generatedImportText.length).trimStart()
   const nonHandlerSection = nonHandlerCode.length > 0 ? `${nonHandlerCode.join('\n\n')}\n\n` : ''
+  const mergedImports = mergeImports(
+    existingFile,
+    generatedImportText,
+    nonHandlerSection + mergedGeneratedBody,
+  )
   const assembled = `${[mergedImports, '', nonHandlerSection + mergedGeneratedBody]
     .join('\n')
     .replaceAll(/\n{3,}/gu, '\n\n')
@@ -230,11 +249,15 @@ export function mergeAppFile(existingCode: string, generatedCode: string) {
   const [existingLast, generatedLast] = [existingRoutes.at(-1), generatedRoutes.at(-1)]
   if (!existingFirst || !existingLast || !generatedFirst || !generatedLast) return generatedCode
   const generatedImportText = extractImportSection(generatedFile)
-  const mergedImports = mergeAppImports(existingFile, generatedImportText)
   const existingImportText = extractImportSection(existingFile)
   const betweenImportsAndRoutes = existingCode.slice(existingImportText.length, existingFirst.start)
   const routes = generatedCode.slice(generatedFirst.start, generatedLast.end)
   const afterRoutes = existingCode.slice(existingLast.end)
+  const mergedImports = mergeAppImports(
+    existingFile,
+    generatedImportText,
+    betweenImportsAndRoutes + routes + afterRoutes,
+  )
   return `${[mergedImports.trimEnd(), '\n', betweenImportsAndRoutes, routes, afterRoutes]
     .join('')
     .replaceAll(/\n{3,}/gu, '\n\n')
@@ -268,12 +291,28 @@ function restoreRouteComments(code: string, existingRoutes: ReadonlyMap<string, 
     }, code)
 }
 
-/** Only `hono` and relative imports are generator-managed; everything else from the user is preserved verbatim. */
-function mergeAppImports(existingFile: Source, generatedImports: string) {
+/**
+ * `hono` and the modules the generated entry imports (the handlers) are generator-managed, and
+ * so is a relative import `body` no longer refers to; everything else from the user, a
+ * relative one their code still uses (`import { auth } from './auth'`) included, is preserved
+ * verbatim.
+ */
+function mergeAppImports(existingFile: Source, generatedImports: string, body: string) {
+  const generatedDecls = importDeclarations(parseSnippet(generatedImports))
+  const generatedSpecifiers = new Set(generatedDecls.map((decl) => decl.source.value))
+  const generatedNamedImports = new Set(
+    generatedDecls.flatMap((decl) =>
+      decl.specifiers.map(importedName).filter((name) => name !== undefined),
+    ),
+  )
   const userImports = importDeclarations(existingFile)
     .filter((decl) => {
       const spec = decl.source.value
-      return spec !== 'hono' && !spec.startsWith('.')
+      if (spec === 'hono' || generatedSpecifiers.has(spec)) return false
+      // The handlers imported from where they were before `output` moved.
+      const named = decl.specifiers.map(importedName).filter((name) => name !== undefined)
+      if (named.length > 0 && named.every((name) => generatedNamedImports.has(name))) return false
+      return !spec.startsWith('.') || isReferenced(decl, body)
     })
     .map((decl) => textOf(existingFile.code, decl))
   return userImports.length > 0
@@ -304,8 +343,11 @@ const HANDLER_IMPORT_SOURCES = new Set<string>([
   'effect/Schema',
 ])
 
-/** User imports are preserved unless generator-managed (HANDLER_IMPORT_SOURCES), relative, or duplicated by generated names. */
-function mergeImports(existingFile: Source, generatedImports: string) {
+/**
+ * User imports are preserved unless generator-managed (HANDLER_IMPORT_SOURCES), duplicated by
+ * generated names, or a relative import `body` no longer refers to.
+ */
+function mergeImports(existingFile: Source, generatedImports: string, body: string) {
   const generatedDecls = importDeclarations(parseSnippet(generatedImports))
   const generatedSpecifiers = new Set(generatedDecls.map((d) => d.source.value))
   const generatedNamedImports = new Set(
@@ -321,10 +363,12 @@ function mergeImports(existingFile: Source, generatedImports: string) {
       if (decl.importKind === 'type') return true
       const spec = decl.source.value
       if (HANDLER_IMPORT_SOURCES.has(spec) || generatedSpecifiers.has(spec)) return false
-      // A value import from a relative path is generator-managed.
-      if (spec.startsWith('.')) return false
       const named = decl.specifiers.map(importedName).filter((name) => name !== undefined)
-      return !(named.length > 0 && named.every((name) => generatedNamedImports.has(name)))
+      if (named.length > 0 && named.every((name) => generatedNamedImports.has(name))) return false
+      // A relative value import is the generator's when nothing refers to it any more: one
+      // of a component module that moved, or of a component the document dropped. One the
+      // user's code still uses (`import { db } from '../db'`) is the user's.
+      return !spec.startsWith('.') || isReferenced(decl, body)
     })
     .map((decl) => textOf(existingFile.code, decl))
   return userImports.length > 0
