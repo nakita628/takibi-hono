@@ -6,14 +6,22 @@ export type Tag = Schema.Schema.Type<typeof TagSchema>
 
 export const PetSchema = Schema.Struct({
   id: Schema.Number.check(Schema.isInt()),
-  name: Schema.String.check(Schema.isMinLength(1)),
+  name: Schema.String.check(
+    Schema.makeFilter((input) => [...input].length >= 1, {
+      expected: 'a string of at least 1 character',
+    }),
+  ),
   tag: Schema.optional(TagSchema),
 }).annotate({ description: 'A pet in the store' })
 
 export type Pet = Schema.Schema.Type<typeof PetSchema>
 
 export const NewPetSchema = Schema.Struct({
-  name: Schema.String.check(Schema.isMinLength(1)),
+  name: Schema.String.check(
+    Schema.makeFilter((input) => [...input].length >= 1, {
+      expected: 'a string of at least 1 character',
+    }),
+  ),
   tag: Schema.optional(TagSchema),
 })
 
@@ -23,7 +31,7 @@ export const ErrorSchema = Schema.Struct({ message: Schema.String })
 
 export type Error = Schema.Schema.Type<typeof ErrorSchema>
 
-export const LimitParamsSchema = Schema.NumberFromString.check(
+export const LimitParamsSchema = Schema.FiniteFromString.check(
   Schema.isInt(),
   Schema.isGreaterThanOrEqualTo(1),
   Schema.isLessThanOrEqualTo(100),

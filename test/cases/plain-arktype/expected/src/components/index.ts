@@ -6,13 +6,20 @@ export type Tag = typeof TagSchema.infer
 
 export const PetSchema = type({
   id: 'number.integer',
-  name: type('string >= 1'),
+  name: type('string').narrow(
+    (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+  ),
   'tag?': TagSchema,
 }).describe('A pet in the store')
 
 export type Pet = typeof PetSchema.infer
 
-export const NewPetSchema = type({ name: type('string >= 1'), 'tag?': TagSchema })
+export const NewPetSchema = type({
+  name: type('string').narrow(
+    (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+  ),
+  'tag?': TagSchema,
+})
 
 export type NewPet = typeof NewPetSchema.infer
 
@@ -20,9 +27,12 @@ export const ErrorSchema = type({ message: 'string' })
 
 export type Error = typeof ErrorSchema.infer
 
-export const LimitParamsSchema = type('string.integer.parse').to(
-  type('number.integer >= 1').and(type('number.integer <= 100')),
-)
+export const LimitParamsSchema = type('string')
+  .pipe((data, ctx) => {
+    const value = Number(data)
+    return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+  })
+  .to('number.integer >= 1 & number.integer <= 100')
 export const RequestIdParamsSchema = type('string')
 
 export const TotalCountHeaderSchema = type('number.integer')

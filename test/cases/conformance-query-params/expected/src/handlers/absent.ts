@@ -12,7 +12,7 @@ export const absentHandler = new Hono().get(
       empty_ok: z.coerce.number().int().exactOptional(),
       empty_def: z.coerce.number().int().default(7).exactOptional(),
       empty_str: z.string().exactOptional(),
-      ref_def: CountSchema.default(3).default(3).exactOptional(),
+      ref_def: CountSchema.default(3).exactOptional(),
     }),
   ),
   (c) => {},

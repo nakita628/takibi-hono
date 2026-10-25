@@ -9,13 +9,33 @@ export const stylesHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      csv: z.array(z.coerce.number().int()).exactOptional(),
-      pipes: z.array(z.coerce.number().int()).exactOptional(),
-      spaces: z.array(z.coerce.number().int()).exactOptional(),
+      csv: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .exactOptional(),
+      pipes: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .exactOptional(),
+      spaces: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .exactOptional(),
       filter: z
         .object({ name: z.string().exactOptional(), age: z.coerce.number().int().exactOptional() })
         .exactOptional(),
-      csv_str: z.array(z.string()).exactOptional(),
+      csv_str: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.string()),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

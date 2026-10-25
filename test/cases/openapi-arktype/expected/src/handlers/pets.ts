@@ -28,9 +28,12 @@ export const petsHandler = new Hono()
     validator(
       'query',
       type({
-        'limit?': type('string.integer.parse').to(
-          type('number.integer >= 1').and(type('number.integer <= 100')),
-        ),
+        'limit?': type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1 & number.integer <= 100'),
         'tag?': TagSchema,
       }),
     ),
@@ -77,13 +80,31 @@ export const petsHandler = new Hono()
         '404': NotFoundResponse,
       },
     }),
-    validator('param', type({ petId: type('string.integer.parse').to('number.integer >= 1') })),
+    validator(
+      'param',
+      type({
+        petId: type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1'),
+      }),
+    ),
     (c) => {},
   )
   .delete(
     '/pets/:petId',
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
-    validator('param', type({ petId: 'string.integer.parse' })),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
     (c) => {},
   )
   .post(
@@ -92,7 +113,23 @@ export const petsHandler = new Hono()
       operationId: 'uploadPhoto',
       responses: { '201': { description: 'Uploaded' } },
     }),
-    validator('param', type({ petId: 'string.integer.parse' })),
-    validator('form', type({ caption: type('string >= 1'), 'featured?': 'boolean' })),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    validator(
+      'form',
+      type({
+        caption: type('string').narrow(
+          (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+        ),
+        'featured?': 'boolean',
+      }),
+    ),
     (c) => {},
   )

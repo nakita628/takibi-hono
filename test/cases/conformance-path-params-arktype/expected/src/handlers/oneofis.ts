@@ -6,6 +6,23 @@ import { EchoResponse } from '../components'
 export const oneofisHandler = new Hono().get(
   '/oneofis/:value',
   describeRoute({ operationId: 'oneofisParam', responses: { '200': EchoResponse } }),
-  validator('param', type({ value: 'string.integer.parse | string' })),
+  validator(
+    'param',
+    type({
+      value: type('unknown').pipe((data, ctx) => {
+        for (const branch of [
+          type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+          type('string'),
+        ]) {
+          const out = branch(data)
+          if (!(out instanceof type.errors)) return out
+        }
+        return ctx.error('one of the members')
+      }),
+    }),
+  ),
   (c) => {},
 )

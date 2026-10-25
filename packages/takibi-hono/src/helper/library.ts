@@ -65,7 +65,7 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     imports: [
       { name: 'Effect', from: 'effect' },
       { name: 'Schema', from: 'effect' },
-      // schema-to-library spells the string transforms (`x-toLowerCase`, `x-toUpperCase`,
+      // schema-truth spells the string transforms (`x-toLowerCase`, `x-toUpperCase`,
       // the boolean decode) through `SchemaTransformation`.
       { name: 'SchemaTransformation', from: 'effect' },
     ],

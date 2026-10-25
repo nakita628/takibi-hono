@@ -12,7 +12,11 @@ export const urlencodedHandler = new Hono().post(
       name: z.string().exactOptional(),
       age: z.int().min(0).exactOptional(),
       ratio: z.number().exactOptional(),
-      big: z.int64().exactOptional(),
+      big: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .exactOptional(),
       active: z.boolean().exactOptional(),
       level: z.union([z.literal(1), z.literal(2)]).exactOptional(),
       agreed: z.literal(true).exactOptional(),
@@ -21,8 +25,13 @@ export const urlencodedHandler = new Hono().post(
       flag: FlagSchema.exactOptional(),
       tags: z.array(z.string()).exactOptional(),
       ids: z.array(z.int()).exactOptional(),
-      moment: z.iso.datetime().exactOptional(),
-      clock: z.iso.time().exactOptional(),
+      moment: z.iso.datetime({ offset: true }).exactOptional(),
+      clock: z
+        .string()
+        .regex(
+          /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/,
+        )
+        .exactOptional(),
       maybe: z.int().nullable().exactOptional(),
       label: z.string().nullable().exactOptional(),
       constructor: z.int().exactOptional(),

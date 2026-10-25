@@ -9,7 +9,7 @@ export const multipleHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.multipleOf(5)),
+      value: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.multipleOf(5)),
     }),
   ),
   (c) => {},

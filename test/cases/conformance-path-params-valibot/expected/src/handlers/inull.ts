@@ -9,7 +9,11 @@ export const inullHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
+      value: v.pipe(
+        v.unknown(),
+        v.transform((input) => (input === 'null' ? null : input)),
+        v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      ),
     }),
   ),
   (c) => {},

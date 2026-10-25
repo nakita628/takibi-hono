@@ -9,7 +9,11 @@ export const CountSchema = Schema.Number.check(
 export type Count = Schema.Schema.Type<typeof CountSchema>
 
 export const IdParamsSchema = resolver(
-  Schema.toStandardSchemaV1(Schema.NumberFromString.check(Schema.isInt())),
+  Schema.toStandardSchemaV1(
+    Schema.BigIntFromString.check(
+      Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+    ),
+  ),
 )
 
 export const EchoResponse = {

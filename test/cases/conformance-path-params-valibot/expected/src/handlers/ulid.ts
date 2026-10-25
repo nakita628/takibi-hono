@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const ulidHandler = new Hono().get(
   '/ulid/:value',
   describeRoute({ operationId: 'ulidParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.string() })),
+  validator('param', v.object({ value: v.pipe(v.string(), v.ulid()) })),
   (c) => {},
 )

@@ -10,7 +10,7 @@ export const multipartHandler = new Hono().post(
     'form',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        file: Schema.String,
+        file: Schema.instanceOf(File),
         age: Schema.optional(Schema.Number.check(Schema.isInt())),
         active: Schema.optional(Schema.Boolean),
         ids: Schema.optional(Schema.Array(Schema.Number.check(Schema.isInt()))),

@@ -12,7 +12,15 @@ export const CountAliasSchema = CountSchema
 
 export type CountAlias = v.InferOutput<typeof CountAliasSchema>
 
-export const BigSchema = v.pipe(v.pipe(v.number(), v.integer()), v.metadata({ ref: 'Big' }))
+export const BigSchema = v.pipe(
+  v.pipe(
+    v.union([v.bigint(), v.pipe(v.number(), v.integer()), v.pipe(v.string(), v.regex(/^-?\d+$/))]),
+    v.transform((input) => BigInt(input)),
+    v.minValue(-9223372036854775808n),
+    v.maxValue(9223372036854775807n),
+  ),
+  v.metadata({ ref: 'Big' }),
+)
 
 export type Big = v.InferOutput<typeof BigSchema>
 
@@ -31,7 +39,10 @@ export const LevelSchema = v.pipe(
 
 export type Level = v.InferOutput<typeof LevelSchema>
 
-export const NameSchema = v.pipe(v.pipe(v.string(), v.minLength(2)), v.metadata({ ref: 'Name' }))
+export const NameSchema = v.pipe(
+  v.pipe(v.string(), v.minCodePoints(2)),
+  v.metadata({ ref: 'Name' }),
+)
 
 export type Name = v.InferOutput<typeof NameSchema>
 

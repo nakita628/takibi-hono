@@ -9,7 +9,7 @@ export const matrixHandler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.NumberFromString.check(Schema.isInt()) }),
+      Schema.Struct({ value: Schema.FiniteFromString.check(Schema.isInt()) }),
     ),
   ),
   (c) => {},

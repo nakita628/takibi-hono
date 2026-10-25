@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const e164Handler = new Hono().get(
   '/e164/:value',
   describeRoute({ operationId: 'e164Param', responses: { '200': EchoResponse } }),
-  validator('param', type({ value: 'string' })),
+  validator('param', type({ value: type(/^\+[1-9]\d{6,14}$/) })),
   (c) => {},
 )

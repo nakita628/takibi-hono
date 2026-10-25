@@ -10,7 +10,11 @@ export const optionalHandler = new Hono().get(
     'header',
     z.object({
       'x-int-opt': z.int().exactOptional(),
-      'x-int64-opt': z.int64().exactOptional(),
+      'x-int64-opt': z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .exactOptional(),
       'x-bool-opt': z.boolean().exactOptional(),
       'x-str-opt': z.string().exactOptional(),
       'x-ienum': z.union([z.literal(1), z.literal(2), z.literal(3)]).exactOptional(),
@@ -25,7 +29,7 @@ export const optionalHandler = new Hono().get(
         .regex(/^[a-z]+-\d{1,3}$/)
         .exactOptional(),
       'x-tx-lower': z.string().toLowerCase().exactOptional(),
-      'x-tx-email': z.email().toLowerCase().exactOptional(),
+      'x-tx-email': z.string().toLowerCase().pipe(z.email()).exactOptional(),
       'x-ref-int': CountSchema.exactOptional(),
       'x-str-arr': z.array(z.string()).exactOptional(),
       'x-obj': z

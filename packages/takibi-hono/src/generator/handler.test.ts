@@ -121,7 +121,7 @@ import{sValidator}from'@hono/standard-validator'
 import*as v from'valibot'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.transform(Number),v.number(),v.integer())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.transform(Number),v.number(),v.safeInteger())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
     ],
     [
       'typebox',
@@ -139,7 +139,7 @@ import{sValidator}from'@hono/standard-validator'
 import{type}from'arktype'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',type({id:"string"})),sValidator('query',type({"q?":"string.integer.parse"})),sValidator('json',ItemSchema),sValidator('form',type({"file?":"string"})),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',type({id:"string"})),sValidator('query',type({"q?":type("string").pipe((data, ctx) => { const value = Number(data); return Number.isSafeInteger(value) ? value : ctx.error("an integer") })})),sValidator('json',ItemSchema),sValidator('form',type({"file?":"string"})),(c)=>{})`,
     ],
     [
       'effect',
@@ -148,7 +148,7 @@ import{sValidator}from'@hono/standard-validator'
 import{Schema}from'effect'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String}))),sValidator('query',Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.NumberFromString.check(Schema.isInt()))}))),sValidator('json',Schema.toStandardSchemaV1(ItemSchema)),sValidator('form',Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)}))),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String}))),sValidator('query',Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.FiniteFromString.check(Schema.isInt()))}))),sValidator('json',Schema.toStandardSchemaV1(ItemSchema)),sValidator('form',Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)}))),(c)=>{})`,
     ],
   ] as const)('%s without hono-openapi: plain validator middleware', (lib, expected) => {
     expect(

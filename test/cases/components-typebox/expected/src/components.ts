@@ -54,9 +54,7 @@ export const UserSchema = Type.Object(
     id: Type.String({ format: 'uuid' }),
     email: Type.String({ format: 'email' }),
     role: Type.Optional(
-      Type.Optional(
-        Type.Union([Type.Literal('admin'), Type.Literal('member')], { default: 'member' }),
-      ),
+      Type.Union([Type.Literal('admin'), Type.Literal('member')], { default: 'member' }),
     ),
   },
   { ref: 'User' },

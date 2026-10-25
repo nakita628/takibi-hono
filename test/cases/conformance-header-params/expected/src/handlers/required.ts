@@ -10,7 +10,10 @@ export const requiredHandler = new Hono().get(
     'header',
     z.object({
       'x-id': z.int(),
-      'x-big': z.int64(),
+      'x-big': z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64()),
       'x-flag': z.boolean(),
       'x-name': z.string(),
       'x-note': z.int().exactOptional(),

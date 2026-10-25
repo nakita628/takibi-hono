@@ -10,20 +10,33 @@ export const requiredHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        id: Schema.NumberFromString.check(Schema.isInt()),
-        big: Schema.NumberFromString.check(Schema.isInt()),
-        flag: Schema.Literals(['true', 'false']).pipe(
+        id: Schema.FiniteFromString.check(Schema.isInt()),
+        big: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+        ),
+        flag: Schema.String.check(
+          Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        ).pipe(
           Schema.decodeTo(
             Schema.Boolean,
             SchemaTransformation.transform({
-              decode: (input) => input === 'true',
-              encode: (input) => (input ? 'true' : 'false'),
+              decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+              encode: (output) => (output ? 'true' : 'false'),
             }),
           ),
         ),
         name: Schema.String,
-        tags: Schema.Array(Schema.NumberFromString.check(Schema.isInt())),
-        note: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+        tags: Schema.Unknown.pipe(
+          Schema.decodeTo(
+            Schema.Unknown,
+            SchemaTransformation.transform<unknown, unknown>({
+              decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+              encode: (output) => output,
+            }),
+          ),
+          Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+        ),
+        note: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
       }),
     ),
   ),

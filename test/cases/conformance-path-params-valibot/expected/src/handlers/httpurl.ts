@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const httpurlHandler = new Hono().get(
   '/httpurl/:value',
   describeRoute({ operationId: 'httpurlParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.string() })),
+  validator('param', v.object({ value: v.pipe(v.string(), v.url(), v.regex(/^https?:\/\//)) })),
   (c) => {},
 )

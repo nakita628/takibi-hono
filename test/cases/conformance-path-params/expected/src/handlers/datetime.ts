@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const datetimeHandler = new Hono().get(
   '/datetime/:value',
   describeRoute({ operationId: 'datetimeParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.iso.datetime() })),
+  validator('param', z.object({ value: z.iso.datetime({ offset: true }) })),
   (c) => {},
 )

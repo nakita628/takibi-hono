@@ -11,7 +11,28 @@ export const optionalHandler = new Hono().get(
     Schema.toStandardSchemaV1(
       Schema.Struct({
         'x-int-opt': Schema.optional(Schema.Number.check(Schema.isInt())),
-        'x-int64-opt': Schema.optional(Schema.Number.check(Schema.isInt())),
+        'x-int64-opt': Schema.optional(
+          Schema.Union([
+            Schema.BigInt,
+            Schema.Number.check(Schema.isInt()),
+            Schema.String.check(Schema.isPattern(/^-?\d+$/)),
+          ])
+            .pipe(
+              Schema.decodeTo(
+                Schema.BigInt,
+                SchemaTransformation.transform({
+                  decode: (input) => BigInt(input),
+                  encode: (output) => output,
+                }),
+              ),
+            )
+            .check(
+              Schema.isBetweenBigInt({
+                minimum: -9223372036854775808n,
+                maximum: 9223372036854775807n,
+              }),
+            ),
+        ),
         'x-bool-opt': Schema.optional(Schema.Boolean),
         'x-str-opt': Schema.optional(Schema.String),
         'x-ienum': Schema.optional(Schema.Literals([1, 2, 3])),
@@ -29,7 +50,14 @@ export const optionalHandler = new Hono().get(
           ),
         ),
         'x-length': Schema.optional(
-          Schema.String.check(Schema.isMinLength(2), Schema.isMaxLength(4)),
+          Schema.String.check(
+            Schema.makeFilter((input) => [...input].length >= 2, {
+              expected: 'a string of at least 2 characters',
+            }),
+            Schema.makeFilter((input) => [...input].length <= 4, {
+              expected: 'a string of at most 4 characters',
+            }),
+          ),
         ),
         'x-pattern': Schema.optional(Schema.String.check(Schema.isPattern(/^[a-z]+-\d{1,3}$/))),
         'x-tx-lower': Schema.optional(

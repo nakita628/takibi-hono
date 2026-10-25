@@ -9,7 +9,11 @@ export const int64Handler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.NumberFromString.check(Schema.isInt()) }),
+      Schema.Struct({
+        value: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+        ),
+      }),
     ),
   ),
   (c) => {},

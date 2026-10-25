@@ -10,7 +10,14 @@ export const requiredHandler = new Hono().get(
     'header',
     type({
       'x-id': 'number.integer',
-      'x-big': 'number.integer',
+      'x-big': type('bigint | number.integer')
+        .or(/^-?\d+$/)
+        .pipe((data) => BigInt(data))
+        .narrow(
+          (data, ctx) =>
+            (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
+            ctx.mustBe('an int64'),
+        ),
       'x-flag': 'boolean',
       'x-name': 'string',
       'x-note?': 'number.integer',

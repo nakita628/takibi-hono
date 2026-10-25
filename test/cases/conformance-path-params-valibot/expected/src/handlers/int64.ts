@@ -8,7 +8,15 @@ export const int64Handler = new Hono().get(
   describeRoute({ operationId: 'int64Param', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?\d+$/),
+        v.transform((input) => BigInt(input)),
+        v.minValue(-9223372036854775808n),
+        v.maxValue(9223372036854775807n),
+      ),
+    }),
   ),
   (c) => {},
 )

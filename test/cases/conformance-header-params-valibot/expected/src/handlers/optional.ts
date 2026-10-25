@@ -11,7 +11,16 @@ export const optionalHandler = new Hono().get(
     v.partial(
       v.object({
         'x-int-opt': v.pipe(v.number(), v.integer()),
-        'x-int64-opt': v.pipe(v.number(), v.integer()),
+        'x-int64-opt': v.pipe(
+          v.union([
+            v.bigint(),
+            v.pipe(v.number(), v.integer()),
+            v.pipe(v.string(), v.regex(/^-?\d+$/)),
+          ]),
+          v.transform((input) => BigInt(input)),
+          v.minValue(-9223372036854775808n),
+          v.maxValue(9223372036854775807n),
+        ),
         'x-bool-opt': v.boolean(),
         'x-str-opt': v.string(),
         'x-ienum': v.union([v.literal(1), v.literal(2), v.literal(3)]),
@@ -20,7 +29,7 @@ export const optionalHandler = new Hono().get(
         'x-senum': v.picklist(['asc', 'desc']),
         'x-ioneof': v.union([v.pipe(v.number(), v.integer()), v.literal('all')]),
         'x-range': v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
-        'x-length': v.pipe(v.string(), v.minLength(2), v.maxLength(4)),
+        'x-length': v.pipe(v.string(), v.minCodePoints(2), v.maxCodePoints(4)),
         'x-pattern': v.pipe(v.string(), v.regex(/^[a-z]+-\d{1,3}$/)),
         'x-tx-lower': v.pipe(v.string(), v.toLowerCase()),
         'x-tx-email': v.pipe(v.string(), v.toLowerCase(), v.email()),
@@ -28,7 +37,12 @@ export const optionalHandler = new Hono().get(
         'x-str-arr': v.array(v.string()),
         'x-obj': v.partial(v.object({ a: v.pipe(v.number(), v.integer()), b: v.string() })),
         'x-objx': v.partial(v.object({ a: v.pipe(v.number(), v.integer()), b: v.string() })),
-        'X-Request-Id': v.pipe(v.string(), v.uuid()),
+        'X-Request-Id': v.pipe(
+          v.string(),
+          v.regex(
+            /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
+          ),
+        ),
         'X-Rate-Limit': v.pipe(v.number(), v.integer()),
         'accept-version': v.pipe(v.number(), v.integer()),
         x_underscore: v.pipe(v.number(), v.integer()),

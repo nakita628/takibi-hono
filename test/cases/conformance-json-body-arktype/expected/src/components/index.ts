@@ -7,7 +7,15 @@ declare global {
   }
 }
 
-export const IdSchema = type('number.integer >= 0').configure({ ref: 'Id' })
+export const IdSchema = type('bigint | number.integer')
+  .or(/^-?\d+$/)
+  .pipe((data) => BigInt(data))
+  .narrow(
+    (data, ctx) =>
+      (data >= -9223372036854775808n && data <= 9223372036854775807n) || ctx.mustBe('an int64'),
+  )
+  .narrow((data, ctx) => data >= 0n || ctx.mustBe('at least 0'))
+  .configure({ ref: 'Id' })
 
 export type Id = typeof IdSchema.infer
 

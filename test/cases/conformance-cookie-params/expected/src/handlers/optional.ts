@@ -10,7 +10,11 @@ export const optionalHandler = new Hono().get(
     'cookie',
     z.object({
       int_opt: z.int().exactOptional(),
-      int64_opt: z.int64().exactOptional(),
+      int64_opt: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .exactOptional(),
       bool_opt: z.boolean().exactOptional(),
       str_opt: z.string().exactOptional(),
       ienum: z.union([z.literal(1), z.literal(2), z.literal(3)]).exactOptional(),
@@ -30,7 +34,7 @@ export const optionalHandler = new Hono().get(
         .exactOptional(),
       obj: z.object({ a: z.int().exactOptional(), b: z.string().exactOptional() }).exactOptional(),
       tx_lower: z.string().toLowerCase().exactOptional(),
-      tx_email: z.email().toLowerCase().exactOptional(),
+      tx_email: z.string().toLowerCase().pipe(z.email()).exactOptional(),
       'session-id': z.int().exactOptional(),
       'user.id': z.int().exactOptional(),
       Int_Opt: z.string().exactOptional(),

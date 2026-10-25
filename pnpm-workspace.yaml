@@ -15,17 +15,6 @@ catalog:
   '@typespec/versioning': ^0.87.0
 allowBuilds:
   esbuild: false
-  # Optional native accelerator pulled in through oas-truth -> schema-to-library -> effect ->
-  # msgpackr; the JS fallback is enough, so its build script stays off.
-  msgpackr-extract: false
 minimumReleaseAgeExclude:
-  - '@effect/platform-node-shared@4.0.5'
-  - '@effect/platform-node@4.0.5'
-  - effect@4.0.5
-  - hono-takibi@0.24.0
-# schema-to-library (through oas-truth) pins @effect/platform-node to a release candidate but
-# takes @effect/platform-node-shared with a caret, which would resolve to the 4.0.5 release
-# that imports modules the pinned effect does not have. Keep that one tree on its RC; the
-# package's own Effect set is the 4.0.5 release hono-takibi uses.
-overrides:
-  '@effect/platform-node@4.0.0-rc.112>@effect/platform-node-shared': 4.0.0-rc.112
+  - oas-truth@0.5.1
+  - schema-truth@0.7.0

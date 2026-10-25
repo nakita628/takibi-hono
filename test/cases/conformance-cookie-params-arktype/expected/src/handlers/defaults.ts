@@ -10,7 +10,14 @@ export const defaultsHandler = new Hono().get(
     'cookie',
     type({
       'int_def?': 'number.integer',
-      'int64_def?': 'number.integer',
+      'int64_def?': type('bigint | number.integer')
+        .or(/^-?\d+$/)
+        .pipe((data) => BigInt(data))
+        .narrow(
+          (data, ctx) =>
+            (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
+            ctx.mustBe('an int64'),
+        ),
       'bool_def?': 'boolean',
       'str_def?': 'string',
     }),

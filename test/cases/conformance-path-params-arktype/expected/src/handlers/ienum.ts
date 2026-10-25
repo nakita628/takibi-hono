@@ -6,6 +6,16 @@ import { EchoResponse } from '../components'
 export const ienumHandler = new Hono().get(
   '/ienum/:value',
   describeRoute({ operationId: 'ienumParam', responses: { '200': EchoResponse } }),
-  validator('param', type({ value: '1 | 2' })),
+  validator(
+    'param',
+    type({
+      value: type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('1 | 2'),
+    }),
+  ),
   (c) => {},
 )

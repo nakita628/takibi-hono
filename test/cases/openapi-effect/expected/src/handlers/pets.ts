@@ -34,7 +34,7 @@ export const petsHandler = new Hono()
       Schema.toStandardSchemaV1(
         Schema.Struct({
           limit: Schema.optional(
-            Schema.NumberFromString.check(
+            Schema.FiniteFromString.check(
               Schema.isInt(),
               Schema.isGreaterThanOrEqualTo(1),
               Schema.isLessThanOrEqualTo(100),
@@ -107,7 +107,7 @@ export const petsHandler = new Hono()
       'param',
       Schema.toStandardSchemaV1(
         Schema.Struct({
-          petId: Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)),
+          petId: Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)),
         }),
       ),
     ),
@@ -119,7 +119,7 @@ export const petsHandler = new Hono()
     validator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ petId: Schema.NumberFromString.check(Schema.isInt()) }),
+        Schema.Struct({ petId: Schema.FiniteFromString.check(Schema.isInt()) }),
       ),
     ),
     (c) => {},
@@ -133,14 +133,18 @@ export const petsHandler = new Hono()
     validator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ petId: Schema.NumberFromString.check(Schema.isInt()) }),
+        Schema.Struct({ petId: Schema.FiniteFromString.check(Schema.isInt()) }),
       ),
     ),
     validator(
       'form',
       Schema.toStandardSchemaV1(
         Schema.Struct({
-          caption: Schema.String.check(Schema.isMinLength(1)),
+          caption: Schema.String.check(
+            Schema.makeFilter((input) => [...input].length >= 1, {
+              expected: 'a string of at least 1 character',
+            }),
+          ),
           featured: Schema.optional(Schema.Boolean),
         }),
       ),

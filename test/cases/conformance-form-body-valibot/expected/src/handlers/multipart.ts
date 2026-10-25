@@ -9,7 +9,7 @@ export const multipartHandler = new Hono().post(
   validator(
     'form',
     v.object({
-      file: v.string(),
+      file: v.file(),
       age: v.optional(v.pipe(v.number(), v.integer())),
       active: v.optional(v.boolean()),
       ids: v.optional(v.array(v.pipe(v.number(), v.integer()))),

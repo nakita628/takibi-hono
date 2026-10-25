@@ -8,7 +8,7 @@ export const overrideHandler = new Hono().get(
   describeRoute({ operationId: 'overrideParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    Schema.toStandardSchemaV1(Schema.Struct({ id: Schema.NumberFromString.check(Schema.isInt()) })),
+    Schema.toStandardSchemaV1(Schema.Struct({ id: Schema.FiniteFromString.check(Schema.isInt()) })),
   ),
   (c) => {},
 )

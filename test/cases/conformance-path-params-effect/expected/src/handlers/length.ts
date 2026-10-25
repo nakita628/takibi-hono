@@ -9,7 +9,16 @@ export const lengthHandler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.String.check(Schema.isMinLength(2), Schema.isMaxLength(4)) }),
+      Schema.Struct({
+        value: Schema.String.check(
+          Schema.makeFilter((input) => [...input].length >= 2, {
+            expected: 'a string of at least 2 characters',
+          }),
+          Schema.makeFilter((input) => [...input].length <= 4, {
+            expected: 'a string of at most 4 characters',
+          }),
+        ),
+      }),
     ),
   ),
   (c) => {},

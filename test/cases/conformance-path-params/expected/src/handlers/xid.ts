@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const xidHandler = new Hono().get(
   '/xid/:value',
   describeRoute({ operationId: 'xidParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.string() })),
+  validator('param', z.object({ value: z.xid() })),
   (c) => {},
 )

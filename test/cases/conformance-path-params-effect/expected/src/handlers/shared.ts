@@ -10,7 +10,7 @@ export const sharedHandler = new Hono()
     validator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ id: Schema.NumberFromString.check(Schema.isInt()) }),
+        Schema.Struct({ id: Schema.FiniteFromString.check(Schema.isInt()) }),
       ),
     ),
     (c) => {},
@@ -21,7 +21,7 @@ export const sharedHandler = new Hono()
     validator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ id: Schema.NumberFromString.check(Schema.isInt()) }),
+        Schema.Struct({ id: Schema.FiniteFromString.check(Schema.isInt()) }),
       ),
     ),
     (c) => {},

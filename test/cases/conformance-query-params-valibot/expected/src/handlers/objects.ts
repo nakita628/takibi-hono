@@ -13,25 +13,50 @@ export const objectsHandler = new Hono().get(
         deep: v.partial(
           v.object({
             name: v.string(),
-            age: v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(0)),
-            active: v.pipe(
-              v.picklist(['true', 'false']),
-              v.transform((input) => input === 'true'),
+            age: v.pipe(
+              v.string(),
+              v.transform(Number),
+              v.number(),
+              v.safeInteger(),
+              v.minValue(0),
             ),
-            ids: v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
-            points: v.array(
-              v.partial(
-                v.object({
-                  x: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-                  y: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-                }),
+            active: v.pipe(
+              v.string(),
+              v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+              v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+            ),
+            ids: v.pipe(
+              v.unknown(),
+              v.transform((input) =>
+                input === undefined || Array.isArray(input) ? input : [input],
+              ),
+              v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            ),
+            points: v.pipe(
+              v.unknown(),
+              v.transform((input) =>
+                input === undefined || Array.isArray(input) ? input : [input],
+              ),
+              v.array(
+                v.partial(
+                  v.object({
+                    x: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+                    y: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+                  }),
+                ),
               ),
             ),
-            tags: v.array(v.string()),
+            tags: v.pipe(
+              v.unknown(),
+              v.transform((input) =>
+                input === undefined || Array.isArray(input) ? input : [input],
+              ),
+              v.array(v.string()),
+            ),
             range: v.partial(
               v.object({
-                min: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-                max: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+                min: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+                max: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
               }),
             ),
           }),
@@ -40,18 +65,18 @@ export const objectsHandler = new Hono().get(
         spread: v.partial(
           v.object({
             sort: v.picklist(['asc', 'desc']),
-            size: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-            page: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+            size: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            page: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           }),
         ),
         pairs: v.partial(
           v.object({
             name: v.string(),
-            age: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+            age: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           }),
         ),
         page: v.string(),
-        limit: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+        limit: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
       }),
     ),
   ),

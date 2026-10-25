@@ -9,7 +9,7 @@ export const sharedHandler = new Hono()
     describeRoute({ operationId: 'sharedGetParam', responses: { '200': EchoResponse } }),
     validator(
       'param',
-      v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+      v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
     ),
     (c) => {},
   )
@@ -18,7 +18,7 @@ export const sharedHandler = new Hono()
     describeRoute({ operationId: 'sharedDeleteParam', responses: { '200': EchoResponse } }),
     validator(
       'param',
-      v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+      v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
     ),
     (c) => {},
   )

@@ -9,9 +9,20 @@ export const orgsHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      orgId: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-      repoId: v.pipe(v.string(), v.uuid()),
-      issueId: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+      orgId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+      repoId: v.pipe(
+        v.string(),
+        v.regex(
+          /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
+        ),
+      ),
+      issueId: v.pipe(
+        v.string(),
+        v.regex(/^-?\d+$/),
+        v.transform((input) => BigInt(input)),
+        v.minValue(-9223372036854775808n),
+        v.maxValue(9223372036854775807n),
+      ),
     }),
   ),
   (c) => {},

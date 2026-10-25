@@ -10,8 +10,8 @@ export const allofHandler = new Hono().get(
     'param',
     v.object({
       value: v.intersect([
-        v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-        v.any(),
+        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        v.pipe(v.string(), v.transform(Number), v.number(), v.finite(), v.minValue(5)),
       ]),
     }),
   ),

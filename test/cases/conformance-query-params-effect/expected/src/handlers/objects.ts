@@ -14,33 +14,71 @@ export const objectsHandler = new Hono().get(
           Schema.Struct({
             name: Schema.optional(Schema.String),
             age: Schema.optional(
-              Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+              Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
             ),
             active: Schema.optional(
-              Schema.Literals(['true', 'false']).pipe(
+              Schema.String.check(
+                Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+              ).pipe(
                 Schema.decodeTo(
                   Schema.Boolean,
                   SchemaTransformation.transform({
-                    decode: (input) => input === 'true',
-                    encode: (input) => (input ? 'true' : 'false'),
+                    decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+                    encode: (output) => (output ? 'true' : 'false'),
                   }),
                 ),
               ),
             ),
-            ids: Schema.optional(Schema.Array(Schema.NumberFromString.check(Schema.isInt()))),
-            points: Schema.optional(
-              Schema.Array(
-                Schema.Struct({
-                  x: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
-                  y: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
-                }),
+            ids: Schema.optional(
+              Schema.Unknown.pipe(
+                Schema.decodeTo(
+                  Schema.Unknown,
+                  SchemaTransformation.transform<unknown, unknown>({
+                    decode: (input) =>
+                      input === undefined || Array.isArray(input) ? input : [input],
+                    encode: (output) => output,
+                  }),
+                ),
+                Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
               ),
             ),
-            tags: Schema.optional(Schema.Array(Schema.String)),
+            points: Schema.optional(
+              Schema.Unknown.pipe(
+                Schema.decodeTo(
+                  Schema.Unknown,
+                  SchemaTransformation.transform<unknown, unknown>({
+                    decode: (input) =>
+                      input === undefined || Array.isArray(input) ? input : [input],
+                    encode: (output) => output,
+                  }),
+                ),
+                Schema.decodeTo(
+                  Schema.Array(
+                    Schema.Struct({
+                      x: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+                      y: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+                    }),
+                  ),
+                ),
+              ),
+            ),
+            tags: Schema.optional(
+              Schema.Unknown.pipe(
+                Schema.decodeTo(
+                  Schema.Unknown,
+                  SchemaTransformation.transform<unknown, unknown>({
+                    decode: (input) =>
+                      input === undefined || Array.isArray(input) ? input : [input],
+                    encode: (output) => output,
+                  }),
+                ),
+                Schema.decodeTo(Schema.Array(Schema.String)),
+              ),
+            ),
             range: Schema.optional(
               Schema.Struct({
-                min: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
-                max: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+                min: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+                max: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
               }),
             ),
           }),
@@ -49,18 +87,18 @@ export const objectsHandler = new Hono().get(
         spread: Schema.optional(
           Schema.Struct({
             sort: Schema.optional(Schema.Literals(['asc', 'desc'])),
-            size: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
-            page: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+            size: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            page: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
           }),
         ),
         pairs: Schema.optional(
           Schema.Struct({
             name: Schema.optional(Schema.String),
-            age: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+            age: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
           }),
         ),
         page: Schema.optional(Schema.String),
-        limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+        limit: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
       }),
     ),
   ),

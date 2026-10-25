@@ -46,8 +46,8 @@ export const UserIdParamsSchema = resolver(
 )
 export const PageParamsSchema = resolver(
   Schema.toStandardSchemaV1(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)).pipe(
-      Schema.withDecodingDefault(Effect.succeed(1)),
+    Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)).pipe(
+      Schema.withDecodingDefaultType(Effect.succeed(1)),
     ),
   ),
 )

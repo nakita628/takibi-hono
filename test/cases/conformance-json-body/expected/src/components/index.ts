@@ -1,7 +1,11 @@
 import { resolver } from 'hono-openapi'
 import * as z from 'zod'
 
-export const IdSchema = z.int64().min(0n).meta({ ref: 'Id' })
+export const IdSchema = z
+  .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+  .transform((val) => BigInt(val))
+  .pipe(z.int64().min(0n))
+  .meta({ ref: 'Id' })
 
 export type Id = z.infer<typeof IdSchema>
 

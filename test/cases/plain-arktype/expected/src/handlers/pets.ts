@@ -9,9 +9,12 @@ export const petsHandler = new Hono()
     sValidator(
       'query',
       type({
-        'limit?': type('string.integer.parse').to(
-          type('number.integer >= 1').and(type('number.integer <= 100')),
-        ),
+        'limit?': type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1 & number.integer <= 100'),
         'tag?': TagSchema,
       }),
     ),
@@ -28,13 +31,51 @@ export const petsHandler = new Hono()
   .on('HEAD', '/pets', sValidator('header', type({ 'X-Request-Id?': 'string' })), (c) => {})
   .get(
     '/pets/:petId',
-    sValidator('param', type({ petId: type('string.integer.parse').to('number.integer >= 1') })),
+    sValidator(
+      'param',
+      type({
+        petId: type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1'),
+      }),
+    ),
     (c) => {},
   )
-  .delete('/pets/:petId', sValidator('param', type({ petId: 'string.integer.parse' })), (c) => {})
+  .delete(
+    '/pets/:petId',
+    sValidator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    (c) => {},
+  )
   .post(
     '/pets/:petId/photos',
-    sValidator('param', type({ petId: 'string.integer.parse' })),
-    sValidator('form', type({ caption: type('string >= 1'), 'featured?': 'boolean' })),
+    sValidator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    sValidator(
+      'form',
+      type({
+        caption: type('string').narrow(
+          (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+        ),
+        'featured?': 'boolean',
+      }),
+    ),
     (c) => {},
   )

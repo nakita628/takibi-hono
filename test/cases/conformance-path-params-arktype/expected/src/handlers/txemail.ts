@@ -6,9 +6,6 @@ import { EchoResponse } from '../components'
 export const txemailHandler = new Hono().get(
   '/txemail/:value',
   describeRoute({ operationId: 'txemailParam', responses: { '200': EchoResponse } }),
-  validator(
-    'param',
-    type({ value: type('string.email').pipe((data: string) => data.toLowerCase()) }),
-  ),
+  validator('param', type({ value: type('string.lower').to('string.email') })),
   (c) => {},
 )

@@ -8,14 +8,24 @@ export const defaultsHandler = new Hono().get(
   describeRoute({ operationId: 'cookieDefaults', responses: { '200': FieldsResponse } }),
   validator(
     'cookie',
-    v.partial(
-      v.object({
-        int_def: v.optional(v.pipe(v.number(), v.integer()), 20),
-        int64_def: v.optional(v.pipe(v.number(), v.integer()), 5),
-        bool_def: v.optional(v.boolean(), false),
-        str_def: v.optional(v.string(), 'fallback'),
-      }),
-    ),
+    v.object({
+      int_def: v.optional(v.pipe(v.number(), v.integer()), 20),
+      int64_def: v.optional(
+        v.pipe(
+          v.union([
+            v.bigint(),
+            v.pipe(v.number(), v.integer()),
+            v.pipe(v.string(), v.regex(/^-?\d+$/)),
+          ]),
+          v.transform((input) => BigInt(input)),
+          v.minValue(-9223372036854775808n),
+          v.maxValue(9223372036854775807n),
+        ),
+        5n,
+      ),
+      bool_def: v.optional(v.boolean(), false),
+      str_def: v.optional(v.string(), 'fallback'),
+    }),
   ),
   (c) => {},
 )

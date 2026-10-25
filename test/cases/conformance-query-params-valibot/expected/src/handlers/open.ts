@@ -10,10 +10,10 @@ export const openHandler = new Hono().get(
     'query',
     v.partial(
       v.object({
-        page: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+        page: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
         extra: v.record(
           v.string(),
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
         ),
       }),
     ),

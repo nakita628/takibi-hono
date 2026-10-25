@@ -11,11 +11,12 @@ export const int64rangeHandler = new Hono().get(
     v.object({
       value: v.pipe(
         v.string(),
-        v.transform(Number),
-        v.number(),
-        v.integer(),
-        v.minValue(1),
-        v.maxValue(100),
+        v.regex(/^-?\d+$/),
+        v.transform((input) => BigInt(input)),
+        v.minValue(-9223372036854775808n),
+        v.maxValue(9223372036854775807n),
+        v.minValue(1n),
+        v.maxValue(100n),
       ),
     }),
   ),

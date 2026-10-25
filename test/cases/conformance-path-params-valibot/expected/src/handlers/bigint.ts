@@ -6,6 +6,16 @@ import { EchoResponse } from '../components'
 export const bigintHandler = new Hono().get(
   '/bigint/:value',
   describeRoute({ operationId: 'bigintParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.pipe(v.string(), v.transform(Number), v.bigint()) })),
+  validator(
+    'param',
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?\d+$/),
+        v.transform((input) => BigInt(input)),
+        v.bigint(),
+      ),
+    }),
+  ),
   (c) => {},
 )

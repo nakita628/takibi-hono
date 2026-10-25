@@ -10,7 +10,7 @@ export const multipleHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.NumberFromString.check(Schema.isInt(), Schema.isMultipleOf(5)),
+        value: Schema.FiniteFromString.check(Schema.isInt(), Schema.isMultipleOf(5)),
       }),
     ),
   ),

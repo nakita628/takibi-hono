@@ -10,7 +10,16 @@ export const requiredHandler = new Hono().get(
     'header',
     v.object({
       'x-id': v.pipe(v.number(), v.integer()),
-      'x-big': v.pipe(v.number(), v.integer()),
+      'x-big': v.pipe(
+        v.union([
+          v.bigint(),
+          v.pipe(v.number(), v.integer()),
+          v.pipe(v.string(), v.regex(/^-?\d+$/)),
+        ]),
+        v.transform((input) => BigInt(input)),
+        v.minValue(-9223372036854775808n),
+        v.maxValue(9223372036854775807n),
+      ),
       'x-flag': v.boolean(),
       'x-name': v.string(),
       'x-note': v.optional(v.pipe(v.number(), v.integer())),

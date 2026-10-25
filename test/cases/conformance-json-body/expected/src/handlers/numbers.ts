@@ -9,14 +9,51 @@ export const numbersHandler = new Hono().post(
   validator(
     'json',
     z.object({
-      id: z.int64().exactOptional(),
-      unsigned: z.int().exactOptional(),
-      ranged: z.int64().min(1n).max(100n).exactOptional(),
-      level: z.union([z.literal(1), z.literal(2)]).exactOptional(),
-      version: z.literal(5).exactOptional(),
-      cursor: z.int64().default(0n).exactOptional(),
-      maybe: z.int64().nullable().exactOptional(),
-      ids: z.array(z.int64()).exactOptional(),
+      id: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .exactOptional(),
+      unsigned: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.uint64())
+        .exactOptional(),
+      ranged: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64().min(1n).max(100n))
+        .exactOptional(),
+      level: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.union([z.literal(1n), z.literal(2n)]))
+        .exactOptional(),
+      version: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.literal(5n))
+        .exactOptional(),
+      cursor: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .default(0n)
+        .exactOptional(),
+      maybe: z
+        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+        .transform((val) => BigInt(val))
+        .pipe(z.int64())
+        .nullable()
+        .exactOptional(),
+      ids: z
+        .array(
+          z
+            .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+            .transform((val) => BigInt(val))
+            .pipe(z.int64()),
+        )
+        .exactOptional(),
       small: z.int32().exactOptional(),
       ref: IdSchema.exactOptional(),
     }),

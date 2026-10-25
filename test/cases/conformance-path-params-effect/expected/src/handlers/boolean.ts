@@ -10,12 +10,14 @@ export const booleanHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.Literals(['true', 'false']).pipe(
+        value: Schema.String.check(
+          Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        ).pipe(
           Schema.decodeTo(
             Schema.Boolean,
             SchemaTransformation.transform({
-              decode: (input) => input === 'true',
-              encode: (input) => (input ? 'true' : 'false'),
+              decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+              encode: (output) => (output ? 'true' : 'false'),
             }),
           ),
         ),

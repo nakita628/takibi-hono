@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const nanoidHandler = new Hono().get(
   '/nanoid/:value',
   describeRoute({ operationId: 'nanoidParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.string() })),
+  validator('param', v.object({ value: v.pipe(v.string(), v.nanoid()) })),
   (c) => {},
 )

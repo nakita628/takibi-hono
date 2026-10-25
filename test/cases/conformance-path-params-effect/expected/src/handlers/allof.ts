@@ -10,8 +10,10 @@ export const allofHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.NumberFromString.check(Schema.isInt()).check(
-          Schema.makeFilter((input) => Schema.is(Schema.Unknown)(input)),
+        value: Schema.FiniteFromString.check(Schema.isInt()).check(
+          Schema.makeFilter((input) =>
+            Schema.is(Schema.FiniteFromString.check(Schema.isGreaterThanOrEqualTo(5)))(input),
+          ),
         ),
       }),
     ),

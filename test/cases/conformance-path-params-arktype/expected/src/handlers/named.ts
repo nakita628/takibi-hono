@@ -9,8 +9,13 @@ export const namedHandler = new Hono().get(
   validator(
     'param',
     type({
-      'user-id': 'string.integer.parse',
-      post_id: type("'true' | 'false'").pipe((data) => data === 'true'),
+      'user-id': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      post_id: type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
     }),
   ),
   (c) => {},
