@@ -10,6 +10,7 @@
 - [hono-openapi](https://hono.dev/examples/hono-openapi) route definitions with `describeRoute`
 - App entry point + handler stubs with [handler merge](#handler-merge)
 - Component splitting into separate files (schemas, parameters, headers, etc.)
+- A typed [Hono client](https://hono.dev/docs/guides/rpc), with RPC functions and query hooks over it
 - Vite plugin for automatic regeneration on spec changes
 
 ## Install
@@ -145,26 +146,34 @@ export default defineConfig({
     },
   },
 
-  // Client-code generators (RPC + framework query hooks + types + docs). Each
-  // generator writes one file: `output` (a directory is normalized to
-  // `<dir>/index.ts`) and imports the Hono client from `import`; `client` is the
-  // exported client variable (default 'client'). Query-hook keys are camelCase
-  // (`tanstackQuery`, ...).
+  // The typed Hono client of the generated app (the `hcWithType` of the Hono guide),
+  // exported as `client`; rpc and the query hooks import it. With `basePath` it is handed
+  // out from below the base path, so `client.pets.$get` addresses `/api/pets`. `baseUrl` is
+  // '/' (the default) for the same origin, `{ env }` for an environment variable read when
+  // the client is created (`import.meta.env`, or `source: 'process.env'`), or
+  // `{ env, import, name }` for a property of the environment object a module of yours
+  // exports. A fixed URL is not taken: it differs between environments.
+  // The client-code generators (RPC + framework query hooks + types + docs) each write one
+  // file: `output` (a directory is normalized to `<dir>/index.ts`). Query-hook keys are
+  // camelCase (`tanstackQuery`, ...).
   client: {
+    output: 'src/client.ts',
+    baseUrl: { env: 'VITE_API_URL' },
+    credentials: 'include', // 'include' | 'same-origin' | 'omit'
+    // import: '@packages/server', // the app's package, when the client is written into another
+    // package: '@packages/client', // the name other packages import the client by
     rpc: {
       output: 'src/rpc.ts',
-      import: './lib',
-      client: 'client',
       parseResponse: true,
       docs: false, // operation summary/description as JSDoc
     },
-    swr: { output: 'src/swr.ts', import: './lib', client: 'client' },
-    tanstackQuery: { output: 'src/tanstack-query.ts', import: './lib', client: 'client' },
-    svelteQuery: { output: 'src/svelte-query.ts', import: './lib', client: 'client' },
-    vueQuery: { output: 'src/vue-query.ts', import: './lib', client: 'client' },
-    preactQuery: { output: 'src/preact-query.ts', import: './lib', client: 'client' },
-    solidQuery: { output: 'src/solid-query.ts', import: './lib', client: 'client' },
-    angularQuery: { output: 'src/angular-query.ts', import: './lib', client: 'client' },
+    swr: { output: 'src/swr.ts' },
+    tanstackQuery: { output: 'src/tanstack-query.ts' },
+    svelteQuery: { output: 'src/svelte-query.ts' },
+    vueQuery: { output: 'src/vue-query.ts' },
+    preactQuery: { output: 'src/preact-query.ts' },
+    solidQuery: { output: 'src/solid-query.ts' },
+    angularQuery: { output: 'src/angular-query.ts' },
     // Self-contained `App` type for RPC client distribution
     type: {
       output: 'src/types.ts',

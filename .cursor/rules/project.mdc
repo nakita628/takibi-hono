@@ -13,8 +13,9 @@ with Vitest, all through vite-plus (`vp`) on pnpm.
 
 It owns only the Hono-specific part. Parsing, the OpenAPI types and the Components builders
 (including `schemas` and `mediaTypes`) come from [`oas-truth`](https://www.npmjs.com/package/oas-truth).
-Client code (RPC, query hooks, the `App` type, docs) is delegated to the client-generation
-dependency wired in `src/core/client.ts`.
+The typed Hono client (`client.output`) is generated here (`src/generator/client.ts`); the rest
+of the client code (RPC, query hooks, the `App` type, docs) is delegated to the client-generation
+dependency wired in `src/core/client.ts`, and rpc and the hooks import the generated client.
 
 This repository is operated **through agent conversation**. The config files are the source of
 truth: when an instruction contradicts one, quote the config and ask before changing it.

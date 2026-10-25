@@ -41,7 +41,7 @@ first and to the code second.
 | `syntax/` | oxc-parser wrapped for reading TypeScript: `parseSource` / `parseModule`, `textOf`, `walk`, `descendantsWhere` | generate or rewrite code |
 | `merge/` | pure merges of regenerated code into the existing handler and app files, over `syntax`; an existing file that does not parse is kept as it is | know about OpenAPI or the filesystem |
 | `helper/` | `library.ts` (the per-lib table: Standard Schema bridge, ref registration, import candidates, `makeInlineAdapter`), `identifiers.ts`, `imports.ts`, `operations.ts` (paths / webhooks → routes) | file I/O |
-| `generator/` | pure code builders: `schemas.ts` (oas-truth's `makeSchemaDeclarations`, plus the arktype prologue), `components.ts` (oas-truth's `make*Declarations`), `handler.ts` (route chains and the app) | touch the filesystem, run an Effect |
+| `generator/` | pure code builders: `schemas.ts` (oas-truth's `makeSchemaDeclarations`, plus the arktype prologue), `components.ts` (oas-truth's `make*Declarations`), `handler.ts` (route chains and the app), `client.ts` (the typed Hono client) | touch the filesystem, run an Effect |
 | `core/` | orchestration: `index.ts` (`hono()`), `layout.ts` (config → paths and import specifiers: relative inside a package, `pathAlias` inside the app directory, a target's `package` from another package), `packages.ts` (the nearest `package.json` above each output), `components.ts`, `handlers.ts`, `client.ts` | assemble code strings (`make*Code` lives in `generator`) |
 | `cli/` | the `takibi-hono` command on `effect/unstable/cli` | generator logic |
 | `vite-plugin/` | `takibiHonoVite()`: reload the config, regenerate on change, clean stale outputs | generator logic |
