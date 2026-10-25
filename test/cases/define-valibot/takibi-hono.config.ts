@@ -6,7 +6,7 @@ import { defineConfig } from 'takibi-hono/config'
 export default defineConfig({
   input: 'specs/petstore.yaml',
   schema: 'valibot',
-  defineHandler: true,
+  defineHandler: { output: '__generated__/define-valibot/src/routes.ts', template: true },
   basePath: '/api',
   output: '__generated__/define-valibot/src/handlers',
   components: { output: '__generated__/define-valibot/src/components/index.ts' },

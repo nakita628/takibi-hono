@@ -135,14 +135,17 @@ describe('parseConfig', () => {
   })
 
   it.each([
-    [true, true],
-    [{ output: 'src/definitions.ts' }, { output: 'src/definitions.ts' }],
-    [{ output: 'src/definitions' }, { output: 'src/definitions/index.ts' }],
+    [{ output: 'src/routes.ts' }, { output: 'src/routes.ts' }],
+    [{ output: 'src/routes' }, { output: 'src/routes/index.ts' }],
     [
-      { output: 'src/definitions', split: true, package: '@acme/definitions' },
-      { output: 'src/definitions', split: true, package: '@acme/definitions' },
+      { output: 'src/routes.ts', template: true },
+      { output: 'src/routes.ts', template: true },
     ],
-  ])('accepts defineHandler %j, as a component kind', async (value, decoded) => {
+    [
+      { output: 'src/routes', split: true, package: '@acme/routes', template: true },
+      { output: 'src/routes', split: true, package: '@acme/routes', template: true },
+    ],
+  ])('accepts defineHandler %j, as a component kind with template', async (value, decoded) => {
     expect(await parse({ ...base, defineHandler: value })).toStrictEqual({
       ...base,
       defineHandler: decoded,
@@ -150,14 +153,40 @@ describe('parseConfig', () => {
   })
 
   it.each([
+    ['client', { client: { output: 'src/client.ts' } }],
+    ['type', { type: { output: 'src/types.ts' } }],
+    ['docs', { docs: { output: 'docs/api.md' } }],
+  ])('asks for defineHandler.template when %s needs the app entry', async (key, extra) => {
+    const error = await parseError({
+      ...base,
+      defineHandler: { output: 'src/routes.ts' },
+      ...extra,
+    })
+    expect(error).toStrictEqual(
+      new ConfigError({
+        message: `Invalid config: ${key} needs the app entry: set defineHandler.template, which writes it along with the handlers.`,
+      }),
+    )
+  })
+
+  it('takes docs with curl without the app entry', async () => {
+    const config = {
+      ...base,
+      defineHandler: { output: 'src/routes.ts' },
+      docs: { output: 'docs/api.md', curl: true, baseUrl: 'http://localhost:3000' },
+    }
+    expect(await parse(config)).toStrictEqual(config)
+  })
+
+  it.each([
     [
       'defineHandler with openapi',
-      { ...base, defineHandler: true, openapi: true },
+      { ...base, defineHandler: { output: 'src/routes.ts' }, openapi: true },
       'Invalid config: defineHandler cannot be combined with openapi: hono-openapi reads the validators in front of a handler, and defineHandler validates inside it.',
     ],
     [
       'defineHandler with typebox',
-      { ...base, defineHandler: true, schema: 'typebox' },
+      { ...base, defineHandler: { output: 'src/routes.ts' }, schema: 'typebox' },
       'Invalid config: defineHandler takes Standard Schema validators, which typebox has none of: pick zod, valibot, arktype or effect.',
     ],
   ])('rejects %s', async (_, config, message) => {

@@ -1,13 +1,14 @@
 import { defineConfig } from 'takibi-hono/config'
 
-// `defineHandler: true`: every operation is a `defineHandler` of its own (`postUsersHandler`),
-// validating the request and the response inside the handler, registered on its group's Hono.
-// `split: true` exports each first path segment (`health`, `users`, `posts`) as a group, with a
-// client per group; rpc calls the client of each operation's group.
+// `defineHandler`: src/routes.ts defines every operation (`postUsersHandler`), validating the
+// request and the response; with `template`, the handler files that call the definitions and
+// the app entry are written too, as hono-takibi's template. `split: true` exports each first
+// path segment (`health`, `users`, `posts`) as a group, with a client per group; rpc calls the
+// client of each operation's group.
 export default defineConfig({
   input: 'openapi.yaml',
   schema: 'zod',
-  defineHandler: true,
+  defineHandler: { output: 'src/routes.ts', template: true },
   basePath: '/api',
   split: true,
   output: 'src/handlers',

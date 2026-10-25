@@ -6,7 +6,7 @@ import { defineConfig } from 'takibi-hono/config'
 export default defineConfig({
   input: 'specs/petstore.yaml',
   schema: 'effect',
-  defineHandler: true,
+  defineHandler: { output: '__generated__/define-effect/src/routes.ts', template: true },
   basePath: '/api',
   output: '__generated__/define-effect/src/handlers',
   components: { output: '__generated__/define-effect/src/components/index.ts' },

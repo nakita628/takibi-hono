@@ -310,9 +310,11 @@ const ConfigSchema = Schema.Struct({
   basePath: Schema.optionalKey(Schema.String),
   schema: Schema.Literals(['zod', 'valibot', 'typebox', 'arktype', 'effect']),
   openapi: Schema.optionalKey(Schema.Boolean),
-  defineHandler: Schema.optionalKey(Schema.Union([Schema.Boolean, OutputSchema])).annotate({
+  defineHandler: Schema.optionalKey(
+    splitUnion({ template: Schema.optionalKey(Schema.Boolean) }),
+  ).annotate({
     description:
-      "Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware. The definitions, one `<method><Path>Handler = defineHandler({...})` per operation (`postPetsHandler`) validating the request targets and the response, go to `routes.ts` beside the app entry (`true`), or to a target as a component kind's: `output` a file or, with `split`, a directory with one file per definition, and `package` for the files of other packages. Each handler file calls its definitions with the handlers. Not combined with `openapi`, whose validators are middleware in front of the handler, nor with `schema: 'typebox'`, which has no Standard Schema interface.",
+      "Hono's `defineHandler` (hono/factory, Hono 5), laid out as hono-takibi lays out its routes. `output` takes the definitions, one `<method><Path>Handler = defineHandler({...})` per operation (`postPetsHandler`) validating the request targets and the response: a file, which also holds the components unless `components` says where they go, or a directory with one file per definition (`split`); `package` names it for the files of other packages. With `template`, the handler files calling the definitions and the app entry are written too, as hono-takibi's template; without it, the definitions stand alone. Not combined with `openapi`, whose validators are middleware in front of the handler, nor with `schema: 'typebox'`, which has no Standard Schema interface.",
   }),
   format: Schema.optionalKey(
     Schema.declare<FormatConfig>(
@@ -352,14 +354,30 @@ const ConfigSchema = Schema.Struct({
       },
       { message: 'a generator that calls the client needs the client block' },
     ),
-    Schema.makeFilter((config) => config.defineHandler !== true || config.openapi !== true, {
+    Schema.makeFilter(
+      (config) => {
+        const define = config.defineHandler
+        if (define === undefined || define.template === true) return true
+        const needsApp = (['client', 'type'] as const).find((key) => config[key] !== undefined)
+        const docs = config.docs !== undefined && !config.docs.curl ? 'docs' : undefined
+        const missing = needsApp ?? docs
+        return missing === undefined
+          ? true
+          : `${missing} needs the app entry: set defineHandler.template, which writes it along with the handlers.`
+      },
+      { message: 'a generator that imports the app entry needs defineHandler.template' },
+    ),
+    Schema.makeFilter((config) => config.defineHandler === undefined || config.openapi !== true, {
       message:
         'defineHandler cannot be combined with openapi: hono-openapi reads the validators in front of a handler, and defineHandler validates inside it.',
     }),
-    Schema.makeFilter((config) => config.defineHandler !== true || config.schema !== 'typebox', {
-      message:
-        'defineHandler takes Standard Schema validators, which typebox has none of: pick zod, valibot, arktype or effect.',
-    }),
+    Schema.makeFilter(
+      (config) => config.defineHandler === undefined || config.schema !== 'typebox',
+      {
+        message:
+          'defineHandler takes Standard Schema validators, which typebox has none of: pick zod, valibot, arktype or effect.',
+      },
+    ),
   )
   .annotate({ title: 'takibi-hono config' })
 

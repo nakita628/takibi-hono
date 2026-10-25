@@ -4,7 +4,6 @@ import {
   makeAppCode,
   makeDefinitionsCode,
   makeHandlerCode,
-  makeSingleFileCode,
   nameOperations,
   toGroupName,
   toHandlerVarName,
@@ -461,7 +460,8 @@ describe('makeDefinitionsCode', () => {
 
   it('declares one defineHandler({...}) per route, importing the schemas it refers to', () => {
     const names = nameOperations(petRoutes as never, [])
-    expect(makeDefinitionsCode(names, context)).toBe(`import{defineHandler}from'hono/factory'
+    expect(makeDefinitionsCode(petRoutes as never, names, context))
+      .toBe(`import{defineHandler}from'hono/factory'
 import*as z from'zod'
 import{PetSchema}from'../components'
 
@@ -503,7 +503,7 @@ export const headPetsHandler=defineHandler({})`)
       },
     }
     expect(
-      makeDefinitionsCode(nameOperations([route] as never, []), {
+      makeDefinitionsCode([route] as never, nameOperations([route] as never, []), {
         ...context,
         components: { ...components, responses } as never,
       }),
@@ -533,7 +533,7 @@ export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Sc
     ],
   ] as const)('%s: each option is handed over as a Standard Schema', (lib, expected) => {
     expect(
-      makeDefinitionsCode(nameOperations([itemRoute] as never, []), {
+      makeDefinitionsCode([itemRoute] as never, nameOperations([itemRoute] as never, []), {
         lib,
         components: undefined,
         imports: [{ name: 'ItemSchema', from: '../components' }],
@@ -543,7 +543,10 @@ export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Sc
 
   it('refuses typebox, which has no Standard Schema interface', () => {
     expect(() =>
-      makeDefinitionsCode(nameOperations(petRoutes as never, []), { ...context, lib: 'typebox' }),
+      makeDefinitionsCode(petRoutes as never, nameOperations(petRoutes as never, []), {
+        ...context,
+        lib: 'typebox',
+      }),
     ).toThrow('defineHandler takes Standard Schema validators, which typebox has none of')
   })
 })
@@ -564,46 +567,5 @@ describe('makeHandlerCode with defineHandler', () => {
 import{getPetsIdHandler,postPetsHandler,headPetsHandler}from'../routes'
 
 export const petsHandler=new Hono().get('/pets/:id',getPetsIdHandler(async(c,{param,query})=>{})).post('/pets',postPetsHandler(async(c,{json})=>{})).on('HEAD','/pets',headPetsHandler(async(c)=>{}))`)
-  })
-})
-
-describe('makeSingleFileCode', () => {
-  it('writes the schemas and the definition of every operation, and no Hono', () => {
-    const openapi = {
-      openapi: '3.1.0',
-      info: { title: 'Pets', version: '1' },
-      paths: {
-        '/pets': {
-          post: {
-            requestBody: {
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
-            },
-            responses: {
-              '201': {
-                description: 'created',
-                content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } },
-              },
-            },
-          },
-        },
-        '/': { get: { responses: { '200': { description: 'ok' } } } },
-      },
-      components: {
-        schemas: {
-          Pet: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
-        },
-      },
-    }
-    expect(makeSingleFileCode(openapi as never, 'valibot'))
-      .toBe(`import{defineHandler}from'hono/factory'
-import*as v from'valibot'
-
-export const PetSchema=v.object({name:v.string()})
-
-export type Pet=v.InferOutput<typeof PetSchema>
-
-export const postPetsHandler=defineHandler({json:PetSchema,response:PetSchema})
-
-export const getHandler=defineHandler({})`)
   })
 })

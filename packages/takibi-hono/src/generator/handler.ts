@@ -1,12 +1,4 @@
-import type {
-  ComponentAdapter,
-  Components,
-  OpenAPI,
-  Operation,
-  ParamIn,
-  Schema,
-  SchemaLib,
-} from 'oas-truth'
+import type { ComponentAdapter, Components, Operation, ParamIn, Schema, SchemaLib } from 'oas-truth'
 import {
   makeSchemaIdentifiers,
   makeSchemaReplacements,
@@ -20,8 +12,7 @@ import type { ImportEntry } from '../helper/imports.js'
 import { withImports } from '../helper/imports.js'
 import { getLibrary, makeInlineAdapter, makeLibraryImports } from '../helper/library.js'
 import type { Route } from '../helper/operations.js'
-import { collectRoutes, resolveRef } from '../helper/operations.js'
-import { makeSchemaDeclarations } from './schemas.js'
+import { resolveRef } from '../helper/operations.js'
 
 type HandlerContext = {
   readonly lib: SchemaLib
@@ -40,7 +31,8 @@ type HandlerContext = {
    */
   readonly defineHandler?: {
     readonly from: string
-    readonly names: ReadonlyMap<Route, string>
+    /** The definition of each route, by {@link routeKey}. */
+    readonly names: ReadonlyMap<string, string>
   }
 }
 
@@ -361,9 +353,14 @@ export function nameOperations(routes: readonly Route[], taken: Iterable<string>
     routes.map((route) => {
       const name = freeName(toOperationVarName(route.method, route.path), names)
       names.add(name)
-      return [route, name] as const
+      return [routeKey(route), name] as const
     }),
   )
+}
+
+/** What a route is known by across the generators: its method and path. */
+export function routeKey(route: Route) {
+  return `${route.method} ${route.path}`
 }
 
 /** What a definitions module is built from: the library and the schemas it may refer to. */
@@ -375,56 +372,30 @@ export type DefinitionsContext = Omit<HandlerContext, 'defineHandler' | 'respons
  * definition is the user's, so a definitions module is written over.
  */
 export function makeDefinitionEntries(
-  names: ReadonlyMap<Route, string>,
+  routes: readonly Route[],
+  names: ReadonlyMap<string, string>,
   context: DefinitionsContext,
 ) {
   const full: HandlerContext = { ...context, openapi: false, responseRefs: false }
   const adapter = makeInlineAdapter(context.lib, { resolver: false })
-  return [...names].map(([route, name]) => ({
-    name,
-    fileName: name.replace(/Handler(\d*)$/u, '$1'),
-    code: makeDefinitionCode(name, route, full, adapter),
-  }))
+  return routes.map((route) => {
+    const name = names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path)
+    return {
+      name,
+      fileName: name.replace(/Handler(\d*)$/u, '$1'),
+      code: makeDefinitionCode(name, route, full, adapter),
+    }
+  })
 }
 
 /** The definitions as one module, importing the schemas it refers to. */
 export function makeDefinitionsCode(
-  names: ReadonlyMap<Route, string>,
+  routes: readonly Route[],
+  names: ReadonlyMap<string, string>,
   context: DefinitionsContext,
 ) {
-  const body = makeDefinitionEntries(names, context).map((entry) => entry.code)
+  const body = makeDefinitionEntries(routes, names, context).map((entry) => entry.code)
   return withImports(body.join('\n\n'), [...makeLibraryImports(context.lib), ...context.imports])
-}
-
-/**
- * The one-shot output (`takibi-hono <input> -o <output.ts>`), as hono-takibi's `-o` writes the
- * route definitions its handlers import: the document's `components.schemas` and the
- * definition of every operation, in one file. The Hono that registers them is the user's,
- * calling each definition with its handler (`getPetsHandler(async (c, { query }) => ...)`).
- */
-export function makeSingleFileCode(openapi: OpenAPI, lib: SchemaLib) {
-  const components = openapi.components
-  const schemas = makeSchemaDeclarations(components?.schemas ?? {}, {
-    lib,
-    exportTypes: true,
-    readonly: false,
-    registerRef: false,
-  })
-  const routes = [...collectRoutes(openapi).values()].flat()
-  const context: HandlerContext = {
-    lib,
-    openapi: false,
-    components,
-    responseRefs: false,
-    imports: [],
-  }
-  const adapter = makeInlineAdapter(lib, { resolver: false })
-  const names = nameOperations(routes, [])
-  const body = [
-    ...schemas.map((schema) => schema.code),
-    ...[...names].map(([route, name]) => makeDefinitionCode(name, route, context, adapter)),
-  ]
-  return withImports(body.join('\n\n'), makeLibraryImports(lib))
 }
 
 /** `/users` → `usersHandler`, `__root` → `rootHandler`. */
@@ -455,14 +426,15 @@ export function makeHandlerCode(
     // Each route call takes the definition with the stub handler, which takes the validated
     // targets apart for the merge to fill; the definitions are imported from their module.
     const calls = routes.map((route) => {
-      const name = definitions.names.get(route) ?? toOperationVarName(route.method, route.path)
+      const name =
+        definitions.names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path)
       const targets = validatedTargets(route, context, adapter)
       const input = targets.length > 0 ? `,{${targets.join(',')}}` : ''
       return makeRouteCall(route.method, [`'${route.path}'`, `${name}(async(c${input})=>{})`])
     })
     const body = `export const ${varName}=new Hono()${calls.join('')}`
     const imported = routes
-      .map((route) => definitions.names.get(route))
+      .map((route) => definitions.names.get(routeKey(route)))
       .filter((n) => n !== undefined)
     return withImports(body, [
       { name: 'Hono', from: 'hono' },

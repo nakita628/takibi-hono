@@ -71,11 +71,12 @@ export type TakibiHonoConfig = ClientConfig & {
   readonly basePath?: string | undefined
   readonly openapi?: boolean | undefined
   /**
-   * Hono's `defineHandler` in place of the validator middleware: the definitions the handler
-   * files import, as `routes.ts` beside the app entry (`true`) or as a target of their own —
-   * a file, or a directory with one file per definition (`split`), in this or another package.
+   * Hono's `defineHandler` in place of the validator middleware, laid out as hono-takibi lays
+   * out its routes: `output` the definitions (a file, which holds the components too unless
+   * `components` says where they go, or a split directory), `template` the handler files and
+   * the app entry around them.
    */
-  readonly defineHandler?: boolean | TargetConfig | undefined
+  readonly defineHandler?: (TargetConfig & { readonly template?: boolean | undefined }) | undefined
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
   /** One export, and one client, for each handler file. */
@@ -101,6 +102,11 @@ export type Layout = {
   readonly appDir: string
   /** The `defineHandler` definitions, when `defineHandler` is set. */
   readonly definitions: Target | undefined
+  /**
+   * Whether the handler files, the app entry and the clients are written: always without
+   * `defineHandler`, and with `defineHandler.template`; definitions without it stand alone.
+   */
+  readonly scaffold: boolean
   /** The typed client, when the `client` block is set. */
   readonly client: Target | undefined
   /** The directories the typed client, rpc and the query hooks are written into. */
@@ -159,13 +165,12 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
   const appDir = path.dirname(handlersDir)
   const client = config.client
   const define = config.defineHandler
+  const definitions = define === undefined ? undefined : toTarget(define)
   const layout = {
     handlersDir,
     appDir,
-    definitions:
-      define === undefined || define === false
-        ? undefined
-        : toTarget(define === true ? { output: path.join(appDir, 'routes.ts') } : define),
+    definitions,
+    scaffold: define === undefined || define.template === true,
     client:
       client === undefined
         ? undefined
@@ -181,7 +186,11 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
   const components = config.components
   const configured = KINDS.filter((kind) => components?.[kind] !== undefined)
   if (configured.length === 0) {
-    const file = toFile(components?.output ?? 'src/components')
+    // A definitions file holds the components too, unless `components` says where they go:
+    // the file of the one-shot mode, and of hono-takibi's single-file `output`.
+    const shared =
+      definitions !== undefined && !definitions.split && components?.output === undefined
+    const file = shared ? definitions.output : toFile(components?.output ?? 'src/components')
     const target = { output: file, split: false, package: components?.package }
     return {
       ...layout,
@@ -254,10 +263,10 @@ export function checkPackages(openapi: OpenAPI, layout: Layout) {
     ? (['defineHandler', targetDirectory(definitions)] as const)
     : (['handlers', layout.handlersDir] as const)
   const edges = [
-    ...(definitions
+    ...(definitions && layout.scaffold
       ? [['handlers', layout.handlersDir, 'defineHandler', definitions] as const]
       : []),
-    ...(schemas && declared('schemas')
+    ...(schemas && declared('schemas') && schemas.output !== definitions?.output
       ? [[...schemaReader, 'components.schemas', schemas] as const]
       : []),
     ...(responses && declared('responses') && !definitions

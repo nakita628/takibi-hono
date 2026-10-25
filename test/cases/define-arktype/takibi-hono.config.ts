@@ -6,7 +6,7 @@ import { defineConfig } from 'takibi-hono/config'
 export default defineConfig({
   input: 'specs/petstore.yaml',
   schema: 'arktype',
-  defineHandler: true,
+  defineHandler: { output: '__generated__/define-arktype/src/routes.ts', template: true },
   basePath: '/api',
   output: '__generated__/define-arktype/src/handlers',
   components: { output: '__generated__/define-arktype/src/components/index.ts' },

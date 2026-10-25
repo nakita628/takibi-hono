@@ -15,7 +15,7 @@ Nothing in the file is yours, so `pnpm generate` writes it over.
 
 [`src/index.ts`](./src/index.ts) is the app: a Hono under `/api` that calls each definition with its handler, `getUsersHandler(async (c, { query }) => ...)`, with the data in [`src/store.ts`](./src/store.ts). The handler gets the validated values as its second argument and returns the value; the status is set with `c.status(201)`, and a miss is thrown as an `HTTPException` with the response to send. Middleware goes before the handler: `getUsersHandler(auth, async (c, { query }) => ...)`.
 
-The same split with a config file, where takibi-hono writes the handler files too, is [`define-handler-split`](../define-handler-split).
+The one-shot mode is `defineHandler: { output: 'src/routes.ts' }` without a config file. Add `template: true` in a config and takibi-hono writes the handler files and the app around the same file: that is [`define-handler-split`](../define-handler-split).
 
 ## Try it
 

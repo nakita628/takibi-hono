@@ -5,7 +5,7 @@ import { defineConfig } from 'takibi-hono/config'
 export default defineConfig({
   input: 'specs/petstore.yaml',
   schema: 'zod',
-  defineHandler: { output: '__generated__/define-split/src/routes', split: true },
+  defineHandler: { output: '__generated__/define-split/src/routes', split: true, template: true },
   basePath: '/api',
   split: true,
   pathAlias: '@/',
