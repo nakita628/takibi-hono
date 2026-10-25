@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as z from 'zod'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const optionalHandler = new Hono().get(
   '/optional',
@@ -32,7 +32,7 @@ export const optionalHandler = new Hono().get(
           .string()
           .regex(/^[a-z]+-\d{1,3}$/)
           .exactOptional(),
-        ref_int: CountSchema.exactOptional(),
+        ref_int: z.coerce.number().int().min(0).exactOptional(),
         prefs: z
           .object({
             theme: z.string().exactOptional(),

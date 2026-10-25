@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { Schema, SchemaTransformation } from 'effect'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const optionalHandler = new Hono().get(
   '/optional',
@@ -98,7 +98,9 @@ export const optionalHandler = new Hono().get(
                 Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase()),
               ).check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),
             ),
-            'x-ref-int': Schema.optional(CountSchema),
+            'x-ref-int': Schema.optional(
+              Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+            ),
             'x-str-arr': Schema.optional(
               Schema.Unknown.pipe(
                 Schema.decodeTo(

@@ -103,6 +103,10 @@ outputs are single files).
   `toExpression` applies them to the expression's root, which is the synthesized object, not the
   parameter. `components.parameters` (oas-truth's `makeParametersCode`) applies them per
   parameter.
+  A `#/components/schemas/*` reference inside a coerced schema is expanded into its component
+  when the component's expression differs with `paramIn` (the component is declared once,
+  without it, so an integer component would never accept its text). One that reads the same
+  either way, such as a string enum, stays a reference and keeps its `$ref` in the document.
 - **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
   schema-truth.
 

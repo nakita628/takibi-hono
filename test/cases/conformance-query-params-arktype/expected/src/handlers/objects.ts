@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { type } from 'arktype'
-import { RangeSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const objectsHandler = new Hono().get(
   '/objects',
@@ -58,7 +58,16 @@ export const objectsHandler = new Hono().get(
           }),
         }),
       }),
-      'deep_ref?': RangeSchema,
+      'deep_ref?': type({
+        from: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+        'to?': type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
       'spread?': type({
         'sort?': "'asc' | 'desc'",
         'size?': type('string').pipe((data, ctx) => {

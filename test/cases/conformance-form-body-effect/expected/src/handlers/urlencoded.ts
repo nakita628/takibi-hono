@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { Effect, Schema, SchemaTransformation } from 'effect'
-import { CountSchema, FlagSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const urlencodedHandler = new Hono().post(
   '/urlencoded',
@@ -69,8 +69,22 @@ export const urlencodedHandler = new Hono().post(
             limit: Schema.FiniteFromString.check(Schema.isInt()).pipe(
               Schema.withDecodingDefaultType(Effect.succeed(20)),
             ),
-            count: Schema.optional(CountSchema),
-            flag: Schema.optional(FlagSchema),
+            count: Schema.optional(
+              Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+            ),
+            flag: Schema.optional(
+              Schema.String.check(
+                Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+              ).pipe(
+                Schema.decodeTo(
+                  Schema.Boolean,
+                  SchemaTransformation.transform({
+                    decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+                    encode: (output) => (output ? 'true' : 'false'),
+                  }),
+                ),
+              ),
+            ),
             tags: Schema.optional(
               Schema.Unknown.pipe(
                 Schema.decodeTo(

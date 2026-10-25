@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as v from 'valibot'
-import { RangeSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const objectsHandler = new Hono().get(
   '/objects',
@@ -61,7 +61,10 @@ export const objectsHandler = new Hono().get(
             ),
           }),
         ),
-        deep_ref: RangeSchema,
+        deep_ref: v.object({
+          from: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          to: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+        }),
         spread: v.partial(
           v.object({
             sort: v.picklist(['asc', 'desc']),
