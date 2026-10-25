@@ -10,7 +10,7 @@ import { computed, toValue } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import type { ClientRequestOptions, InferRequestType } from 'hono/client'
 import { parseResponse } from 'hono/client'
-import { client } from './lib'
+import { client } from './client'
 
 export function get_2024_01Key() {
   return ['2024-01'] as const

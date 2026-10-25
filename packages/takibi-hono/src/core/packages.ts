@@ -37,6 +37,7 @@ export function makePackageRoot(layout: Layout) {
           layout.handlersDir,
           layout.appDir,
           ...Object.values(layout.targets).map(targetDirectory),
+          ...layout.clientDirs,
         ].map((dir) => path.resolve(dir)),
       ),
     ]

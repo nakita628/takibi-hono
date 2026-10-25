@@ -4,6 +4,7 @@ import { Data, Effect } from 'effect'
 import type { OpenAPI } from 'oas-truth'
 import type { FormatConfig } from 'oxfmt'
 
+import type { BaseUrl, Credentials } from '../generator/client.js'
 import type { ComponentKind } from '../generator/components.js'
 import { COMPONENT_KINDS } from '../generator/components.js'
 
@@ -11,12 +12,20 @@ import { COMPONENT_KINDS } from '../generator/components.js'
 type ClientQueryOptions = {
   /** One `.ts` file (`parseConfig` normalizes a directory to `<dir>/index.ts`). */
   readonly output: string
-  readonly import: string
-  readonly client?: string | undefined
 }
 
-/** Client-code generators delegated to `hono-takibi`. Each entry is opt-in. */
+/**
+ * The typed client (`output`, which rpc and the query hooks import), and the client-code
+ * generators delegated to `hono-takibi`. Each entry is opt-in.
+ */
 export type ClientOptions = {
+  readonly output?: string | undefined
+  readonly baseUrl?: BaseUrl | undefined
+  readonly credentials?: Credentials | undefined
+  /** The module the client imports the type of the app from. */
+  readonly import?: string | undefined
+  /** The name other packages import the client by: the package it is written into. */
+  readonly package?: string | undefined
   readonly rpc?:
     | (ClientQueryOptions & {
         readonly parseResponse?: boolean | undefined
@@ -79,6 +88,10 @@ export type Target = {
 export type Layout = {
   readonly handlersDir: string
   readonly appDir: string
+  /** The typed client, when `client.output` is set. */
+  readonly client: Target | undefined
+  /** The directories the typed client, rpc and the query hooks are written into. */
+  readonly clientDirs: readonly string[]
   readonly pathAlias: string | undefined
   /** Set when every component kind lives in one module. */
   readonly aggregate: string | undefined
@@ -93,6 +106,18 @@ export type Layout = {
 
 /** A generated file would import another package that names no `package`. */
 export class LayoutError extends Data.TaggedError('LayoutError')<{ readonly message: string }> {}
+
+/** The client generators that import the typed client. */
+export const CLIENT_IMPORTERS = [
+  'rpc',
+  'swr',
+  'tanstackQuery',
+  'svelteQuery',
+  'vueQuery',
+  'preactQuery',
+  'solidQuery',
+  'angularQuery',
+] as const
 
 /** Every component kind the layout places: the schemas, then the other Components kinds. */
 const KINDS = ['schemas', ...COMPONENT_KINDS] as const
@@ -118,7 +143,7 @@ export function targetDirectory(target: Target) {
 }
 
 /** The module a target is imported by: its file, or the `index.ts` barrel of a split directory. */
-function targetModule(target: Target) {
+export function targetModule(target: Target) {
   return target.split ? path.join(target.output, 'index.ts') : target.output
 }
 
@@ -130,9 +155,17 @@ function targetModule(target: Target) {
  */
 export function resolveLayout(config: TakibiHonoConfig): Layout {
   const handlersDir = config.output ?? 'src/handlers'
+  const client = config.client
   const layout = {
     handlersDir,
     appDir: path.dirname(handlersDir),
+    client:
+      client?.output === undefined
+        ? undefined
+        : { output: client.output, split: false, exportTypes: false, package: client.package },
+    clientDirs: [client?.output, ...CLIENT_IMPORTERS.map((key) => client?.[key]?.output)].flatMap(
+      (output) => (output === undefined ? [] : [path.dirname(output)]),
+    ),
     pathAlias: config.pathAlias,
     packageRoot: () => undefined,
   }

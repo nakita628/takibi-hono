@@ -44,8 +44,13 @@ describe('parseConfig', () => {
       readonly: true,
       pathAlias: '@/',
       client: {
-        rpc: { output: 'src/rpc', import: '../lib', parseResponse: true, docs: false },
-        swr: { output: 'src/swr.ts', import: '../lib', client: 'api' },
+        output: 'src/client',
+        baseUrl: { env: 'API_URL', import: '@/env', name: 'env' },
+        credentials: 'include',
+        import: '@acme/api',
+        package: '@acme/client',
+        rpc: { output: 'src/rpc', parseResponse: true, docs: false },
+        swr: { output: 'src/swr.ts' },
         type: { output: 'src/types.ts', readonly: true },
         docs: { output: 'src/docs', entry: 'src/index.ts', curl: true },
       },
@@ -65,7 +70,8 @@ describe('parseConfig', () => {
       ...config,
       client: {
         ...config.client,
-        rpc: { output: 'src/rpc/index.ts', import: '../lib', parseResponse: true, docs: false },
+        output: 'src/client/index.ts',
+        rpc: { output: 'src/rpc/index.ts', parseResponse: true, docs: false },
       },
       components: {
         schemas: {
@@ -78,6 +84,31 @@ describe('parseConfig', () => {
         parameters: { output: 'src/parameters.ts', exportTypes: true },
         mediaTypes: { split: false, output: 'src/media/index.ts' },
       },
+    })
+  })
+
+  it.each([
+    [
+      'an environment variable read by Vite',
+      { env: 'VITE_API_URL' },
+      { env: 'VITE_API_URL', source: 'import.meta.env' },
+    ],
+    [
+      'an environment variable read by Node.js',
+      { env: 'API_URL', source: 'process.env' },
+      { env: 'API_URL', source: 'process.env' },
+    ],
+    [
+      'the environment object of a module',
+      { env: 'API_URL', import: '@/env' },
+      { env: 'API_URL', import: '@/env', name: 'env' },
+    ],
+    ['the same origin', '/', '/'],
+  ])('accepts a client baseUrl of %s, filling in its defaults', async (_, baseUrl, decoded) => {
+    const config = { ...base, client: { output: 'src/client.ts', baseUrl } }
+    expect(await parse(config)).toStrictEqual({
+      ...config,
+      client: { ...config.client, baseUrl: decoded },
     })
   })
 
@@ -148,13 +179,54 @@ describe('parseConfig', () => {
       'client.type.output: must be a .ts file',
     ],
     [
-      'a client generator without import',
+      'rpc without the typed client it imports',
       { ...base, client: { rpc: { output: 'src/rpc' } } },
-      'client.rpc.import: Missing key',
+      'client: rpc and the query hooks import the client takibi-hono generates: set client.output to the file it is written into.',
+    ],
+    [
+      'a query hook without the typed client it imports',
+      { ...base, client: { tanstackQuery: { output: 'src/q.ts' } } },
+      'client: rpc and the query hooks import the client takibi-hono generates: set client.output to the file it is written into.',
+    ],
+    [
+      'a typed-client key without client.output',
+      { ...base, client: { credentials: 'include', type: { output: 'src/types.ts' } } },
+      'client: baseUrl, credentials, import and package describe the typed client: they go with client.output.',
+    ],
+    [
+      'a fixed base URL',
+      { ...base, client: { output: 'src/client.ts', baseUrl: 'https://api.example.com' } },
+      "client.baseUrl: must be '/' for the same origin: a fixed URL differs between environments, so read it from the environment with { env } or { env, import }",
+    ],
+    [
+      'a base URL variable that is not a variable name',
+      { ...base, client: { output: 'src/client.ts', baseUrl: { env: 'API-URL' } } },
+      'client.baseUrl.env: must be the name of an environment variable',
+    ],
+    [
+      'unknown credentials',
+      { ...base, client: { output: 'src/client.ts', credentials: 'always' } },
+      'client.credentials: Expected "include" | "same-origin" | "omit"',
+    ],
+    [
+      'the retired rpc import',
+      {
+        ...base,
+        client: { output: 'src/client.ts', rpc: { output: 'src/rpc.ts', import: '../lib' } },
+      },
+      'client.rpc.import: import was removed: rpc and the query hooks import the client takibi-hono generates. Set client.output, and client.package when they are written into another package.',
+    ],
+    [
+      'the retired query-hook client name',
+      {
+        ...base,
+        client: { output: 'src/client.ts', swr: { output: 'src/swr.ts', client: 'api' } },
+      },
+      'client.swr.client: client was removed: the generated client is exported as `client`, and rpc and the query hooks import it by that name.',
     ],
     [
       'the retired client split option',
-      { ...base, client: { swr: { output: 'src/swr.ts', import: '../lib', split: true } } },
+      { ...base, client: { output: 'src/client.ts', swr: { output: 'src/swr.ts', split: true } } },
       'client.swr.split: split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
     ],
     [

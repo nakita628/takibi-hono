@@ -1,6 +1,6 @@
 import type { InferRequestType, ClientRequestOptions } from 'hono/client'
 import { parseResponse } from 'hono/client'
-import { client } from './lib'
+import { client } from './client'
 
 /**
  * Health
@@ -8,7 +8,7 @@ import { client } from './lib'
  * GET /
  */
 export async function get(options?: ClientRequestOptions) {
-  return await parseResponse(client.index.$get(undefined, options))
+  return await parseResponse(client.$get(undefined, options))
 }
 
 /**

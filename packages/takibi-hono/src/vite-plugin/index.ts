@@ -146,7 +146,9 @@ function extractOutputPaths(config: Config) {
   const clientOutputs = Object.values(config.client ?? {}).flatMap((value) =>
     isOutputConfig(value) ? [value.output] : [],
   )
-  return [...componentOutputs, ...baseOutput, ...clientOutputs].map(toAbsolutePath)
+  // The typed client is `client.output` itself, not a block under `client`.
+  const typedClient = config.client?.output === undefined ? [] : [config.client.output]
+  return [...componentOutputs, ...baseOutput, ...clientOutputs, ...typedClient].map(toAbsolutePath)
 }
 
 /** Removes generated outputs the previous config wrote and the current one no longer names. */

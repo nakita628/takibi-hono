@@ -23,6 +23,6 @@ export function hono(config: TakibiHonoConfig) {
     yield* writeComponents(openapi, config, layout)
     const handlerFileNames = yield* writeHandlers(openapi, config, layout)
     yield* writeApp(handlerFileNames, config, layout)
-    if (config.client) yield* makeClients(openapi, config.client, process.cwd(), config.basePath)
+    if (config.client) yield* makeClients(openapi, config, layout, process.cwd())
   }).pipe(Effect.provideService(FormatOptions, config.format ?? {}))
 }

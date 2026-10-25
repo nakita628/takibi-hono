@@ -1,7 +1,7 @@
 import { defineConfig } from 'takibi-hono/config'
 
-const hook = (name: string) =>
-  ({ output: `__generated__/client-hooks/src/${name}.ts`, import: './lib' }) as const
+// Golden only, no tsconfig.json: the query libraries the hooks import are not installed here.
+const hook = (name: string) => ({ output: `__generated__/client-hooks/src/${name}.ts` }) as const
 
 export default defineConfig({
   input: 'specs/petstore.yaml',
@@ -11,7 +11,9 @@ export default defineConfig({
   output: '__generated__/client-hooks/src/handlers',
   components: { output: '__generated__/client-hooks/src/components/index.ts' },
   client: {
-    rpc: { output: '__generated__/client-hooks/src/rpc.ts', import: './lib' },
+    output: '__generated__/client-hooks/src/client.ts',
+    baseUrl: { env: 'VITE_API_URL' },
+    rpc: { output: '__generated__/client-hooks/src/rpc.ts' },
     swr: hook('swr'),
     tanstackQuery: hook('tanstack-query'),
     svelteQuery: hook('svelte-query'),

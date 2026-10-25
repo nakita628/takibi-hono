@@ -1,5 +1,5 @@
 import type { InferRequestType, ClientRequestOptions } from 'hono/client'
-import { client } from './lib'
+import { client } from './client'
 
 export async function get(options?: ClientRequestOptions) {
   return await client.$get(undefined, options)

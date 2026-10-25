@@ -117,14 +117,86 @@ const ExportTypesOutputSchema = splitUnion({ exportTypes: Schema.optionalKey(Sch
 
 const ClientQuerySchema = Schema.Struct({
   output: FileOutputSchema,
-  import: Schema.String,
-  client: Schema.optionalKey(Schema.String),
+  import: removed(
+    'import was removed: rpc and the query hooks import the client takibi-hono generates. Set client.output, and client.package when they are written into another package.',
+  ),
+  client: removed(
+    'client was removed: the generated client is exported as `client`, and rpc and the query hooks import it by that name.',
+  ),
   split: removed(
     'split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
   ),
 })
 
+const EnvNameSchema = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u, {
+    message: 'must be the name of an environment variable',
+  }),
+)
+
+/**
+ * What the typed client is created with. `/` is the only URL written into the file: a fixed
+ * URL differs between environments, so it is read from the environment instead. The member
+ * that takes `import` stands first, since the other would take the object as well and drop it.
+ */
+const BaseUrlSchema = Schema.Union([
+  Schema.Literal('/').annotate({
+    message:
+      "must be '/' for the same origin: a fixed URL differs between environments, so read it from the environment with { env } or { env, import }",
+  }),
+  Schema.Struct({
+    env: EnvNameSchema,
+    import: PackageSchema,
+    name: Schema.String.check(
+      Schema.isPattern(/^[A-Za-z_$][A-Za-z0-9_$]*$/u, {
+        message: 'must be a JavaScript identifier',
+      }),
+    ).pipe(Schema.withDecodingDefault(Effect.succeed('env'))),
+  }),
+  Schema.Struct({
+    env: EnvNameSchema,
+    source: Schema.Literals(['import.meta.env', 'process.env']).pipe(
+      Schema.withDecodingDefault(Effect.succeed('import.meta.env')),
+    ),
+  }),
+]).annotate({
+  description:
+    "`hc(baseUrl)`: '/' (the default) for the same origin; { env } reads an environment variable when the client is created (`import.meta.env` by default, or `process.env`), asserted present; { env, import } reads a property of an environment object a module of yours exports (`env` by default).",
+})
+
+/** The typed-client keys, which are only read with `client.output`. */
+const TYPED_CLIENT_KEYS = ['baseUrl', 'credentials', 'import', 'package'] as const
+
+/** The client generators that import the typed client. */
+const CLIENT_IMPORTERS = [
+  'rpc',
+  'swr',
+  'tanstackQuery',
+  'svelteQuery',
+  'vueQuery',
+  'preactQuery',
+  'solidQuery',
+  'angularQuery',
+] as const
+
 const ClientSchema = Schema.Struct({
+  output: Schema.optionalKey(FileOutputSchema).annotate({
+    description:
+      'The typed Hono client of the generated app, exported as `client`. rpc and the query hooks import it.',
+  }),
+  baseUrl: Schema.optionalKey(BaseUrlSchema),
+  credentials: Schema.optionalKey(Schema.Literals(['include', 'same-origin', 'omit'])).annotate({
+    description:
+      'The `credentials` of every request the client sends, `hc(baseUrl, { init: { credentials } })`. Left out, nothing is written.',
+  }),
+  import: Schema.optionalKey(PackageSchema).annotate({
+    description:
+      'The module the client imports the type of the app from. Left out, the app entry is imported relatively; name the package of the app when the client is written into another package.',
+  }),
+  package: Schema.optionalKey(PackageSchema).annotate({
+    description:
+      'The name the files of other packages import the client by: the package it is written into.',
+  }),
   rpc: Schema.optionalKey(
     Schema.Struct({
       ...ClientQuerySchema.fields,
@@ -151,7 +223,29 @@ const ClientSchema = Schema.Struct({
       baseUrl: Schema.optionalKey(Schema.String),
     }),
   ),
-}).annotate({ description: 'Client-code generators delegated to hono-takibi. Each is opt-in.' })
+})
+  .check(
+    Schema.makeFilter(
+      (client) =>
+        client.output !== undefined || CLIENT_IMPORTERS.every((key) => client[key] === undefined),
+      {
+        message:
+          'rpc and the query hooks import the client takibi-hono generates: set client.output to the file it is written into.',
+      },
+    ),
+    Schema.makeFilter(
+      (client) =>
+        client.output !== undefined || TYPED_CLIENT_KEYS.every((key) => client[key] === undefined),
+      {
+        message:
+          'baseUrl, credentials, import and package describe the typed client: they go with client.output.',
+      },
+    ),
+  )
+  .annotate({
+    description:
+      'The typed client (output), and the client-code generators delegated to hono-takibi. Each is opt-in.',
+  })
 
 const ComponentsSchema = Schema.Struct({
   output: Schema.optionalKey(TypeScriptPathSchema),

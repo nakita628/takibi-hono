@@ -5,7 +5,7 @@ import useSWRMutation from 'swr/mutation'
 import type { SWRMutationConfiguration } from 'swr/mutation'
 import type { ClientRequestOptions, InferRequestType } from 'hono/client'
 import { parseResponse } from 'hono/client'
-import { client } from './lib'
+import { client } from './client'
 
 export function get_2024_01Key() {
   return ['2024-01'] as const
