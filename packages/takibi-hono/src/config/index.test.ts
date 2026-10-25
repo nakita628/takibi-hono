@@ -42,6 +42,7 @@ describe('parseConfig', () => {
       openapi: true,
       format: { printWidth: 80, experimentalSortImports: {} },
       readonly: true,
+      split: true,
       pathAlias: '@/',
       client: {
         output: 'src/client.ts',
@@ -280,6 +281,7 @@ describe('parseConfig', () => {
       'testFramework: testFramework is not provided: takibi-hono generates no test files.',
     ],
     ['a non-boolean readonly', { ...base, readonly: 'yes' }, 'readonly: Expected boolean'],
+    ['a non-boolean split', { ...base, split: 'groups' }, 'split: Expected boolean'],
     [
       'a format that is not an object',
       { ...base, format: [] },

@@ -63,6 +63,13 @@ export default defineConfig({
   // Add `.readonly()` to generated schemas
   readonly: true,
 
+  // `true` divides the app into groups, one per handler file (the first segment of the
+  // path). The app entry exports each group under its name (`pets`, `__root`) instead of
+  // `api`, and `client` writes one client per group (`petsClient`), typed by that group's
+  // routes alone, so the type a caller works out stays small. Every group is still
+  // registered on the one app.
+  split: false,
+
   // Generated files import one another relatively, under `pathAlias` when the target is in
   // the directory of the app entry (matches the `paths` in your tsconfig, e.g. "@/*":
   // ["src/*"]), and by the target's `package` from another package: the nearest

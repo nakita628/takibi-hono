@@ -949,6 +949,88 @@ describe('mergeHandlerFile', () => {
 })
 
 describe('mergeAppFile', () => {
+  it("replaces the groups of a split app, keeping middleware and the user's own exports", () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { cors } from 'hono/cors'",
+      "import { petsHandler, usersHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      'app.use(cors())',
+      '',
+      "export const pets = app.route('/', petsHandler)",
+      '',
+      "export const users = app.route('/', usersHandler)",
+      '',
+      'export type Users = typeof users',
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { ordersHandler, petsHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      '',
+      "export const orders = app.route('/', ordersHandler)",
+      '',
+      "export const pets = app.route('/', petsHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    expect(mergeAppFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { ordersHandler, petsHandler } from './handlers'",
+        "import { cors } from 'hono/cors'",
+        '',
+        'const app = new Hono()',
+        'app.use(cors())',
+        '',
+        "export const orders = app.route('/', ordersHandler)",
+        '',
+        "export const pets = app.route('/', petsHandler)",
+        '',
+        'export type Users = typeof users',
+        '',
+        'export default app',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('swaps api for the groups when split is turned on', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { petsHandler, usersHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      '',
+      "export const api = app.route('/', petsHandler).route('/', usersHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { petsHandler, usersHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      '',
+      "export const pets = app.route('/', petsHandler)",
+      '',
+      "export const users = app.route('/', usersHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    expect(mergeAppFile(existing, generated)).toBe(generated)
+    // And back, when it is turned off.
+    expect(mergeAppFile(generated, existing)).toBe(existing)
+  })
+
   it('replaces api statement with generated version', () => {
     const existing = [
       "import { Hono } from 'hono'",

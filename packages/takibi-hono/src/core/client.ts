@@ -9,6 +9,8 @@ import type { OpenAPI } from 'oas-truth'
 
 import { emit } from '../emit/index.js'
 import { makeClientCode } from '../generator/client.js'
+import { toGroupName } from '../generator/handler.js'
+import { collectRoutes, makeHandlerFileName } from '../helper/operations.js'
 import type { ClientOptions, HookLibrary, Layout, Target, TakibiHonoConfig } from './layout.js'
 import { HOOK_LIBRARIES, makeSpecifier, targetModule } from './layout.js'
 
@@ -95,8 +97,19 @@ function clientSpecifier(layout: Layout, key: string, output: string) {
     : Effect.succeed(makeSpecifier(layout, path.dirname(output), target))
 }
 
-/** Writes the typed client, which rpc and the query hooks import as `client`. */
-function writeClient(config: TakibiHonoConfig, layout: Layout, baseDir: string) {
+/**
+ * The group an operation of a split app belongs to, as rpc and the hooks are handed it: the
+ * export of its handler file, as the app entry names it.
+ */
+const grouping = (route: string) => toGroupName(makeHandlerFileName(route))
+
+/** The groups of a split app, in the order the app entry exports them. */
+function makeGroups(openapi: OpenAPI) {
+  return [...collectRoutes(openapi).keys()].toSorted().map(toGroupName)
+}
+
+/** Writes the typed client (one per group of a split app), which rpc and the hooks import. */
+function writeClient(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout, baseDir: string) {
   return Effect.gen(function* () {
     const client = config.client
     const target = layout.client
@@ -107,6 +120,7 @@ function writeClient(config: TakibiHonoConfig, layout: Layout, baseDir: string) 
       baseUrl: client.baseUrl,
       basePath: config.basePath,
       credentials: client.credentials,
+      ...(config.split === true && { groups: makeGroups(openapi) }),
     })
     yield* emit(code, path.dirname(output), output)
   })
@@ -125,7 +139,7 @@ export function makeClients(
   baseDir: string,
 ) {
   return Effect.gen(function* () {
-    yield* writeClient(config, layout, baseDir)
+    yield* writeClient(openapi, config, layout, baseDir)
     yield* delegateClients(openapi, config, layout, baseDir)
   })
 }
@@ -153,6 +167,7 @@ function delegateClients(
               yield* hooks(oa, output, importPath, library, {
                 clientName: 'client',
                 ...(basePath !== undefined && { basePath }),
+                ...(config.split === true && { grouping }),
               })
             })
           : Effect.void
@@ -170,6 +185,7 @@ function delegateClients(
         config.rpc.parseResponse,
         basePath,
         config.rpc.docs,
+        config.split === true ? grouping : undefined,
       )
     }
     if (config.type) {

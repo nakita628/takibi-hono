@@ -7,6 +7,7 @@ import {
   valueToCode,
 } from 'oas-truth'
 
+import { freeName } from '../helper/identifiers.js'
 import type { ImportEntry } from '../helper/imports.js'
 import { withImports } from '../helper/imports.js'
 import { getLibrary, makeInlineAdapter, makeLibraryImports } from '../helper/library.js'
@@ -295,13 +296,99 @@ export function makeHandlerCode(
   return withImports(body, [...makeLibraryImports(context.lib), ...context.imports])
 }
 
+// What a group cannot be exported as: the words of the language, strict mode's included (a
+// module is strict), and the two names strict mode refuses to bind.
+const RESERVED = new Set([
+  'arguments',
+  'await',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'eval',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'implements',
+  'import',
+  'in',
+  'instanceof',
+  'interface',
+  'let',
+  'new',
+  'null',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'return',
+  'static',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+])
+
+/**
+ * The export of a group of a split app, which is a handler file: its name as an identifier
+ * (`pets`, `userProfiles`, `_20100401`), `__root` for the root as hono-takibi names it, and
+ * `__` before a word of the language (`__delete`).
+ */
+export function toGroupName(fileName: string) {
+  if (fileName === '__root') return '__root'
+  const base = toHandlerVarName(fileName).replace(/Handler$/u, '')
+  return RESERVED.has(base) ? `__${base}` : base
+}
+
+/**
+ * The app entry: every handler routed on one app, under the base path. `api` is the app with
+ * every route. With `split`, each handler file is a group exported under its name instead, so
+ * that a client of one group resolves the routes of that group and not of the whole app; the
+ * routes are still registered on the one app. The app is bound as `app`, unless a group takes
+ * that name.
+ */
 export function makeAppCode(
   handlerFileNames: readonly string[],
-  options: { readonly basePath: string | undefined; readonly handlersImport: string },
+  options: {
+    readonly basePath: string | undefined
+    readonly handlersImport: string
+    readonly split?: boolean | undefined
+  },
 ) {
-  const names = handlerFileNames.toSorted().map(toHandlerVarName)
-  const app = options.basePath
+  const files = handlerFileNames.toSorted()
+  const names = files.map(toHandlerVarName)
+  const app = options.split === true ? freeName('app', files.map(toGroupName)) : 'app'
+  const created = options.basePath
     ? `new Hono().basePath(${JSON.stringify(options.basePath)})`
     : 'new Hono()'
-  return `import{Hono}from'hono'\nimport{${names.join(',')}}from'${options.handlersImport}'\n\nconst app=${app}\n\nexport const api=app${names.map((name) => `.route('/',${name})`).join('')}\n\nexport default app`
+  const routes =
+    options.split === true
+      ? files
+          .map(
+            (file) =>
+              `export const ${toGroupName(file)}=${app}.route('/',${toHandlerVarName(file)})`,
+          )
+          .join('\n\n')
+      : `export const api=app${names.map((name) => `.route('/',${name})`).join('')}`
+  return `import{Hono}from'hono'\nimport{${names.join(',')}}from'${options.handlersImport}'\n\nconst ${app}=${created}\n\n${routes}\n\nexport default ${app}`
 }

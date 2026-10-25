@@ -116,4 +116,56 @@ ${TYPED}
 
 export const client=hcWithType('/',{init:{credentials:"include"}}).api`)
   })
+
+  it('writes one client for each group of a split app, typed by that group alone', () => {
+    expect(
+      makeClientCode({
+        appImport: '..',
+        baseUrl: '/',
+        basePath: '/api',
+        credentials: undefined,
+        groups: ['__root', 'pets'],
+      }),
+    ).toBe(`import{hc}from'hono/client'
+import type{__root,pets}from'..'
+
+type __RootClient=ReturnType<typeof hc<typeof __root>>
+
+const hc__RootWithType=(...args:Parameters<typeof hc>):__RootClient=>hc<typeof __root>(...args)
+
+export const __rootClient=hc__RootWithType('/').api
+
+type PetsClient=ReturnType<typeof hc<typeof pets>>
+
+const hcPetsWithType=(...args:Parameters<typeof hc>):PetsClient=>hc<typeof pets>(...args)
+
+export const petsClient=hcPetsWithType('/').api`)
+  })
+
+  it('imports a group under another name when the file binds that name itself', () => {
+    expect(
+      makeClientCode({
+        appImport: '..',
+        baseUrl: { env: 'API_URL', source: 'process.env' },
+        basePath: undefined,
+        credentials: undefined,
+        groups: ['hc', 'baseUrl'],
+      }),
+    ).toBe(`import{hc}from'hono/client'
+import type{hc as hcApp,baseUrl as baseUrlApp}from'..'
+
+const baseUrl=process.env.API_URL!
+
+type HcClient=ReturnType<typeof hc<typeof hcApp>>
+
+const hcHcWithType=(...args:Parameters<typeof hc>):HcClient=>hc<typeof hcApp>(...args)
+
+export const hcClient=hcHcWithType(baseUrl)
+
+type BaseUrlClient=ReturnType<typeof hc<typeof baseUrlApp>>
+
+const hcBaseUrlWithType=(...args:Parameters<typeof hc>):BaseUrlClient=>hc<typeof baseUrlApp>(...args)
+
+export const baseUrlClient=hcBaseUrlWithType(baseUrl)`)
+  })
 })

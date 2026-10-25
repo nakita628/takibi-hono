@@ -320,6 +320,10 @@ const ConfigSchema = Schema.Struct({
     ),
   ),
   readonly: Schema.optionalKey(Schema.Boolean),
+  split: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Divide the app into groups, one per handler file (the first segment of the path): the app entry exports each under its name instead of `api`, and the client is one client per group (`petsClient`), so that a client of one group resolves the routes of that group and not of the whole app. Every group is registered on the one app. As hono-takibi's `template.split`.",
+  }),
   ...CLIENT_FIELDS,
   pathAlias: Schema.optionalKey(Schema.String),
   components: Schema.optionalKey(ComponentsSchema),
