@@ -115,7 +115,13 @@ export const petsHandler = new Hono()
       'form',
       v.object({
         caption: v.pipe(v.string(), v.minCodePoints(1)),
-        featured: v.optional(v.boolean()),
+        featured: v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+          ),
+        ),
       }),
     ),
     (c) => {},

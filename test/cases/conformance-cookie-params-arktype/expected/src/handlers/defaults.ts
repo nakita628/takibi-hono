@@ -9,16 +9,20 @@ export const defaultsHandler = new Hono().get(
   validator(
     'cookie',
     type({
-      'int_def?': 'number.integer',
-      'int64_def?': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'int_def?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'int64_def?': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) =>
             (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
             ctx.mustBe('an int64'),
         ),
-      'bool_def?': 'boolean',
+      'bool_def?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
       'str_def?': 'string',
     }),
   ),

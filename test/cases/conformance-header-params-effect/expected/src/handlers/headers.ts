@@ -10,64 +10,50 @@ export const headersHandler = new Hono().get(
     'header',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        'x-integer': Schema.optional(Schema.Number.check(Schema.isInt())),
-        'x-int32': Schema.optional(Schema.Number.check(Schema.isInt32())),
+        'x-integer': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        'x-int32': Schema.optional(Schema.FiniteFromString.check(Schema.isInt32())),
         'x-int64': Schema.optional(
-          Schema.Union([
-            Schema.BigInt,
-            Schema.Number.check(Schema.isInt()),
-            Schema.String.check(Schema.isPattern(/^-?\d+$/)),
-          ])
-            .pipe(
-              Schema.decodeTo(
-                Schema.BigInt,
-                SchemaTransformation.transform({
-                  decode: (input) => BigInt(input),
-                  encode: (output) => output,
-                }),
-              ),
-            )
-            .check(
-              Schema.isBetweenBigInt({
-                minimum: -9223372036854775808n,
-                maximum: 9223372036854775807n,
-              }),
-            ),
+          Schema.BigIntFromString.check(
+            Schema.isBetweenBigInt({
+              minimum: -9223372036854775808n,
+              maximum: 9223372036854775807n,
+            }),
+          ),
         ),
-        'x-bigint': Schema.optional(Schema.BigInt),
-        'x-uint32': Schema.optional(Schema.Number.check(Schema.isUint32())),
+        'x-bigint': Schema.optional(Schema.BigIntFromString),
+        'x-uint32': Schema.optional(Schema.FiniteFromString.check(Schema.isUint32())),
         'x-uint64': Schema.optional(
-          Schema.Union([
-            Schema.BigInt,
-            Schema.Number.check(Schema.isInt()),
-            Schema.String.check(Schema.isPattern(/^-?\d+$/)),
-          ])
-            .pipe(
-              Schema.decodeTo(
-                Schema.BigInt,
-                SchemaTransformation.transform({
-                  decode: (input) => BigInt(input),
-                  encode: (output) => output,
-                }),
-              ),
-            )
-            .check(Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n })),
+          Schema.BigIntFromString.check(
+            Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n }),
+          ),
         ),
-        'x-number': Schema.optional(Schema.Number),
+        'x-number': Schema.optional(Schema.FiniteFromString),
         'x-float': Schema.optional(
-          Schema.Number.check(
+          Schema.FiniteFromString.check(
             Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
           ),
         ),
         'x-float32': Schema.optional(
-          Schema.Number.check(
+          Schema.FiniteFromString.check(
             Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
           ),
         ),
-        'x-float64': Schema.optional(Schema.Number),
-        'x-double': Schema.optional(Schema.Number),
-        'x-numpassword': Schema.optional(Schema.Number),
-        'x-boolean': Schema.optional(Schema.Boolean),
+        'x-float64': Schema.optional(Schema.FiniteFromString),
+        'x-double': Schema.optional(Schema.FiniteFromString),
+        'x-numpassword': Schema.optional(Schema.FiniteFromString),
+        'x-boolean': Schema.optional(
+          Schema.String.check(
+            Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+          ).pipe(
+            Schema.decodeTo(
+              Schema.Boolean,
+              SchemaTransformation.transform({
+                decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+                encode: (output) => (output ? 'true' : 'false'),
+              }),
+            ),
+          ),
+        ),
         'x-string': Schema.optional(Schema.String),
         'x-email': Schema.optional(
           Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),
@@ -175,7 +161,18 @@ export const headersHandler = new Hono().get(
             ),
           ),
         ),
-        'x-ids': Schema.optional(Schema.Array(Schema.Number.check(Schema.isInt()))),
+        'x-ids': Schema.optional(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+          ),
+        ),
       }),
     ),
   ),

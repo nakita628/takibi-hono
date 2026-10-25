@@ -162,6 +162,47 @@ export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.
     ).toBe(expected)
   })
 
+  it('coerces header, cookie and form body values from text', () => {
+    const route = {
+      method: 'post',
+      path: '/uploads',
+      parameters: [],
+      operation: {
+        parameters: [
+          { name: 'x-count', in: 'header', schema: { type: 'integer' } },
+          { name: 'debug', in: 'cookie', schema: { type: 'boolean' } },
+        ],
+        requestBody: {
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  size: { type: 'integer' },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {},
+      },
+    }
+    expect(
+      makeHandlerCode('uploadsHandler', [route] as never, {
+        lib: 'zod',
+        openapi: false,
+        components: undefined,
+        responseRefs: false,
+        imports: [],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{sValidator}from'@hono/standard-validator'
+import*as z from'zod'
+
+export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.coerce.number().int().exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.coerce.number().int().exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
+  })
+
   it.each([
     ['typebox', `validator('json',Compile(ItemSchema))`, 'resolver(Compile(ItemSchema))'],
     [

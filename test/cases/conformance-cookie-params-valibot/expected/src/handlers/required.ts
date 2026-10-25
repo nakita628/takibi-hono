@@ -9,20 +9,21 @@ export const requiredHandler = new Hono().get(
   validator(
     'cookie',
     v.object({
-      id: v.pipe(v.number(), v.integer()),
+      id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
       big: v.pipe(
-        v.union([
-          v.bigint(),
-          v.pipe(v.number(), v.integer()),
-          v.pipe(v.string(), v.regex(/^-?\d+$/)),
-        ]),
+        v.string(),
+        v.regex(/^-?\d+$/),
         v.transform((input) => BigInt(input)),
         v.minValue(-9223372036854775808n),
         v.maxValue(9223372036854775807n),
       ),
-      flag: v.boolean(),
+      flag: v.pipe(
+        v.string(),
+        v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+      ),
       name: v.string(),
-      note: v.optional(v.pipe(v.number(), v.integer())),
+      note: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
     }),
   ),
   (c) => {},

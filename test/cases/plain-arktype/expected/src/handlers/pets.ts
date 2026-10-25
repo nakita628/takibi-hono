@@ -74,7 +74,9 @@ export const petsHandler = new Hono()
         caption: type('string').narrow(
           (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
         ),
-        'featured?': 'boolean',
+        'featured?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+          /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+        ),
       }),
     ),
     (c) => {},

@@ -10,64 +10,50 @@ export const cookiesHandler = new Hono().get(
     'cookie',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        integer: Schema.optional(Schema.Number.check(Schema.isInt())),
-        int32: Schema.optional(Schema.Number.check(Schema.isInt32())),
+        integer: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        int32: Schema.optional(Schema.FiniteFromString.check(Schema.isInt32())),
         int64: Schema.optional(
-          Schema.Union([
-            Schema.BigInt,
-            Schema.Number.check(Schema.isInt()),
-            Schema.String.check(Schema.isPattern(/^-?\d+$/)),
-          ])
-            .pipe(
-              Schema.decodeTo(
-                Schema.BigInt,
-                SchemaTransformation.transform({
-                  decode: (input) => BigInt(input),
-                  encode: (output) => output,
-                }),
-              ),
-            )
-            .check(
-              Schema.isBetweenBigInt({
-                minimum: -9223372036854775808n,
-                maximum: 9223372036854775807n,
-              }),
-            ),
+          Schema.BigIntFromString.check(
+            Schema.isBetweenBigInt({
+              minimum: -9223372036854775808n,
+              maximum: 9223372036854775807n,
+            }),
+          ),
         ),
-        bigint: Schema.optional(Schema.BigInt),
-        uint32: Schema.optional(Schema.Number.check(Schema.isUint32())),
+        bigint: Schema.optional(Schema.BigIntFromString),
+        uint32: Schema.optional(Schema.FiniteFromString.check(Schema.isUint32())),
         uint64: Schema.optional(
-          Schema.Union([
-            Schema.BigInt,
-            Schema.Number.check(Schema.isInt()),
-            Schema.String.check(Schema.isPattern(/^-?\d+$/)),
-          ])
-            .pipe(
-              Schema.decodeTo(
-                Schema.BigInt,
-                SchemaTransformation.transform({
-                  decode: (input) => BigInt(input),
-                  encode: (output) => output,
-                }),
-              ),
-            )
-            .check(Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n })),
+          Schema.BigIntFromString.check(
+            Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n }),
+          ),
         ),
-        number: Schema.optional(Schema.Number),
+        number: Schema.optional(Schema.FiniteFromString),
         float: Schema.optional(
-          Schema.Number.check(
+          Schema.FiniteFromString.check(
             Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
           ),
         ),
         float32: Schema.optional(
-          Schema.Number.check(
+          Schema.FiniteFromString.check(
             Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
           ),
         ),
-        float64: Schema.optional(Schema.Number),
-        double: Schema.optional(Schema.Number),
-        numpassword: Schema.optional(Schema.Number),
-        boolean: Schema.optional(Schema.Boolean),
+        float64: Schema.optional(Schema.FiniteFromString),
+        double: Schema.optional(Schema.FiniteFromString),
+        numpassword: Schema.optional(Schema.FiniteFromString),
+        boolean: Schema.optional(
+          Schema.String.check(
+            Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+          ).pipe(
+            Schema.decodeTo(
+              Schema.Boolean,
+              SchemaTransformation.transform({
+                decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+                encode: (output) => (output ? 'true' : 'false'),
+              }),
+            ),
+          ),
+        ),
         string: Schema.optional(Schema.String),
         email: Schema.optional(
           Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),
@@ -180,7 +166,18 @@ export const cookiesHandler = new Hono().get(
             ),
           ),
         ),
-        ids: Schema.optional(Schema.Array(Schema.Number.check(Schema.isInt()))),
+        ids: Schema.optional(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+          ),
+        ),
       }),
     ),
   ),

@@ -94,11 +94,15 @@ outputs are single files).
 - Values are emitted with `valueToCode` / `makeSchemaReplacements`. `resolver(...)` wraps **only
   response `content` schemas** in `describeRoute`: that is all hono-openapi resolves; header
   schemas stay plain JSON Schema. Collision maps come from oas-truth's `makeSchemaIdentifiers`.
-- Query and path parameters are coerced by schema-to-library's `paramIn`
-  (`adapter.toExpression(schema, paramIn)`), one synthesized object schema per location. This was
-  once kept here because the five libraries had no symmetric coercion. schema-to-library 0.4
-  covers all of them, so it is delegated: zod `z.coerce`, valibot `v.transform(Number)`, typebox
-  `Codec`, arktype `.parse` and effect `NumberFromString`.
+- Path, query, header and cookie parameters are coerced by schema-truth's `paramIn`
+  (`adapter.toExpression(schema, location)`), one synthesized object schema per location, and a
+  form body by `paramIn: 'formData'`. This was once kept here because the five libraries had no
+  symmetric coercion; schema-truth covers all of them, so it is delegated: zod `z.coerce`, valibot
+  `v.transform(Number)`, typebox `Codec`, arktype `.pipe` and effect `FiniteFromString`.
+  A parameter's `style` / `explode` / `allowEmptyValue` are not passed by the handler validators:
+  `toExpression` applies them to the expression's root, which is the synthesized object, not the
+  parameter. `components.parameters` (oas-truth's `makeParametersCode`) applies them per
+  parameter.
 - **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
   schema-to-library.
 

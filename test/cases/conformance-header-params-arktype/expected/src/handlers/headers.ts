@@ -9,31 +9,68 @@ export const headersHandler = new Hono().get(
   validator(
     'header',
     type({
-      'x-integer?': 'number.integer',
-      'x-int32?': 'number.integer >= -2147483648 & number.integer <= 2147483647',
-      'x-int64?': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'x-integer?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'x-int32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= -2147483648 & number.integer <= 2147483647'),
+      'x-int64?': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) =>
             (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
             ctx.mustBe('an int64'),
         ),
-      'x-bigint?': 'bigint',
-      'x-uint32?': 'number.integer >= 0 & number.integer <= 4294967295',
-      'x-uint64?': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'x-bigint?': type('string').pipe((data, ctx) =>
+        /^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer'),
+      ),
+      'x-uint32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= 0 & number.integer <= 4294967295'),
+      'x-uint64?': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) => (data >= 0n && data <= 18446744073709551615n) || ctx.mustBe('a uint64'),
         ),
-      'x-number?': 'number',
-      'x-float?': 'number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38',
-      'x-float32?': 'number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38',
-      'x-float64?': 'number',
-      'x-double?': 'number',
-      'x-numpassword?': 'number',
-      'x-boolean?': 'boolean',
+      'x-number?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'x-float?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+      'x-float32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+      'x-float64?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'x-double?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'x-numpassword?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'x-boolean?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
       'x-string?': 'string',
       'x-email?': 'string.email',
       'x-uuid?': 'string.uuid',
@@ -83,7 +120,15 @@ export const headersHandler = new Hono().get(
       'x-guid?': type(
         /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/,
       ),
-      'x-ids?': 'number.integer[]',
+      'x-ids?': type('unknown').pipe(
+        (data) => (data === undefined || Array.isArray(data) ? data : [data]),
+        type(
+          type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+        ).array(),
+      ),
     }),
   ),
   (c) => {},

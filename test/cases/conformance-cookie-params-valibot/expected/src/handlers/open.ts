@@ -10,8 +10,11 @@ export const openHandler = new Hono().get(
     'cookie',
     v.partial(
       v.object({
-        page: v.pipe(v.number(), v.integer()),
-        bag: v.record(v.string(), v.pipe(v.number(), v.integer())),
+        page: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        bag: v.record(
+          v.string(),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        ),
       }),
     ),
   ),

@@ -10,9 +10,22 @@ export const multipartHandler = new Hono().post(
     'form',
     type({
       file: 'File',
-      'age?': 'number.integer',
-      'active?': 'boolean',
-      'ids?': 'number.integer[]',
+      'age?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'active?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
+      'ids?': type('unknown').pipe(
+        (data) => (data === undefined || Array.isArray(data) ? data : [data]),
+        type(
+          type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+        ).array(),
+      ),
     }),
   ),
   (c) => {},

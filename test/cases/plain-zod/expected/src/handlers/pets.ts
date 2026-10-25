@@ -44,7 +44,7 @@ export const petsHandler = new Hono()
     sValidator('param', z.object({ petId: z.coerce.number().int() })),
     sValidator(
       'form',
-      z.object({ caption: z.string().min(1), featured: z.boolean().exactOptional() }),
+      z.object({ caption: z.string().min(1), featured: z.stringbool().exactOptional() }),
     ),
     (c) => {},
   )

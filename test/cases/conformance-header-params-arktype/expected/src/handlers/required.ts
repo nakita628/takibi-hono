@@ -9,18 +9,25 @@ export const requiredHandler = new Hono().get(
   validator(
     'header',
     type({
-      'x-id': 'number.integer',
-      'x-big': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'x-id': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'x-big': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) =>
             (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
             ctx.mustBe('an int64'),
         ),
-      'x-flag': 'boolean',
+      'x-flag': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
       'x-name': 'string',
-      'x-note?': 'number.integer',
+      'x-note?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
     }),
   ),
   (c) => {},

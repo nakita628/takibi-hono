@@ -10,8 +10,10 @@ export const openHandler = new Hono().get(
     'cookie',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        page: Schema.optional(Schema.Number.check(Schema.isInt())),
-        bag: Schema.optional(Schema.Record(Schema.String, Schema.Number.check(Schema.isInt()))),
+        page: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        bag: Schema.optional(
+          Schema.Record(Schema.String, Schema.FiniteFromString.check(Schema.isInt())),
+        ),
       }),
     ),
   ),

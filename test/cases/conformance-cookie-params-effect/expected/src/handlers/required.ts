@@ -10,30 +10,23 @@ export const requiredHandler = new Hono().get(
     'cookie',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        id: Schema.Number.check(Schema.isInt()),
-        big: Schema.Union([
-          Schema.BigInt,
-          Schema.Number.check(Schema.isInt()),
-          Schema.String.check(Schema.isPattern(/^-?\d+$/)),
-        ])
-          .pipe(
-            Schema.decodeTo(
-              Schema.BigInt,
-              SchemaTransformation.transform({
-                decode: (input) => BigInt(input),
-                encode: (output) => output,
-              }),
-            ),
-          )
-          .check(
-            Schema.isBetweenBigInt({
-              minimum: -9223372036854775808n,
-              maximum: 9223372036854775807n,
+        id: Schema.FiniteFromString.check(Schema.isInt()),
+        big: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+        ),
+        flag: Schema.String.check(
+          Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        ).pipe(
+          Schema.decodeTo(
+            Schema.Boolean,
+            SchemaTransformation.transform({
+              decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+              encode: (output) => (output ? 'true' : 'false'),
             }),
           ),
-        flag: Schema.Boolean,
+        ),
         name: Schema.String,
-        note: Schema.optional(Schema.Number.check(Schema.isInt())),
+        note: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
       }),
     ),
   ),

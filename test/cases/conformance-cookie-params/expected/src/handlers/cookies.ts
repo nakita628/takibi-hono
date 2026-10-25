@@ -9,27 +9,19 @@ export const cookiesHandler = new Hono().get(
   validator(
     'cookie',
     z.object({
-      integer: z.int().exactOptional(),
-      int32: z.int32().exactOptional(),
-      int64: z
-        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
-        .transform((val) => BigInt(val))
-        .pipe(z.int64())
-        .exactOptional(),
-      bigint: z.bigint().exactOptional(),
-      uint32: z.uint32().exactOptional(),
-      uint64: z
-        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
-        .transform((val) => BigInt(val))
-        .pipe(z.uint64())
-        .exactOptional(),
-      number: z.number().exactOptional(),
-      float: z.float32().exactOptional(),
-      float32: z.float32().exactOptional(),
-      float64: z.float64().exactOptional(),
-      double: z.number().exactOptional(),
-      numpassword: z.number().exactOptional(),
-      boolean: z.boolean().exactOptional(),
+      integer: z.coerce.number().int().exactOptional(),
+      int32: z.coerce.number().pipe(z.int32()).exactOptional(),
+      int64: z.coerce.bigint().pipe(z.int64()).exactOptional(),
+      bigint: z.coerce.bigint().exactOptional(),
+      uint32: z.coerce.number().pipe(z.uint32()).exactOptional(),
+      uint64: z.coerce.bigint().pipe(z.uint64()).exactOptional(),
+      number: z.coerce.number().exactOptional(),
+      float: z.coerce.number().pipe(z.float32()).exactOptional(),
+      float32: z.coerce.number().pipe(z.float32()).exactOptional(),
+      float64: z.coerce.number().pipe(z.float64()).exactOptional(),
+      double: z.coerce.number().exactOptional(),
+      numpassword: z.coerce.number().exactOptional(),
+      boolean: z.stringbool().exactOptional(),
       string: z.string().exactOptional(),
       email: z.email().exactOptional(),
       uuid: z.uuid().exactOptional(),
@@ -100,7 +92,12 @@ export const cookiesHandler = new Hono().get(
       ksuid: z.ksuid().exactOptional(),
       xid: z.xid().exactOptional(),
       guid: z.guid().exactOptional(),
-      ids: z.array(z.int()).exactOptional(),
+      ids: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

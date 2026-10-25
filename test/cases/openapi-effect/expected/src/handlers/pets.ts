@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 import {
   TagSchema,
   PetSchema,
@@ -145,7 +145,19 @@ export const petsHandler = new Hono()
               expected: 'a string of at least 1 character',
             }),
           ),
-          featured: Schema.optional(Schema.Boolean),
+          featured: Schema.optional(
+            Schema.String.check(
+              Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            ).pipe(
+              Schema.decodeTo(
+                Schema.Boolean,
+                SchemaTransformation.transform({
+                  decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+                  encode: (output) => (output ? 'true' : 'false'),
+                }),
+              ),
+            ),
+          ),
         }),
       ),
     ),

@@ -9,27 +9,19 @@ export const headersHandler = new Hono().get(
   validator(
     'header',
     z.object({
-      'x-integer': z.int().exactOptional(),
-      'x-int32': z.int32().exactOptional(),
-      'x-int64': z
-        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
-        .transform((val) => BigInt(val))
-        .pipe(z.int64())
-        .exactOptional(),
-      'x-bigint': z.bigint().exactOptional(),
-      'x-uint32': z.uint32().exactOptional(),
-      'x-uint64': z
-        .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
-        .transform((val) => BigInt(val))
-        .pipe(z.uint64())
-        .exactOptional(),
-      'x-number': z.number().exactOptional(),
-      'x-float': z.float32().exactOptional(),
-      'x-float32': z.float32().exactOptional(),
-      'x-float64': z.float64().exactOptional(),
-      'x-double': z.number().exactOptional(),
-      'x-numpassword': z.number().exactOptional(),
-      'x-boolean': z.boolean().exactOptional(),
+      'x-integer': z.coerce.number().int().exactOptional(),
+      'x-int32': z.coerce.number().pipe(z.int32()).exactOptional(),
+      'x-int64': z.coerce.bigint().pipe(z.int64()).exactOptional(),
+      'x-bigint': z.coerce.bigint().exactOptional(),
+      'x-uint32': z.coerce.number().pipe(z.uint32()).exactOptional(),
+      'x-uint64': z.coerce.bigint().pipe(z.uint64()).exactOptional(),
+      'x-number': z.coerce.number().exactOptional(),
+      'x-float': z.coerce.number().pipe(z.float32()).exactOptional(),
+      'x-float32': z.coerce.number().pipe(z.float32()).exactOptional(),
+      'x-float64': z.coerce.number().pipe(z.float64()).exactOptional(),
+      'x-double': z.coerce.number().exactOptional(),
+      'x-numpassword': z.coerce.number().exactOptional(),
+      'x-boolean': z.stringbool().exactOptional(),
       'x-string': z.string().exactOptional(),
       'x-email': z.email().exactOptional(),
       'x-uuid': z.uuid().exactOptional(),
@@ -99,7 +91,12 @@ export const headersHandler = new Hono().get(
       'x-ksuid': z.ksuid().exactOptional(),
       'x-xid': z.xid().exactOptional(),
       'x-guid': z.guid().exactOptional(),
-      'x-ids': z.array(z.int()).exactOptional(),
+      'x-ids': z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

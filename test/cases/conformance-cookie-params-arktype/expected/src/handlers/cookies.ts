@@ -9,31 +9,68 @@ export const cookiesHandler = new Hono().get(
   validator(
     'cookie',
     type({
-      'integer?': 'number.integer',
-      'int32?': 'number.integer >= -2147483648 & number.integer <= 2147483647',
-      'int64?': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'integer?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'int32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= -2147483648 & number.integer <= 2147483647'),
+      'int64?': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) =>
             (data >= -9223372036854775808n && data <= 9223372036854775807n) ||
             ctx.mustBe('an int64'),
         ),
-      'bigint?': 'bigint',
-      'uint32?': 'number.integer >= 0 & number.integer <= 4294967295',
-      'uint64?': type('bigint | number.integer')
-        .or(/^-?\d+$/)
-        .pipe((data) => BigInt(data))
+      'bigint?': type('string').pipe((data, ctx) =>
+        /^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer'),
+      ),
+      'uint32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= 0 & number.integer <= 4294967295'),
+      'uint64?': type('string')
+        .pipe((data, ctx) => (/^-?\d+$/.test(data) ? BigInt(data) : ctx.error('an integer')))
         .narrow(
           (data, ctx) => (data >= 0n && data <= 18446744073709551615n) || ctx.mustBe('a uint64'),
         ),
-      'number?': 'number',
-      'float?': 'number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38',
-      'float32?': 'number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38',
-      'float64?': 'number',
-      'double?': 'number',
-      'numpassword?': 'number',
-      'boolean?': 'boolean',
+      'number?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'float?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+      'float32?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+      'float64?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'double?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'numpassword?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isFinite(value) ? value : ctx.error('a number')
+      }),
+      'boolean?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+        /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+      ),
       'string?': 'string',
       'email?': 'string.email',
       'uuid?': 'string.uuid',
@@ -84,7 +121,15 @@ export const cookiesHandler = new Hono().get(
       'guid?': type(
         /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/,
       ),
-      'ids?': 'number.integer[]',
+      'ids?': type('unknown').pipe(
+        (data) => (data === undefined || Array.isArray(data) ? data : [data]),
+        type(
+          type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+        ).array(),
+      ),
     }),
   ),
   (c) => {},

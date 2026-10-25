@@ -71,7 +71,11 @@ export const petsHandler = new Hono()
       'form',
       Type.Object({
         caption: Type.String({ minLength: 1 }),
-        featured: Type.Optional(Type.Boolean()),
+        featured: Type.Optional(
+          Codec(Type.Union([Type.Literal('true'), Type.Literal('false')]))
+            .Decode((value) => value === 'true')
+            .Encode((value) => (value ? 'true' : 'false')),
+        ),
       }),
     ),
     (c) => {},

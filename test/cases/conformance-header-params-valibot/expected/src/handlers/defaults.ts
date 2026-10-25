@@ -9,21 +9,28 @@ export const defaultsHandler = new Hono().get(
   validator(
     'header',
     v.object({
-      'x-int-def': v.optional(v.pipe(v.number(), v.integer()), 20),
+      'x-int-def': v.optional(
+        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        '20',
+      ),
       'x-int64-def': v.optional(
         v.pipe(
-          v.union([
-            v.bigint(),
-            v.pipe(v.number(), v.integer()),
-            v.pipe(v.string(), v.regex(/^-?\d+$/)),
-          ]),
+          v.string(),
+          v.regex(/^-?\d+$/),
           v.transform((input) => BigInt(input)),
           v.minValue(-9223372036854775808n),
           v.maxValue(9223372036854775807n),
         ),
-        5n,
+        '5',
       ),
-      'x-bool-def': v.optional(v.boolean(), false),
+      'x-bool-def': v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+          v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+        ),
+        'false',
+      ),
       'x-str-def': v.optional(v.string(), 'fallback'),
     }),
   ),
