@@ -41,7 +41,7 @@ export const petsHandler = new Hono()
         }),
       ),
     ),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     validator('cookie', v.partial(v.object({ session: v.string() }))),
     (c) => {},
   )
@@ -60,7 +60,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     validator('json', NewPetSchema),
     (c) => {},
   )
@@ -68,7 +68,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     (c) => {},
   )
   .get(

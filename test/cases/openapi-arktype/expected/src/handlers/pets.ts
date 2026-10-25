@@ -37,7 +37,7 @@ export const petsHandler = new Hono()
         'tag?': TagSchema,
       }),
     ),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     validator('cookie', type({ 'session?': 'string' })),
     (c) => {},
   )
@@ -56,7 +56,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     validator('json', NewPetSchema),
     (c) => {},
   )
@@ -64,7 +64,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     (c) => {},
   )
   .get(

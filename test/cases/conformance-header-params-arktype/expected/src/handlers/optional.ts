@@ -89,8 +89,8 @@ export const optionalHandler = new Hono().get(
             }),
             'b?': 'string',
           }),
-          'X-Request-Id?': 'string.uuid',
-          'X-Rate-Limit?': type('string').pipe((data, ctx) => {
+          'x-request-id?': 'string.uuid',
+          'x-rate-limit?': type('string').pipe((data, ctx) => {
             const value = Number(data)
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),

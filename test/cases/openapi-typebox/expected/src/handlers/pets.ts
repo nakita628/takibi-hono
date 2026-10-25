@@ -39,7 +39,7 @@ export const petsHandler = new Hono()
         }),
       ),
     ),
-    validator('header', Compile(Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) }))),
+    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
     validator('cookie', Compile(Type.Object({ session: Type.Optional(Type.String()) }))),
     (c) => {},
   )
@@ -58,7 +58,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', Compile(Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) }))),
+    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
     validator('json', Compile(NewPetSchema)),
     (c) => {},
   )
@@ -66,7 +66,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', Compile(Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) }))),
+    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
     (c) => {},
   )
   .get(

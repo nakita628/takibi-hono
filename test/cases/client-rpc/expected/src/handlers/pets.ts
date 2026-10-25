@@ -32,7 +32,7 @@ export const petsHandler = new Hono()
         tag: TagSchema.exactOptional(),
       }),
     ),
-    validator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    validator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     validator('cookie', z.object({ session: z.string().exactOptional() })),
     (c) => {},
   )
@@ -51,7 +51,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    validator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     validator('json', NewPetSchema),
     (c) => {},
   )
@@ -59,7 +59,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    validator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     (c) => {},
   )
   .get(

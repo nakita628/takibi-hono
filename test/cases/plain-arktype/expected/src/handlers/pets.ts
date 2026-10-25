@@ -18,17 +18,17 @@ export const petsHandler = new Hono()
         'tag?': TagSchema,
       }),
     ),
-    sValidator('header', type({ 'X-Request-Id?': 'string' })),
+    sValidator('header', type({ 'x-request-id?': 'string' })),
     sValidator('cookie', type({ 'session?': 'string' })),
     (c) => {},
   )
   .post(
     '/pets',
-    sValidator('header', type({ 'X-Request-Id?': 'string' })),
+    sValidator('header', type({ 'x-request-id?': 'string' })),
     sValidator('json', NewPetSchema),
     (c) => {},
   )
-  .on('HEAD', '/pets', sValidator('header', type({ 'X-Request-Id?': 'string' })), (c) => {})
+  .on('HEAD', '/pets', sValidator('header', type({ 'x-request-id?': 'string' })), (c) => {})
   .get(
     '/pets/:petId',
     sValidator(

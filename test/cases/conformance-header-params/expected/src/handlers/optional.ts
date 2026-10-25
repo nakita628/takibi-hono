@@ -47,8 +47,8 @@ export const optionalHandler = new Hono().get(
         'x-objx': z
           .object({ a: z.coerce.number().int().exactOptional(), b: z.string().exactOptional() })
           .exactOptional(),
-        'X-Request-Id': z.uuid().exactOptional(),
-        'X-Rate-Limit': z.coerce.number().int().exactOptional(),
+        'x-request-id': z.uuid().exactOptional(),
+        'x-rate-limit': z.coerce.number().int().exactOptional(),
         'accept-version': z.coerce.number().int().exactOptional(),
         x_underscore: z.coerce.number().int().exactOptional(),
         'x-inull': z

@@ -22,20 +22,20 @@ export const petsHandler = new Hono()
         }),
       ),
     ),
-    sValidator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    sValidator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     sValidator('cookie', v.partial(v.object({ session: v.string() }))),
     (c) => {},
   )
   .post(
     '/pets',
-    sValidator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    sValidator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     sValidator('json', NewPetSchema),
     (c) => {},
   )
   .on(
     'HEAD',
     '/pets',
-    sValidator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    sValidator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     (c) => {},
   )
   .get(

@@ -17,20 +17,20 @@ export const petsHandler = new Hono()
         tag: Type.Optional(TagSchema),
       }),
     ),
-    tbValidator('header', Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) })),
+    tbValidator('header', Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
     tbValidator('cookie', Type.Object({ session: Type.Optional(Type.String()) })),
     (c) => {},
   )
   .post(
     '/pets',
-    tbValidator('header', Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) })),
+    tbValidator('header', Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
     tbValidator('json', NewPetSchema),
     (c) => {},
   )
   .on(
     'HEAD',
     '/pets',
-    tbValidator('header', Type.Object({ 'X-Request-Id': Type.Optional(Type.String()) })),
+    tbValidator('header', Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
     (c) => {},
   )
   .get(

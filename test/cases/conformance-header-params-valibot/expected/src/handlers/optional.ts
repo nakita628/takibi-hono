@@ -78,13 +78,13 @@ export const optionalHandler = new Hono().get(
               b: v.string(),
             }),
           ),
-          'X-Request-Id': v.pipe(
+          'x-request-id': v.pipe(
             v.string(),
             v.regex(
               /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
             ),
           ),
-          'X-Rate-Limit': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          'x-rate-limit': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           'accept-version': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           x_underscore: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           'x-inull': v.pipe(

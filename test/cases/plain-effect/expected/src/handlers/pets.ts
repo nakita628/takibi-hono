@@ -23,7 +23,7 @@ export const petsHandler = new Hono()
     ),
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'X-Request-Id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
     ),
     sValidator(
       'cookie',
@@ -35,7 +35,7 @@ export const petsHandler = new Hono()
     '/pets',
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'X-Request-Id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
     ),
     sValidator('json', Schema.toStandardSchemaV1(NewPetSchema)),
     (c) => {},
@@ -45,7 +45,7 @@ export const petsHandler = new Hono()
     '/pets',
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'X-Request-Id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
     ),
     (c) => {},
   )

@@ -203,6 +203,35 @@ import*as z from'zod'
 export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.coerce.number().int().exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.coerce.number().int().exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
   })
 
+  it('reads a header parameter under its lowercased name, as Hono hands it over', () => {
+    const route = {
+      method: 'get',
+      path: '/limits',
+      parameters: [{ name: 'X-Rate-Limit', in: 'header', schema: { type: 'integer' } }],
+      operation: {
+        // The operation-level parameter overrides the Path Item's, whatever the case.
+        parameters: [
+          { name: 'x-rate-limit', in: 'header', required: true, schema: { type: 'integer' } },
+          { name: 'X-Request-Id', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        responses: {},
+      },
+    }
+    expect(
+      makeHandlerCode('limitsHandler', [route] as never, {
+        lib: 'zod',
+        openapi: false,
+        components: undefined,
+        responseRefs: false,
+        imports: [],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{sValidator}from'@hono/standard-validator'
+import*as z from'zod'
+
+export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object({"x-rate-limit":z.coerce.number().int(),"x-request-id":z.string()})),(c)=>{})`)
+  })
+
   it.each([
     ['typebox', `validator('json',Compile(ItemSchema))`, 'resolver(Compile(ItemSchema))'],
     [

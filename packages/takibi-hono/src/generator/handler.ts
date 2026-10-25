@@ -102,6 +102,14 @@ function makeDescribeRoute(
 }
 
 /**
+ * The key Hono's validator reads a parameter under: header names are case-insensitive and Hono
+ * hands them over lowercased, so `X-Rate-Limit` is read as `x-rate-limit`.
+ */
+function wireName(parameter: { readonly name: string; readonly in: string }) {
+  return parameter.in === 'header' ? parameter.name.toLowerCase() : parameter.name
+}
+
+/**
  * `[target, expression]` per Hono validator: one object schema per parameter
  * location (schema-truth applies the wire coercion), then one per body target
  * (`application/json` wins over other JSON types; a form body is coerced as `formData`).
@@ -115,7 +123,9 @@ function makeValidators(
     [...route.parameters, ...(route.operation.parameters ?? [])].flatMap((raw) => {
       const parameter = resolveRef(raw, components?.parameters)
       // An operation-level parameter overrides the Path Item's one with the same name and location.
-      return parameter?.schema ? [[`${parameter.in}:${parameter.name}`, parameter] as const] : []
+      return parameter?.schema
+        ? [[`${parameter.in}:${wireName(parameter)}`, parameter] as const]
+        : []
     }),
   )
   const parameterValidators = PARAMETER_LOCATIONS.flatMap((location) => {
@@ -124,11 +134,11 @@ function makeValidators(
     const schema: Schema = {
       type: 'object',
       properties: Object.fromEntries(
-        group.map((parameter) => [parameter.name, parameter.schema ?? {}]),
+        group.map((parameter) => [wireName(parameter), parameter.schema ?? {}]),
       ),
       required: group
         .filter((parameter) => location === 'path' || parameter.required === true)
-        .map((parameter) => parameter.name),
+        .map(wireName),
     }
     // Every location arrives as text, and schema-truth coerces each one from it. A parameter's
     // `style` / `explode` / `allowEmptyValue` are not passed: they apply to the expression's

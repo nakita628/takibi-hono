@@ -122,7 +122,9 @@ describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
       parameters: [
         { in: 'query', name: 'limit', schema: { type: 'integer', minimum: 1, maximum: 100 } },
         { in: 'query', name: 'tag', schema: { $ref: '#/components/schemas/Tag' } },
-        { in: 'header', name: 'X-Request-Id', schema: { type: 'string' } },
+        // Header names are case-insensitive; the validator reads them lowercased, as Hono hands
+        // them over, and hono-openapi documents the validator's key.
+        { in: 'header', name: 'x-request-id', schema: { type: 'string' } },
         { in: 'cookie', name: 'session', schema: { type: 'string' } },
       ],
     })
@@ -142,7 +144,7 @@ describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
         },
         '400': { description: 'Bad request' },
       },
-      parameters: [{ in: 'header', name: 'X-Request-Id', schema: { type: 'string' } }],
+      parameters: [{ in: 'header', name: 'x-request-id', schema: { type: 'string' } }],
       requestBody: {
         required: true,
         content: { 'application/json': { schema: { $ref: '#/components/schemas/NewPet' } } },

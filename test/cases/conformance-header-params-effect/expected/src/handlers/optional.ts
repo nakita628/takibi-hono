@@ -124,8 +124,8 @@ export const optionalHandler = new Hono().get(
                 b: Schema.optional(Schema.String),
               }),
             ),
-            'X-Request-Id': Schema.optional(Schema.String.check(Schema.isUUID())),
-            'X-Rate-Limit': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            'x-request-id': Schema.optional(Schema.String.check(Schema.isUUID())),
+            'x-rate-limit': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
             'accept-version': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
             x_underscore: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
             'x-inull': Schema.optional(
