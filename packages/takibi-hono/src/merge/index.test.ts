@@ -44,6 +44,52 @@ describe('mergeHandlerFile', () => {
     )
   })
 
+  it("keeps the user's relative import a handler body uses, and drops a stale one", () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { OldSchema } from '../old-components'",
+      "import { store } from '../store'",
+      '',
+      "export const usersHandler = new Hono().get('/users', (c) => c.json(store.users()))",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { UserSchema } from '../components'",
+      '',
+      "export const usersHandler = new Hono().get('/users', validator('json', UserSchema), (c) => {})",
+      '',
+    ].join('\n')
+    expect(mergeHandlerFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { UserSchema } from '../components'",
+        "import { store } from '../store'",
+        '',
+        "export const usersHandler = new Hono().get('/users', validator('json', UserSchema), (c) => c.json(store.users()))",
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('drops a relative import whose names the generator imports from elsewhere now', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { UserSchema } from '../schemas'",
+      '',
+      "export const usersHandler = new Hono().get('/users', validator('json', UserSchema), (c) => {})",
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { UserSchema } from '../components'",
+      '',
+      "export const usersHandler = new Hono().get('/users', validator('json', UserSchema), (c) => {})",
+      '',
+    ].join('\n')
+    expect(mergeHandlerFile(existing, generated)).toBe(generated)
+  })
+
   it('keeps stub when existing has no implementation', () => {
     const existing = [
       "import { Hono } from 'hono'",
@@ -994,6 +1040,48 @@ describe('mergeAppFile', () => {
         "export const pets = app.route('/', petsHandler)",
         '',
         'export type Users = typeof users',
+        '',
+        'export default app',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it("keeps the user's relative import the app entry uses, and drops the handlers' old path", () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { petsHandler } from './routes'",
+      "import { auth } from './auth'",
+      '',
+      'const app = new Hono()',
+      "app.use('*', auth)",
+      '',
+      "export const api = app.route('/', petsHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { petsHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      '',
+      "export const api = app.route('/', petsHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    expect(mergeAppFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { petsHandler } from './handlers'",
+        "import { auth } from './auth'",
+        '',
+        'const app = new Hono()',
+        "app.use('*', auth)",
+        '',
+        "export const api = app.route('/', petsHandler)",
         '',
         'export default app',
         '',

@@ -10,7 +10,8 @@ export default defineConfig({
   // matches nothing inside a workspace (a broad root-relative pattern such as `packages/**`
   // makes the workspaces' own `vp check` exclude every file). `fixtures/**` holds generator
   // output formatted by takibi-hono itself, and so do the golden copies, seeds and overlays
-  // of the cases in `test/`.
+  // of the cases in `test/`. An example is formatted as the repository is (its config passes
+  // the same `format`), except the rpc module, which hono-takibi formats on its own terms.
   fmt: {
     printWidth: 100,
     singleQuote: true,
@@ -19,6 +20,7 @@ export default defineConfig({
     experimentalSortImports: {},
     ignorePatterns: [
       'fixtures/**',
+      'examples/*/src/rpc.ts',
       'test/cases/*/expected/**',
       'test/cases/*/seed/**',
       'test/cases/*/overlay/**',
