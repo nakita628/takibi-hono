@@ -8,6 +8,7 @@
 
 - OpenAPI schemas to validation schemas (`zod` | `valibot` | `typebox` | `arktype` | `effect`)
 - [hono-openapi](https://hono.dev/examples/hono-openapi) route definitions with `describeRoute`
+- Hono's [`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) (Hono 5): one handler per operation, validating the request and the response
 - App entry point + handler stubs with [handler merge](#handler-merge)
 - Component splitting into separate files (schemas, parameters, headers, etc.)
 - A typed [Hono client](https://hono.dev/docs/guides/rpc), with RPC functions and query hooks over it
@@ -56,6 +57,13 @@ export default defineConfig({
 
   // Enable hono-openapi style output (@see https://hono.dev/examples/hono-openapi)
   openapi: true,
+
+  // Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware: one
+  // `<method><Path>Handler` per operation (`postPetsHandler`), validating the request targets and
+  // the response inside the handler, registered on the group's Hono. Not combined with `openapi`
+  // (hono-openapi reads validators in front of a handler) nor with `schema: 'typebox'` (no
+  // Standard Schema interface). See [defineHandler](#definehandler).
+  // defineHandler: true,
 
   // oxfmt FormatConfig for generated code output
   // format: {},
@@ -207,9 +215,18 @@ export default defineConfig({
 ```bash
 npx takibi-hono                               # runs ./takibi-hono.config.ts
 npx takibi-hono --config config/api.config.ts # runs another config file (-c)
+npx takibi-hono openapi.yaml -o src/api.ts    # one-shot: one file, no config
+npx takibi-hono -o src/api.ts --schema valibot
 ```
 
 `--help`, `--version` and `--completions <bash|zsh|fish|sh>` are also available.
+
+The one-shot mode writes a single file: the document's `components.schemas`, one
+[`defineHandler`](#definehandler) per operation (`getPetsHandler`), and `api`, a Hono that
+registers every operation. The input defaults to the one of `openapi.yaml`, `openapi.json` or
+`main.tsp` in the current directory, and the library (`-s`) to `zod`. Mount `api` on your app
+(`new Hono().route('/', api)`), and run it again after a spec change: the handlers you wrote
+survive, as in [handler merge](#handler-merge).
 
 ### Vite Plugin
 
@@ -225,14 +242,60 @@ export default defineConfig({
 
 The plugin watches your OpenAPI/TypeSpec files and config, automatically regenerating code on changes.
 
+## defineHandler
+
+`defineHandler: true` (or the one-shot `-o`) generates Hono 5's
+[`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) from `hono/factory`: one
+export per operation, named by its method and path as hono-takibi names a route (`postPetsHandler`
+where hono-takibi has `postPetsRoute`), and the group's Hono registering them.
+
+```ts
+// src/handlers/pets.ts
+import { Hono } from 'hono'
+import { defineHandler } from 'hono/factory'
+import * as z from 'zod'
+
+import { NewPetSchema, PetSchema } from '../components'
+
+export const postPetsHandler = defineHandler({
+  header: z.object({ 'x-request-id': z.string().exactOptional() }),
+  json: NewPetSchema,
+  response: PetSchema,
+})(async (c, { header, json }) => {})
+
+export const getPetsPetIdHandler = defineHandler({
+  param: z.object({ petId: z.coerce.number().int().min(1) }),
+  response: PetSchema,
+})(async (c, { param }) => {})
+
+export const petsHandler = new Hono()
+  .post('/pets', postPetsHandler)
+  .get('/pets/:petId', getPetsPetIdHandler)
+```
+
+Each request target the operation declares (`param`, `query`, `header`, `cookie`, `form`,
+`json`) is a Standard Schema option, and `response` is the JSON schema of its success
+responses (`anyOf` them when they differ), so the value the handler returns is validated too.
+The stub takes the validated targets apart; fill it in, set the status with `c.status()`, and
+return the value. On regeneration the handler you wrote is kept, middleware you put before it
+(`defineHandler({...})(auth, async (c, { json }) => ...)`) included, and the options are the
+spec's again.
+
+`defineHandler` validates with Standard Schema, so `schema` is `zod`, `valibot`, `arktype`
+or `effect`; an arktype `Type` is handed over as its `~standard` object, which keeps Hono's
+types from overflowing on it. hono-openapi's `describeRoute` reads validators in front of a
+handler, so `openapi` and `defineHandler` do not combine. Hono 5 is a release candidate while
+this is written, and `defineHandler` is marked experimental there.
+
 ## Handler Merge
 
 When regenerating, takibi-hono **preserves your hand-written code**:
 
 - Handler bodies `(c) => { ... }` — your implementation logic is kept
-- User-added imports — only generator-managed imports are updated
+- `defineHandler` handlers, by name, with the middleware before them — their options are regenerated
+- User-added imports — only generator-managed imports are updated; of one the generator also writes (`hono`, `hono/factory`), the names it does not import are kept
 - Non-handler code (helpers, constants, middleware) — left untouched
-- JSDoc comments on routes — restored after regeneration
+- JSDoc comments on routes and `defineHandler` declarations — restored after regeneration
 
 Route metadata (describeRoute, validators) is updated from the spec. New routes are added with a stub `(c) => {}`. Deleted routes are removed.
 

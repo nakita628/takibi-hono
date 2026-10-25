@@ -34,8 +34,9 @@ const fillStubs = (dir, stub) => {
       fillStubs(file, stub)
     } else if (entry.name.endsWith('.ts')) {
       const source = readFileSync(file, 'utf8')
-      // oxfmt may break a long stub across lines: `(\n  c,\n) => {}`.
-      const filled = source.replaceAll(/\(\s*c,?\s*\) => \{\}/gu, stub)
+      // oxfmt may break a long stub across lines: `(\n  c,\n) => {}`. A defineHandler stub
+      // takes the validated targets apart: `async (c, { param, json }) => {}`.
+      const filled = source.replaceAll(/\(\s*c(?:\s*,\s*\{[^}]*\})?\s*,?\s*\) => \{\}/gu, stub)
       if (filled !== source) writeFileSync(file, filled)
     }
   }

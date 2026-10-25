@@ -4,6 +4,7 @@ import type {
   ImportDeclaration,
   Node,
   Program,
+  Statement,
   StringLiteral,
 } from 'oxc-parser'
 
@@ -54,6 +55,26 @@ type VariableStatement = {
   readonly exported: boolean
   readonly names: readonly string[]
   readonly text: string
+}
+
+/**
+ * What a `defineHandler` declaration in the existing file contributes to the regenerated one:
+ * the arguments of the call that takes the handler — middleware the user put before it
+ * included — and the JSDoc above the declaration.
+ */
+type DefineHandlerInfo = {
+  /** `defineHandler({...})(<args>)` or `defineHandler(<args>)`, as written. */
+  readonly args: string
+  /** The only argument is still the empty stub the generator wrote. */
+  readonly stub: boolean
+  readonly comment: string | undefined
+}
+
+/** A `const <name>=defineHandler(...)(...)` or `defineHandler(...)` statement. */
+type DefineHandlerCall = {
+  readonly name: string
+  readonly statement: VariableStatement
+  readonly args: readonly Node[]
 }
 
 /** Hono's chain methods; `head` / `trace` go through `.on('METHOD', path, ...)`. */
@@ -165,17 +186,131 @@ function routeCalls(source: Source): readonly RouteCall[] {
   })
 }
 
+/** The JSDoc that ends right before `end`, if one does. */
+function commentBefore(code: string, end: number) {
+  return code.slice(0, end).match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/u)?.[1]
+}
+
+/**
+ * Every top-level `defineHandler` declaration: `const x=defineHandler({...})(h)` (validated)
+ * or `const x=defineHandler(h)` (plain), with the arguments of the call that takes the
+ * handler. A declaration whose handler is still the stub has nothing of the user's.
+ */
+function defineHandlerCalls(source: Source): readonly DefineHandlerCall[] {
+  const { body } = source.program
+  return variableStatements(source).flatMap((statement) => {
+    const node = body.find((s) => s.start === statement.start)
+    const declaration = node?.type === 'ExportNamedDeclaration' ? node.declaration : node
+    if (declaration?.type !== 'VariableDeclaration') return []
+    const [declarator] = declaration.declarations
+    const name = declarator?.id.type === 'Identifier' ? declarator.id.name : undefined
+    const init = declarator?.init
+    if (name === undefined || init?.type !== 'CallExpression') return []
+    const callee = init.callee.type === 'CallExpression' ? init.callee.callee : init.callee
+    if (callee.type !== 'Identifier' || callee.name !== 'defineHandler') return []
+    return init.arguments.length > 0 ? [{ name, statement, args: init.arguments }] : []
+  })
+}
+
+/** `async (c, { json }) => {}` or `(c) => {}`: a handler with nothing in it yet. */
+function isEmptyHandler(node: Node) {
+  return (
+    node.type === 'ArrowFunctionExpression' &&
+    node.body.type === 'BlockStatement' &&
+    node.body.body.length === 0
+  )
+}
+
+function extractDefineHandlers(source: Source) {
+  return new Map(
+    defineHandlerCalls(source).map(({ name, statement, args }) => {
+      const first = args[0]
+      const last = args.at(-1)
+      return [
+        name,
+        {
+          args: first && last ? source.code.slice(first.start, last.end) : '',
+          stub: args.length === 1 && first !== undefined && isEmptyHandler(first),
+          comment: commentBefore(source.code, statement.start),
+        } satisfies DefineHandlerInfo,
+      ]
+    }),
+  )
+}
+
+/**
+ * The regenerated `defineHandler` declarations with the user's handler (and the middleware
+ * before it) in place of the stub, by name. The options object stays the generator's.
+ */
+function replaceDefineHandlers(
+  generated: Source,
+  existingHandlers: ReadonlyMap<string, DefineHandlerInfo>,
+) {
+  const ops: [start: number, end: number, text: string][] = defineHandlerCalls(generated).flatMap(
+    ({ name, args }) => {
+      const existing = existingHandlers.get(name)
+      const first = args[0]
+      const last = args.at(-1)
+      if (!existing || existing.stub || !first || !last) return []
+      return [[first.start, last.end, existing.args]]
+    },
+  )
+  return applyRangeOps(generated.code, ops)
+}
+
+/** Puts each declaration's JSDoc back above its regenerated `export const`. */
+function restoreHandlerComments(
+  code: string,
+  existingHandlers: ReadonlyMap<string, DefineHandlerInfo>,
+) {
+  return [...existingHandlers]
+    .flatMap(([name, info]) => (info.comment === undefined ? [] : [[name, info.comment] as const]))
+    .reduce(
+      (result, [name, comment]) =>
+        result.replace(
+          new RegExp(`(?<![\\w$])export const ${name}\\s*=`, 'u'),
+          (match) => `${comment}\n${match}`,
+        ),
+      code,
+    )
+}
+
+/**
+ * The names the top-level declarations of a module bind: variables and type aliases,
+ * exported or not.
+ */
+function declaredNames(source: Source) {
+  return new Set(
+    source.program.body.flatMap((statement) => {
+      const node = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement
+      if (node?.type === 'TSTypeAliasDeclaration') return [node.id.name]
+      if (node?.type !== 'VariableDeclaration') return []
+      return node.declarations.flatMap((d) => (d.id.type === 'Identifier' ? [d.id.name] : []))
+    }),
+  )
+}
+
+/**
+ * Whether a statement of the existing file declares something the generated file declares
+ * too (a schema, its type alias, the app): the generated declaration stands in for it, where
+ * keeping both would declare the name twice.
+ */
+function isRedeclared(statement: Statement, generatedNames: ReadonlySet<string>) {
+  const node = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement
+  if (node?.type === 'TSTypeAliasDeclaration') return generatedNames.has(node.id.name)
+  if (node?.type !== 'VariableDeclaration') return false
+  return node.declarations.some((d) => d.id.type === 'Identifier' && generatedNames.has(d.id.name))
+}
+
 function extractRouteInfo(source: Source) {
   const result = new Map<string, RouteInfo>()
   for (const { args, name, method, routePath } of routeCalls(source)) {
-    const before = source.code.slice(0, name.start - 1)
-    const commentMatch = before.match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/u)
     const last = args.at(-1)
     result.set(`${method}:${routePath}`, {
       method,
       routePath,
       body: last ? textOf(source.code, last) : '',
-      comment: commentMatch?.[1],
+      comment: commentBefore(source.code, name.start - 1),
     })
   }
   return result
@@ -201,7 +336,10 @@ function replaceRouteParts(generated: Source, existingRoutes: ReadonlyMap<string
  *
  * - Route handler bodies present in existing are preserved; generated metadata
  *   (path, describeRoute call) is taken from generated.
- * - Non-handler statements in existing (helpers, constants) are preserved.
+ * - The handler of a `defineHandler` declaration (`getPetsHandler`), and the middleware
+ *   before it, are preserved by name; its options object is taken from generated.
+ * - Non-handler statements in existing (helpers, constants) are preserved, except one that
+ *   declares a name the generated file declares (a schema in a one-file output).
  * - Imports are reconciled: user imports kept, generator-managed imports overwritten.
  * - Leading JSDoc comments above route calls in existing are restored on output.
  * - An existing file that does not parse is kept as it is: its edit is still in progress.
@@ -210,17 +348,23 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   const existingFile = parseSnippet(existingCode)
   if (existingFile.errors.length > 0) return existingCode
   const existingRoutes = extractRouteInfo(existingFile)
-  const mergedGenerated = replaceRouteParts(parseSnippet(generatedCode), existingRoutes)
+  const existingHandlers = extractDefineHandlers(existingFile)
+  const generatedFile = parseSnippet(generatedCode)
+  const mergedGenerated = replaceDefineHandlers(
+    parseSnippet(replaceRouteParts(generatedFile, existingRoutes)),
+    existingHandlers,
+  )
 
   const existingImportText = extractImportSection(existingFile)
   const existingBodyFile = parseSnippet(existingCode.slice(existingImportText.length))
+  const generatedNames = declaredNames(generatedFile)
   const handlerRanges = variableStatements(existingBodyFile)
-    .filter((s) => s.text.includes('Handler'))
+    .filter((s) => s.text.includes('Handler') || s.names.some((name) => generatedNames.has(name)))
     .map((s) => [s.fullStart, s.end] as const)
   const isInsideHandlerRange = (pos: number) =>
     handlerRanges.some(([start, end]) => pos >= start && pos <= end)
   const nonHandlerCode = existingBodyFile.program.body
-    .filter((s) => !isInsideHandlerRange(s.start))
+    .filter((s) => !isInsideHandlerRange(s.start) && !isRedeclared(s, generatedNames))
     .map((s) => textOf(existingBodyFile.code, s))
 
   const mergedGeneratedFile = parseSnippet(mergedGenerated)
@@ -236,7 +380,7 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
     .join('\n')
     .replaceAll(/\n{3,}/gu, '\n\n')
     .trim()}\n`
-  return restoreRouteComments(assembled, existingRoutes)
+  return restoreHandlerComments(restoreRouteComments(assembled, existingRoutes), existingHandlers)
 }
 
 export function mergeAppFile(existingCode: string, generatedCode: string) {
@@ -322,6 +466,7 @@ function mergeAppImports(existingFile: Source, generatedImports: string, body: s
 
 const HANDLER_IMPORT_SOURCES = new Set<string>([
   'hono',
+  'hono/factory',
   'hono-openapi',
   'hono-openapi/zod',
   'hono-openapi/valibot',
@@ -344,8 +489,32 @@ const HANDLER_IMPORT_SOURCES = new Set<string>([
 ])
 
 /**
+ * The named specifiers of a generator-managed import that are the user's own — `Context`
+ * in `import { Hono, type Context } from 'hono'`, `createMiddleware` beside `defineHandler`
+ * from 'hono/factory' — as an import of their own, when `body` refers to one of them. The
+ * generator's names are left to the generated import.
+ */
+function userSpecifiers(
+  existingFile: Source,
+  decl: ImportDeclaration,
+  generatedNamedImports: ReadonlySet<string>,
+  body: string,
+) {
+  const own = decl.specifiers.filter((specifier) => {
+    const name = importedName(specifier)
+    return name !== undefined && !generatedNamedImports.has(name)
+  })
+  if (own.length === 0) return undefined
+  const kept = { ...decl, specifiers: own }
+  if (!isReferenced(kept, body)) return undefined
+  const names = own.map((specifier) => textOf(existingFile.code, specifier)).join(', ')
+  return `import { ${names} } from ${textOf(existingFile.code, decl.source)}`
+}
+
+/**
  * User imports are preserved unless generator-managed (HANDLER_IMPORT_SOURCES), duplicated by
- * generated names, or a relative import `body` no longer refers to.
+ * generated names, or a relative import `body` no longer refers to. Of a generator-managed
+ * import, the names the generator does not import are kept as an import of their own.
  */
 function mergeImports(existingFile: Source, generatedImports: string, body: string) {
   const generatedDecls = importDeclarations(parseSnippet(generatedImports))
@@ -355,22 +524,28 @@ function mergeImports(existingFile: Source, generatedImports: string, body: stri
       d.specifiers.map(importedName).filter((name) => name !== undefined),
     ),
   )
-  const userImports = importDeclarations(existingFile)
-    .filter((decl) => {
-      // The generator never writes `import type`, so a type-only import is the user's even
-      // when it names a module the generator imports from (`import type { Pet } from
-      // '../components'` beside the generated `import { PetSchema } from '../components'`).
-      if (decl.importKind === 'type') return true
-      const spec = decl.source.value
-      if (HANDLER_IMPORT_SOURCES.has(spec) || generatedSpecifiers.has(spec)) return false
-      const named = decl.specifiers.map(importedName).filter((name) => name !== undefined)
-      if (named.length > 0 && named.every((name) => generatedNamedImports.has(name))) return false
-      // A relative value import is the generator's when nothing refers to it any more: one
-      // of a component module that moved, or of a component the document dropped. One the
-      // user's code still uses (`import { db } from '../db'`) is the user's.
-      return !spec.startsWith('.') || isReferenced(decl, body)
-    })
-    .map((decl) => textOf(existingFile.code, decl))
+  const userImports = importDeclarations(existingFile).flatMap((decl) => {
+    // The generator never writes `import type`, so a type-only import is the user's even
+    // when it names a module the generator imports from (`import type { Pet } from
+    // '../components'` beside the generated `import { PetSchema } from '../components'`).
+    if (decl.importKind === 'type') return [textOf(existingFile.code, decl)]
+    const spec = decl.source.value
+    const named = decl.specifiers.map(importedName).filter((name) => name !== undefined)
+    if (
+      HANDLER_IMPORT_SOURCES.has(spec) ||
+      generatedSpecifiers.has(spec) ||
+      (named.length > 0 && named.every((name) => generatedNamedImports.has(name)))
+    ) {
+      const own = userSpecifiers(existingFile, decl, generatedNamedImports, body)
+      return own === undefined ? [] : [own]
+    }
+    // A relative value import is the generator's when nothing refers to it any more: one
+    // of a component module that moved, or of a component the document dropped. One the
+    // user's code still uses (`import { db } from '../db'`) is the user's.
+    return !spec.startsWith('.') || isReferenced(decl, body)
+      ? [textOf(existingFile.code, decl)]
+      : []
+  })
   return userImports.length > 0
     ? `${generatedImports}${userImports.join('\n')}\n`
     : generatedImports

@@ -70,6 +70,8 @@ export type TakibiHonoConfig = ClientConfig & {
   readonly output?: string | undefined
   readonly basePath?: string | undefined
   readonly openapi?: boolean | undefined
+  /** Hono's `defineHandler` in place of the validator middleware. */
+  readonly defineHandler?: boolean | undefined
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
   /** One export, and one client, for each handler file. */

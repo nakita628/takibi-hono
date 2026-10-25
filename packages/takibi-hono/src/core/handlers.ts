@@ -14,7 +14,7 @@ import type { Layout, TakibiHonoConfig } from './layout.js'
 import { makeSpecifier } from './layout.js'
 
 /** Writes `code`, keeping the hand-written parts of an existing file via `merge`. */
-function writeMerged(
+export function writeMerged(
   file: string,
   code: string,
   merge: (existing: string, code: string) => string,
@@ -37,9 +37,14 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
     const components = openapi.components
     const schemas = targets.schemas
     const responses = targets.responses
+    const groups = collectRoutes(openapi)
     const context = {
       lib: config.schema,
       openapi: useOpenAPI,
+      defineHandler: config.defineHandler === true,
+      // An operation handler (`postCommentsHandler`) must not take the name of a group export
+      // (`/post-comments`): the barrel re-exports every file.
+      taken: [...groups.keys()].map(toHandlerVarName),
       components,
       responseRefs: responses !== undefined,
       imports: [
@@ -57,7 +62,6 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
           : []),
       ],
     }
-    const groups = collectRoutes(openapi)
     const webhooks = useOpenAPI ? collectWebhookRoutes(openapi) : []
     const files = [
       ...[...groups].map(([name, routes]) => ({

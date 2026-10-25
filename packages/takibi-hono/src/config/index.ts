@@ -310,6 +310,10 @@ const ConfigSchema = Schema.Struct({
   basePath: Schema.optionalKey(Schema.String),
   schema: Schema.Literals(['zod', 'valibot', 'typebox', 'arktype', 'effect']),
   openapi: Schema.optionalKey(Schema.Boolean),
+  defineHandler: Schema.optionalKey(Schema.Boolean).annotate({
+    description:
+      "Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware: one `<method><Path>Handler` per operation (`postPetsHandler`), validating the request targets and the response inside the handler, registered on the group's Hono. Not combined with `openapi`, whose validators are middleware in front of the handler, nor with `schema: 'typebox'`, which has no Standard Schema interface.",
+  }),
   format: Schema.optionalKey(
     Schema.declare<FormatConfig>(
       (u): u is FormatConfig => typeof u === 'object' && u !== null && !Array.isArray(u),
@@ -348,6 +352,14 @@ const ConfigSchema = Schema.Struct({
       },
       { message: 'a generator that calls the client needs the client block' },
     ),
+    Schema.makeFilter((config) => config.defineHandler !== true || config.openapi !== true, {
+      message:
+        'defineHandler cannot be combined with openapi: hono-openapi reads the validators in front of a handler, and defineHandler validates inside it.',
+    }),
+    Schema.makeFilter((config) => config.defineHandler !== true || config.schema !== 'typebox', {
+      message:
+        'defineHandler takes Standard Schema validators, which typebox has none of: pick zod, valibot, arktype or effect.',
+    }),
   )
   .annotate({ title: 'takibi-hono config' })
 

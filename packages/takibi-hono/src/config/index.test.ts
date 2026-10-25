@@ -134,6 +134,29 @@ describe('parseConfig', () => {
     expect(await parse(config)).toStrictEqual(config)
   })
 
+  it('accepts defineHandler', async () => {
+    expect(await parse({ ...base, defineHandler: true })).toStrictEqual({
+      ...base,
+      defineHandler: true,
+    })
+  })
+
+  it.each([
+    [
+      'defineHandler with openapi',
+      { ...base, defineHandler: true, openapi: true },
+      'Invalid config: defineHandler cannot be combined with openapi: hono-openapi reads the validators in front of a handler, and defineHandler validates inside it.',
+    ],
+    [
+      'defineHandler with typebox',
+      { ...base, defineHandler: true, schema: 'typebox' },
+      'Invalid config: defineHandler takes Standard Schema validators, which typebox has none of: pick zod, valibot, arktype or effect.',
+    ],
+  ])('rejects %s', async (_, config, message) => {
+    const error = await parseError(config)
+    expect(error).toStrictEqual(new ConfigError({ message }))
+  })
+
   it.each([
     ['a missing input', { schema: 'zod' }, 'input: Missing key'],
     ['a missing schema', { input: 'a.yaml' }, 'schema: Missing key'],
