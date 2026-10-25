@@ -1,5 +1,5 @@
 // The data the handlers serve, in memory: enough to see every operation answer.
-import type { Post, User } from './api'
+import type { Post, User } from './routes'
 
 const users: User[] = [{ id: 1, name: 'Ada' }]
 const posts: Post[] = [{ id: 1, authorId: 1, title: 'Hello' }]

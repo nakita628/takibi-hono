@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "takibi-hono openapi.yaml -o src/api.ts",
+    "generate": "takibi-hono openapi.yaml -o src/routes.ts",
     "dev": "vite --host",
     "check": "tsc -p tsconfig.json",
     "test": "vp test run"

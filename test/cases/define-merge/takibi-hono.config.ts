@@ -1,8 +1,8 @@
 import { defineConfig } from 'takibi-hono/config'
 
-// Regeneration over a hand-edited defineHandler output (seed/): the handlers the user
-// implemented, the middleware they put before one, their helper, their JSDoc and the import of
-// their own from hono/factory survive; every options object is the spec's again.
+// Regeneration over a hand-edited defineHandler output (seed/): the handlers the user gave the
+// definitions, the middleware they put before one, their helper, their JSDoc and the import of
+// their own from hono/factory survive; the definitions module is the spec's again.
 export default defineConfig({
   input: 'specs/petstore.yaml',
   schema: 'zod',

@@ -1,13 +1,15 @@
+import path from 'node:path'
+
 import { Effect } from 'effect'
 import type { SchemaLib } from 'oas-truth'
 
+import { emit } from '../emit/index.js'
 import { FormatOptions } from '../format/index.js'
 import { makeSingleFileCode } from '../generator/handler.js'
-import { mergeHandlerFile } from '../merge/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
 import { makeClients } from './client.js'
 import { writeComponents } from './components.js'
-import { writeApp, writeHandlers, writeMerged } from './handlers.js'
+import { writeApp, writeHandlers } from './handlers.js'
 import type { TakibiHonoConfig } from './layout.js'
 import { checkPackages, resolveLayout } from './layout.js'
 import { makePackageRoot } from './packages.js'
@@ -31,13 +33,13 @@ export function hono(config: TakibiHonoConfig) {
 }
 
 /**
- * The one-shot mode, `takibi-hono <input> -o <output.ts>`: the document's schemas, one
- * `defineHandler` per operation and the app registering them, in a single file. The
- * hand-written parts of an existing file survive as they do in a handler file.
+ * The one-shot mode, `takibi-hono <input> -o <output.ts>`: the document's schemas and the
+ * `defineHandler` definition of every operation, in a single file the user's handlers import.
+ * Nothing in it is the user's, so it is written over, as hono-takibi's `-o` writes its routes.
  */
 export function honoFile(input: string, output: string, lib: SchemaLib) {
   return Effect.gen(function* () {
     const openapi = yield* parseOpenAPI(input)
-    yield* writeMerged(output, makeSingleFileCode(openapi, lib), mergeHandlerFile)
+    yield* emit(makeSingleFileCode(openapi, lib), path.dirname(output), output)
   }).pipe(Effect.provideService(FormatOptions, {}))
 }

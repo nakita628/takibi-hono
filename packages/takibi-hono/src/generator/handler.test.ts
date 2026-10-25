@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import {
   makeAppCode,
+  makeDefinitionsCode,
   makeHandlerCode,
   makeSingleFileCode,
+  nameOperations,
   toGroupName,
   toHandlerVarName,
   toOperationVarName,
@@ -441,29 +443,33 @@ describe('toOperationVarName', () => {
   })
 })
 
-describe('makeHandlerCode with defineHandler', () => {
-  const context = {
-    lib: 'zod',
-    openapi: false,
-    components: components as never,
-    responseRefs: false,
-    imports: petImports,
-    defineHandler: true,
-  } as const
+describe('nameOperations', () => {
+  it('names each route by method and path, numbering a name that is taken', () => {
+    const routes = [
+      { method: 'post', path: '/comments', parameters: [], operation: { responses: {} } },
+      { method: 'post', path: '/comments/', parameters: [], operation: { responses: {} } },
+    ]
+    expect([...nameOperations(routes as never, ['postCommentsHandler']).values()]).toStrictEqual([
+      'postCommentsHandler2',
+      'postCommentsIndexHandler',
+    ])
+  })
+})
 
-  it('declares one defineHandler per operation and registers each on the group', () => {
-    expect(makeHandlerCode('petsHandler', petRoutes as never, context)).toBe(`import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
+describe('makeDefinitionsCode', () => {
+  const context = { lib: 'zod', components: components as never, imports: petImports } as const
+
+  it('declares one defineHandler({...}) per route, importing the schemas it refers to', () => {
+    const names = nameOperations(petRoutes as never, [])
+    expect(makeDefinitionsCode(names, context)).toBe(`import{defineHandler}from'hono/factory'
 import*as z from'zod'
 import{PetSchema}from'../components'
 
-export const getPetsIdHandler=defineHandler({param:z.object({id:z.coerce.number().int()}),query:z.object({limit:z.coerce.number().int().exactOptional()}),response:PetSchema})(async(c,{param,query})=>{})
+export const getPetsIdHandler=defineHandler({param:z.object({id:z.coerce.number().int()}),query:z.object({limit:z.coerce.number().int().exactOptional()}),response:PetSchema})
 
-export const postPetsHandler=defineHandler({json:PetSchema})(async(c,{json})=>{})
+export const postPetsHandler=defineHandler({json:PetSchema})
 
-export const headPetsHandler=defineHandler(async(c)=>{})
-
-export const petsHandler=new Hono().get('/pets/:id',getPetsIdHandler).post('/pets',postPetsHandler).on('HEAD','/pets',headPetsHandler)`)
+export const headPetsHandler=defineHandler({})`)
   })
 
   it('validates the response with the JSON of the success responses, anyOf when they differ', () => {
@@ -497,67 +503,37 @@ export const petsHandler=new Hono().get('/pets/:id',getPetsIdHandler).post('/pet
       },
     }
     expect(
-      makeHandlerCode('petsHandler', [route] as never, {
+      makeDefinitionsCode(nameOperations([route] as never, []), {
         ...context,
         components: { ...components, responses } as never,
       }),
-    ).toBe(`import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
+    ).toBe(`import{defineHandler}from'hono/factory'
 import*as z from'zod'
 import{PetSchema}from'../components'
 
-export const postPetsHandler=defineHandler({response:z.union([PetSchema,z.object({})])})(async(c)=>{})
-
-export const petsHandler=new Hono().post('/pets',postPetsHandler)`)
-  })
-
-  it('numbers an operation handler that would take the name of a group export', () => {
-    const route = {
-      method: 'post',
-      path: '/comments',
-      parameters: [],
-      operation: { responses: {} },
-    }
-    expect(
-      makeHandlerCode('commentsHandler', [route] as never, {
-        ...context,
-        taken: ['postCommentsHandler', 'commentsHandler'],
-      }),
-    ).toBe(`import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
-
-export const postCommentsHandler2=defineHandler(async(c)=>{})
-
-export const commentsHandler=new Hono().post('/comments',postCommentsHandler2)`)
+export const postPetsHandler=defineHandler({response:z.union([PetSchema,z.object({})])})`)
   })
 
   it.each([
     [
       'arktype',
-      `import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
+      `import{defineHandler}from'hono/factory'
 import{type}from'arktype'
 import{ItemSchema}from'../components'
 
-export const putItemsIdHandler=defineHandler({param:{'~standard':type({id:"string"})['~standard']},query:{'~standard':type({"q?":type("string").pipe((data, ctx) => { const value = Number(data); return Number.isSafeInteger(value) ? value : ctx.error("an integer") })})['~standard']},form:{'~standard':type({"file?":"string"})['~standard']},json:{'~standard':ItemSchema['~standard']}})(async(c,{param,query,form,json})=>{})
-
-export const itemsHandler=new Hono().put('/items/:id',putItemsIdHandler)`,
+export const putItemsIdHandler=defineHandler({param:{'~standard':type({id:"string"})['~standard']},query:{'~standard':type({"q?":type("string").pipe((data, ctx) => { const value = Number(data); return Number.isSafeInteger(value) ? value : ctx.error("an integer") })})['~standard']},form:{'~standard':type({"file?":"string"})['~standard']},json:{'~standard':ItemSchema['~standard']}})`,
     ],
     [
       'effect',
-      `import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
+      `import{defineHandler}from'hono/factory'
 import{Schema}from'effect'
 import{ItemSchema}from'../components'
 
-export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String})),query:Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.FiniteFromString.check(Schema.isInt()))})),form:Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)})),json:Schema.toStandardSchemaV1(ItemSchema)})(async(c,{param,query,form,json})=>{})
-
-export const itemsHandler=new Hono().put('/items/:id',putItemsIdHandler)`,
+export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String})),query:Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.FiniteFromString.check(Schema.isInt()))})),form:Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)})),json:Schema.toStandardSchemaV1(ItemSchema)})`,
     ],
   ] as const)('%s: each option is handed over as a Standard Schema', (lib, expected) => {
     expect(
-      makeHandlerCode('itemsHandler', [itemRoute] as never, {
-        ...context,
+      makeDefinitionsCode(nameOperations([itemRoute] as never, []), {
         lib,
         components: undefined,
         imports: [{ name: 'ItemSchema', from: '../components' }],
@@ -567,13 +543,32 @@ export const itemsHandler=new Hono().put('/items/:id',putItemsIdHandler)`,
 
   it('refuses typebox, which has no Standard Schema interface', () => {
     expect(() =>
-      makeHandlerCode('petsHandler', petRoutes as never, { ...context, lib: 'typebox' }),
+      makeDefinitionsCode(nameOperations(petRoutes as never, []), { ...context, lib: 'typebox' }),
     ).toThrow('defineHandler takes Standard Schema validators, which typebox has none of')
   })
 })
 
+describe('makeHandlerCode with defineHandler', () => {
+  it('calls each definition with the stub handler, which takes the validated targets apart', () => {
+    const names = nameOperations(petRoutes as never, ['petsHandler'])
+    expect(
+      makeHandlerCode('petsHandler', petRoutes as never, {
+        lib: 'zod',
+        openapi: false,
+        components: components as never,
+        responseRefs: false,
+        imports: petImports,
+        defineHandler: { from: '../routes', names },
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{getPetsIdHandler,postPetsHandler,headPetsHandler}from'../routes'
+
+export const petsHandler=new Hono().get('/pets/:id',getPetsIdHandler(async(c,{param,query})=>{})).post('/pets',postPetsHandler(async(c,{json})=>{})).on('HEAD','/pets',headPetsHandler(async(c)=>{}))`)
+  })
+})
+
 describe('makeSingleFileCode', () => {
-  it('writes the schemas and the api, each defineHandler inline in its route call', () => {
+  it('writes the schemas and the definition of every operation, and no Hono', () => {
     const openapi = {
       openapi: '3.1.0',
       info: { title: 'Pets', version: '1' },
@@ -599,14 +594,16 @@ describe('makeSingleFileCode', () => {
         },
       },
     }
-    expect(makeSingleFileCode(openapi as never, 'valibot')).toBe(`import{Hono}from'hono'
-import{defineHandler}from'hono/factory'
+    expect(makeSingleFileCode(openapi as never, 'valibot'))
+      .toBe(`import{defineHandler}from'hono/factory'
 import*as v from'valibot'
 
 export const PetSchema=v.object({name:v.string()})
 
 export type Pet=v.InferOutput<typeof PetSchema>
 
-export const api=new Hono().post('/pets',defineHandler({json:PetSchema,response:PetSchema})(async(c,{json})=>{})).get('/',defineHandler(async(c)=>{}))`)
+export const postPetsHandler=defineHandler({json:PetSchema,response:PetSchema})
+
+export const getHandler=defineHandler({})`)
   })
 })

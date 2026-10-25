@@ -310,9 +310,11 @@ const ConfigSchema = Schema.Struct({
   basePath: Schema.optionalKey(Schema.String),
   schema: Schema.Literals(['zod', 'valibot', 'typebox', 'arktype', 'effect']),
   openapi: Schema.optionalKey(Schema.Boolean),
-  defineHandler: Schema.optionalKey(Schema.Boolean).annotate({
+  defineHandler: Schema.optionalKey(
+    Schema.Union([Schema.Boolean, Schema.Struct({ output: TypeScriptPathSchema })]),
+  ).annotate({
     description:
-      "Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware: one `<method><Path>Handler` per operation (`postPetsHandler`), validating the request targets and the response inside the handler, registered on the group's Hono. Not combined with `openapi`, whose validators are middleware in front of the handler, nor with `schema: 'typebox'`, which has no Standard Schema interface.",
+      "Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware. A definitions module, `routes.ts` beside the app entry or `output`, declares one `<method><Path>Handler = defineHandler({...})` per operation (`postPetsHandler`), validating the request targets and the response; each handler file calls its definitions with the handlers. Not combined with `openapi`, whose validators are middleware in front of the handler, nor with `schema: 'typebox'`, which has no Standard Schema interface.",
   }),
   format: Schema.optionalKey(
     Schema.declare<FormatConfig>(

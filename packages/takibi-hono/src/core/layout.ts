@@ -70,8 +70,11 @@ export type TakibiHonoConfig = ClientConfig & {
   readonly output?: string | undefined
   readonly basePath?: string | undefined
   readonly openapi?: boolean | undefined
-  /** Hono's `defineHandler` in place of the validator middleware. */
-  readonly defineHandler?: boolean | undefined
+  /**
+   * Hono's `defineHandler` in place of the validator middleware: a definitions module
+   * (`<appDir>/routes.ts`, or `output`) the handler files import.
+   */
+  readonly defineHandler?: boolean | { readonly output: string } | undefined
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
   /** One export, and one client, for each handler file. */
@@ -95,6 +98,8 @@ export type Target = {
 export type Layout = {
   readonly handlersDir: string
   readonly appDir: string
+  /** The `defineHandler` definitions module, when `defineHandler` is set. */
+  readonly definitions: string | undefined
   /** The typed client, when the `client` block is set. */
   readonly client: Target | undefined
   /** The directories the typed client, rpc and the query hooks are written into. */
@@ -150,10 +155,18 @@ export function targetModule(target: Target) {
  */
 export function resolveLayout(config: TakibiHonoConfig): Layout {
   const handlersDir = config.output ?? 'src/handlers'
+  const appDir = path.dirname(handlersDir)
   const client = config.client
+  const define = config.defineHandler
   const layout = {
     handlersDir,
-    appDir: path.dirname(handlersDir),
+    appDir,
+    definitions:
+      define === undefined || define === false
+        ? undefined
+        : define === true
+          ? path.join(appDir, 'routes.ts')
+          : define.output,
     client:
       client === undefined
         ? undefined

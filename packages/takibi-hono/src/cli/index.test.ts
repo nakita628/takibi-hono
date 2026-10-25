@@ -165,23 +165,19 @@ export const pingHandler = new Hono().get('/ping', (c) => {})
       .filter((line) => line.startsWith('  --'))
       .map((line) => line.trim().replaceAll(/ {2,}/gu, '  '))
     expect(flags).toStrictEqual([
-      '--output, -o output.ts  One-shot mode: write the schemas, one defineHandler per operation and the app to this file',
+      '--output, -o output.ts  One-shot mode: write the schemas and the defineHandler definition of every operation to this file',
       '--schema, -s choice  Schema library of the one-shot mode (default: zod) (choices: zod, valibot, arktype, effect)',
       '--config, -c file  Config file to run (default: ./takibi-hono.config.ts)',
     ])
   })
 
   describe('one-shot mode', () => {
-    const PING = `import { Hono } from 'hono'
-import { defineHandler } from 'hono/factory'
+    const PING = `import { defineHandler } from 'hono/factory'
 
-export const api = new Hono().get(
-  '/ping',
-  defineHandler(async (c) => {}),
-)
+export const getPingHandler = defineHandler({})
 `
 
-    it('writes the schemas and the api, with each defineHandler inline, to -o', async () => {
+    it('writes the schemas and the definition of every operation to -o', async () => {
       useTmpDir({ 'spec/openapi.yaml': SPEC })
 
       const result = await runCli(['spec/openapi.yaml', '-o', 'src/api.ts'])
@@ -231,37 +227,24 @@ components:
       const result = await runCli(['-o', 'api.ts', '--schema', 'valibot'])
 
       expect(result.stdout).toBe('🔥 takibi-hono: openapi.yaml (valibot) → api.ts ✅')
-      expect(fs.readFileSync('api.ts', 'utf8')).toBe(`import { Hono } from 'hono'
-import { defineHandler } from 'hono/factory'
+      expect(fs.readFileSync('api.ts', 'utf8')).toBe(`import { defineHandler } from 'hono/factory'
 import * as v from 'valibot'
 
 export const PetSchema = v.object({ name: v.string() })
 
 export type Pet = v.InferOutput<typeof PetSchema>
 
-export const api = new Hono().post(
-  '/pets',
-  defineHandler({ json: PetSchema })(async (c, { json }) => {}),
-)
+export const postPetsHandler = defineHandler({ json: PetSchema })
 `)
     })
 
-    it('keeps the handlers of an existing output file', async () => {
-      useTmpDir({
-        'openapi.yaml': SPEC,
-        'api.ts': `import { Hono } from 'hono'
-import { defineHandler } from 'hono/factory'
-
-export const api = new Hono().get('/ping', defineHandler(async (c) => ({ pong: true })))
-`,
-      })
+    it('writes over an existing output file: nothing in it is the user’s', async () => {
+      useTmpDir({ 'openapi.yaml': SPEC, 'api.ts': 'export const stale = 1\n' })
 
       const result = await runCli(['-o', 'api.ts'])
 
       expect(result.ok).toBe(true)
-      expect(fs.readFileSync('api.ts', 'utf8')).toContain(
-        'defineHandler(async (c) => ({ pong: true }))',
-      )
+      expect(fs.readFileSync('api.ts', 'utf8')).toBe(PING)
     })
 
     it.each([

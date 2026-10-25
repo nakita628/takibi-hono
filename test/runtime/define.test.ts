@@ -1,8 +1,9 @@
 // The defineHandler cases, as running apps.
 //
-// cases/define-<lib> generate the petstore with `defineHandler: true`: every operation is a
-// `defineHandler` whose options validate the request targets and the response, and the
-// group's Hono registers it. The stubs are filled by scripts/generate.mjs with a handler that
+// cases/define-<lib> generate the petstore with `defineHandler: true`: src/routes.ts defines
+// every operation as a `defineHandler` whose options validate the request targets and the
+// response, and each group's Hono calls its definitions with the handlers. The stubs are filled
+// by scripts/generate.mjs with a handler that
 // answers, by target, the data `c.req.valid()` holds — what `defineHandler` validated and
 // coerced — as a body Response, which a response schema lets through unvalidated. So a 200
 // carries what reached the handler, and a 400 is `defineHandler`'s rejection, with the
@@ -88,7 +89,7 @@ describe('define-merge', () => {
     expect(await listed.json()).toStrictEqual([{ id: 1, name: 'Rex', tag: 'dog' }])
     expect(listed.headers.get('X-Requests-Seen')).toBe('1')
 
-    // A plain `defineHandler(handler)` the spec now validates keeps its handler.
+    // A definition called with a handler of the user's keeps it.
     expect(await status('define-merge', '/api/pets', { method: 'HEAD' })).toBe(200)
   })
 

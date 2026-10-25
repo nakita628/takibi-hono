@@ -33,8 +33,8 @@ type RouteInfo = {
   readonly body: string
   /** The JSDoc right above the call, if any. */
   readonly comment: string | undefined
-  /** When the handler is an inline `defineHandler(...)`: the arguments of the call that takes the handler. */
-  readonly handler: DefineHandlerInfo | undefined
+  /** The handler is still the stub the generator wrote: nothing of the user's in it. */
+  readonly stub: boolean
 }
 
 /** A `.get('/path', ...)` or `.on('METHOD', '/path', ...)` call, by the name it is called by. */
@@ -59,26 +59,6 @@ type VariableStatement = {
   readonly text: string
 }
 
-/**
- * What a `defineHandler` declaration in the existing file contributes to the regenerated one:
- * the arguments of the call that takes the handler — middleware the user put before it
- * included — and the JSDoc above the declaration.
- */
-type DefineHandlerInfo = {
-  /** `defineHandler({...})(<args>)` or `defineHandler(<args>)`, as written. */
-  readonly args: string
-  /** The only argument is still the empty stub the generator wrote. */
-  readonly stub: boolean
-  readonly comment: string | undefined
-}
-
-/** A `const <name>=defineHandler(...)(...)` or `defineHandler(...)` statement. */
-type DefineHandlerCall = {
-  readonly name: string
-  readonly statement: VariableStatement
-  readonly args: readonly Node[]
-}
-
 /** Hono's chain methods; `head` / `trace` go through `.on('METHOD', path, ...)`. */
 const CHAIN_METHODS: ReadonlySet<string> = new Set([
   'get',
@@ -88,9 +68,6 @@ const CHAIN_METHODS: ReadonlySet<string> = new Set([
   'delete',
   'options',
 ])
-
-/** The handler the generator emits; a body that is still this stub has nothing to preserve. */
-const STUB = '(c)=>{}'
 
 function parseSnippet(code: string): Source {
   return { code, ...parseSource(code) }
@@ -196,18 +173,6 @@ function commentBefore(code: string, end: number) {
   return code.slice(0, end).match(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/)\s*$/u)?.[1]
 }
 
-/**
- * The arguments of the call that takes the handler, when `node` is a `defineHandler`:
- * `defineHandler({...})(<args>)` (validated) or `defineHandler(<args>)` (plain). Middleware
- * the user put before the handler is among them.
- */
-function handlerArguments(node: Node | undefined): readonly Node[] | undefined {
-  if (node?.type !== 'CallExpression') return undefined
-  const callee = node.callee.type === 'CallExpression' ? node.callee.callee : node.callee
-  if (callee.type !== 'Identifier' || callee.name !== 'defineHandler') return undefined
-  return node.arguments.length > 0 ? node.arguments : undefined
-}
-
 /** `async (c, { json }) => {}` or `(c) => {}`: a handler with nothing in it yet. */
 function isEmptyHandler(node: Node) {
   return (
@@ -217,89 +182,16 @@ function isEmptyHandler(node: Node) {
   )
 }
 
-/** What a `defineHandler` contributes: its handler arguments as written, and whether they are the stub. */
-function defineHandlerInfo(
-  source: Source,
-  args: readonly Node[],
-  commentEnd: number,
-): DefineHandlerInfo {
-  const first = args[0]
-  const last = args.at(-1)
-  return {
-    args: first && last ? source.code.slice(first.start, last.end) : '',
-    stub: args.length === 1 && first !== undefined && isEmptyHandler(first),
-    comment: commentBefore(source.code, commentEnd),
-  }
-}
-
-/** The span of the handler arguments, for the regenerated ones to take the user's. */
-function handlerArgumentsOp(
-  args: readonly Node[],
-  existing: DefineHandlerInfo | undefined,
-): readonly [start: number, end: number, text: string] | undefined {
-  const first = args[0]
-  const last = args.at(-1)
-  if (!existing || existing.stub || !first || !last) return undefined
-  return [first.start, last.end, existing.args]
-}
-
 /**
- * Every top-level `defineHandler` declaration, `const x=defineHandler(...)`, with the
- * arguments of the call that takes the handler. A declaration whose handler is still the
- * stub has nothing of the user's.
+ * The handler argument of a route call as the generator writes it: the empty handler, or a
+ * `defineHandler` definition called with it alone (`getPetsHandler(async (c, { query }) => {})`).
+ * The user's middleware before the handler, or a body, makes it theirs.
  */
-function defineHandlerCalls(source: Source): readonly DefineHandlerCall[] {
-  const { body } = source.program
-  return variableStatements(source).flatMap((statement) => {
-    const node = body.find((s) => s.start === statement.start)
-    const declaration = node?.type === 'ExportNamedDeclaration' ? node.declaration : node
-    if (declaration?.type !== 'VariableDeclaration') return []
-    const [declarator] = declaration.declarations
-    const name = declarator?.id.type === 'Identifier' ? declarator.id.name : undefined
-    const args = handlerArguments(declarator?.init ?? undefined)
-    return name !== undefined && args ? [{ name, statement, args }] : []
-  })
-}
-
-function extractDefineHandlers(source: Source) {
-  return new Map(
-    defineHandlerCalls(source).map(({ name, statement, args }) => [
-      name,
-      defineHandlerInfo(source, args, statement.start),
-    ]),
-  )
-}
-
-/**
- * The regenerated `defineHandler` declarations with the user's handler (and the middleware
- * before it) in place of the stub, by name. The options object stays the generator's.
- */
-function replaceDefineHandlers(
-  generated: Source,
-  existingHandlers: ReadonlyMap<string, DefineHandlerInfo>,
-) {
-  const ops = defineHandlerCalls(generated).flatMap(({ name, args }) => {
-    const op = handlerArgumentsOp(args, existingHandlers.get(name))
-    return op ? [op] : []
-  })
-  return applyRangeOps(generated.code, ops)
-}
-
-/** Puts each declaration's JSDoc back above its regenerated `export const`. */
-function restoreHandlerComments(
-  code: string,
-  existingHandlers: ReadonlyMap<string, DefineHandlerInfo>,
-) {
-  return [...existingHandlers]
-    .flatMap(([name, info]) => (info.comment === undefined ? [] : [[name, info.comment] as const]))
-    .reduce(
-      (result, [name, comment]) =>
-        result.replace(
-          new RegExp(`(?<![\\w$])export const ${name}\\s*=`, 'u'),
-          (match) => `${comment}\n${match}`,
-        ),
-      code,
-    )
+function isStubHandler(node: Node) {
+  if (isEmptyHandler(node)) return true
+  if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier') return false
+  const [only] = node.arguments
+  return node.arguments.length === 1 && only !== undefined && isEmptyHandler(only)
 }
 
 /**
@@ -333,13 +225,12 @@ function extractRouteInfo(source: Source) {
   const result = new Map<string, RouteInfo>()
   for (const { args, name, method, routePath } of routeCalls(source)) {
     const last = args.at(-1)
-    const handlerArgs = handlerArguments(last)
     result.set(`${method}:${routePath}`, {
       method,
       routePath,
       body: last ? textOf(source.code, last) : '',
       comment: commentBefore(source.code, name.start - 1),
-      handler: handlerArgs && last ? defineHandlerInfo(source, handlerArgs, last.start) : undefined,
+      stub: last === undefined || isStubHandler(last),
     })
   }
   return result
@@ -352,17 +243,8 @@ function replaceRouteParts(generated: Source, existingRoutes: ReadonlyMap<string
     if (seenPositions.has(name.start)) continue
     seenPositions.add(name.start)
     const existing = existingRoutes.get(`${method}:${routePath}`)
-    if (!existing) continue
+    if (!existing || existing.stub) continue
     const last = args.at(-1)
-    // An inline `defineHandler` keeps its handler and takes the regenerated options; a handler
-    // that is still the stub is regenerated whole.
-    const generatedHandlerArgs = handlerArguments(last)
-    if (generatedHandlerArgs && existing.handler) {
-      const op = handlerArgumentsOp(generatedHandlerArgs, existing.handler)
-      if (op) ops.push(op)
-      continue
-    }
-    if (existing.body.replaceAll(/\s/gu, '') === STUB) continue
     if (last) ops.push([last.start, last.end, existing.body])
   }
   return applyRangeOps(generated.code, ops)
@@ -373,8 +255,8 @@ function replaceRouteParts(generated: Source, existingRoutes: ReadonlyMap<string
  *
  * - Route handler bodies present in existing are preserved; generated metadata
  *   (path, describeRoute call) is taken from generated.
- * - The handler of a `defineHandler` declaration (`getPetsHandler`), and the middleware
- *   before it, are preserved by name; its options object is taken from generated.
+ * - A handler that is still the generator's stub, bare or given to a `defineHandler`
+ *   definition (`getPetsHandler(async (c, { query }) => {})`), is regenerated.
  * - Non-handler statements in existing (helpers, constants) are preserved, except one that
  *   declares a name the generated file declares (a schema in a one-file output).
  * - Imports are reconciled: user imports kept, generator-managed imports overwritten.
@@ -385,12 +267,8 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   const existingFile = parseSnippet(existingCode)
   if (existingFile.errors.length > 0) return existingCode
   const existingRoutes = extractRouteInfo(existingFile)
-  const existingHandlers = extractDefineHandlers(existingFile)
   const generatedFile = parseSnippet(generatedCode)
-  const mergedGenerated = replaceDefineHandlers(
-    parseSnippet(replaceRouteParts(generatedFile, existingRoutes)),
-    existingHandlers,
-  )
+  const mergedGenerated = replaceRouteParts(generatedFile, existingRoutes)
 
   const existingImportText = extractImportSection(existingFile)
   const existingBodyFile = parseSnippet(existingCode.slice(existingImportText.length))
@@ -417,7 +295,7 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
     .join('\n')
     .replaceAll(/\n{3,}/gu, '\n\n')
     .trim()}\n`
-  return restoreHandlerComments(restoreRouteComments(assembled, existingRoutes), existingHandlers)
+  return restoreRouteComments(assembled, existingRoutes)
 }
 
 export function mergeAppFile(existingCode: string, generatedCode: string) {

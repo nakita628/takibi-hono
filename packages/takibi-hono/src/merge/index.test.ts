@@ -2065,53 +2065,37 @@ describe('mergeHandlerFile: STUBS boundary', () => {
   })
 })
 
-describe('mergeHandlerFile: defineHandler declarations', () => {
+describe('mergeHandlerFile: a defineHandler definition called in a route call', () => {
   const generated = [
     "import { Hono } from 'hono'",
-    "import { defineHandler } from 'hono/factory'",
-    "import * as z from 'zod'",
-    "import { PetSchema } from '../components'",
+    "import { getPetsHandler, headPetsHandler, postPetsHandler } from '../routes'",
     '',
-    'export const getPetsHandler = defineHandler({',
-    '  query: z.object({ limit: z.coerce.number().int().exactOptional() }),',
-    '  response: z.array(PetSchema),',
-    '})(async (c, { query }) => {})',
-    '',
-    'export const headPetsHandler = defineHandler({',
-    "  header: z.object({ 'x-request-id': z.string().exactOptional() }),",
-    '})(async (c, { header }) => {})',
-    '',
-    "export const petsHandler = new Hono().get('/pets', getPetsHandler).on('HEAD', '/pets', headPetsHandler)",
+    "export const petsHandler = new Hono().get('/pets', getPetsHandler(async (c, { query, header }) => {})).post('/pets', postPetsHandler(async (c, { json }) => {})).on('HEAD', '/pets', headPetsHandler(async (c, { header }) => {}))",
     '',
   ].join('\n')
 
-  it('keeps the handler and the middleware before it; the options are the spec’s again', () => {
+  it('keeps a call with a handler, or with middleware before it, and regenerates one with the stub', () => {
     const existing = [
       "import { Hono } from 'hono'",
-      "import { createMiddleware, defineHandler } from 'hono/factory'",
-      "import * as z from 'zod'",
+      "import { createMiddleware } from 'hono/factory'",
       "import type { Pet } from '../components'",
+      "import { getPetsHandler, headPetsHandler, postPetsHandler } from '../routes'",
       '',
       'const pets: Pet[] = []',
       '',
       'const count = createMiddleware(async (c, next) => { await next() })',
       '',
-      '/** Lists the pets. */',
-      'export const getPetsHandler = defineHandler({',
-      '  query: z.object({ limit: z.coerce.number().optional() }),',
-      '})(count, async (c, { query }) => pets.slice(0, query.limit))',
-      '',
-      'export const headPetsHandler = defineHandler(async (c) => c.body(null, 200))',
-      '',
-      "export const petsHandler = new Hono().get('/pets', getPetsHandler).on('HEAD', '/pets', headPetsHandler)",
+      'export const petsHandler = new Hono()',
+      '  /** Lists the pets. */',
+      "  .get('/pets', getPetsHandler(count, async (c, { query }) => pets.slice(0, query.limit)))",
+      "  .post('/pets', postPetsHandler(async (c, { json }) => {}))",
+      "  .on('HEAD', '/pets', headPetsHandler(async (c) => c.body(null, 200)))",
       '',
     ].join('\n')
     expect(mergeHandlerFile(existing, generated)).toBe(
       [
         "import { Hono } from 'hono'",
-        "import { defineHandler } from 'hono/factory'",
-        "import * as z from 'zod'",
-        "import { PetSchema } from '../components'",
+        "import { getPetsHandler, headPetsHandler, postPetsHandler } from '../routes'",
         "import { createMiddleware } from 'hono/factory'",
         "import type { Pet } from '../components'",
         '',
@@ -2119,56 +2103,19 @@ describe('mergeHandlerFile: defineHandler declarations', () => {
         '',
         'const count = createMiddleware(async (c, next) => { await next() })',
         '',
-        '/** Lists the pets. */',
-        'export const getPetsHandler = defineHandler({',
-        '  query: z.object({ limit: z.coerce.number().int().exactOptional() }),',
-        '  response: z.array(PetSchema),',
-        '})(count, async (c, { query }) => pets.slice(0, query.limit))',
-        '',
-        'export const headPetsHandler = defineHandler({',
-        "  header: z.object({ 'x-request-id': z.string().exactOptional() }),",
-        '})(async (c) => c.body(null, 200))',
-        '',
-        "export const petsHandler = new Hono().get('/pets', getPetsHandler).on('HEAD', '/pets', headPetsHandler)",
+        'export const petsHandler = new Hono()',
+        '  /** Lists the pets. */',
+        "  .get('/pets', getPetsHandler(count, async (c, { query }) => pets.slice(0, query.limit))).post('/pets', postPetsHandler(async (c, { json }) => {})).on('HEAD', '/pets', headPetsHandler(async (c) => c.body(null, 200)))",
         '',
       ].join('\n'),
     )
   })
-
-  it('regenerates a handler that is still the stub, destructuring included', () => {
-    const existing = [
-      "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
-      '',
-      'export const getPetsHandler = defineHandler({ response: z.string() })(async (c) => {})',
-      '',
-      'export const headPetsHandler = defineHandler(async (c) => {})',
-      '',
-      "export const petsHandler = new Hono().get('/pets', getPetsHandler).on('HEAD', '/pets', headPetsHandler)",
-      '',
-    ].join('\n')
-    expect(mergeHandlerFile(existing, generated)).toBe(generated)
-  })
-
-  it('drops a defineHandler declaration of an operation the spec no longer has', () => {
-    const existing = [
-      "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
-      '',
-      'export const deletePetsHandler = defineHandler(async (c) => c.body(null, 204))',
-      '',
-      "export const petsHandler = new Hono().delete('/pets', deletePetsHandler)",
-      '',
-    ].join('\n')
-    expect(mergeHandlerFile(existing, generated)).toBe(generated)
-  })
 })
 
-describe('mergeHandlerFile: a one-file output', () => {
+describe('mergeHandlerFile: a declaration the generated file declares too', () => {
   it('takes the generated schema and type alias over the existing, keeping the user’s helper', () => {
     const existing = [
       "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
       "import * as z from 'zod'",
       '',
       'export const PetSchema = z.object({ name: z.string() })',
@@ -2177,32 +2124,23 @@ describe('mergeHandlerFile: a one-file output', () => {
       '',
       'const pets: Pet[] = []',
       '',
-      'export const postPetsHandler = defineHandler({ json: PetSchema })(async (c, { json }) => {',
-      '  pets.push(json)',
-      '  return json',
-      '})',
-      '',
-      "export const api = new Hono().post('/pets', postPetsHandler)",
+      "export const petsHandler = new Hono().post('/pets', (c) => c.json(pets))",
       '',
     ].join('\n')
     const generated = [
       "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
       "import * as z from 'zod'",
       '',
       'export const PetSchema = z.object({ name: z.string().min(1) })',
       '',
       'export type Pet = z.infer<typeof PetSchema>',
       '',
-      'export const postPetsHandler = defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {})',
-      '',
-      "export const api = new Hono().post('/pets', postPetsHandler)",
+      "export const petsHandler = new Hono().post('/pets', (c) => {})",
       '',
     ].join('\n')
     expect(mergeHandlerFile(existing, generated)).toBe(
       [
         "import { Hono } from 'hono'",
-        "import { defineHandler } from 'hono/factory'",
         "import * as z from 'zod'",
         '',
         'const pets: Pet[] = []',
@@ -2211,12 +2149,7 @@ describe('mergeHandlerFile: a one-file output', () => {
         '',
         'export type Pet = z.infer<typeof PetSchema>',
         '',
-        'export const postPetsHandler = defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {',
-        '  pets.push(json)',
-        '  return json',
-        '})',
-        '',
-        "export const api = new Hono().post('/pets', postPetsHandler)",
+        "export const petsHandler = new Hono().post('/pets', (c) => c.json(pets))",
         '',
       ].join('\n'),
     )
@@ -2247,44 +2180,6 @@ describe('mergeHandlerFile: the user’s names of a generator-managed import', (
         'const who = (c: Context) => c.req.header("x-who")',
         '',
         "export const usersHandler = new Hono().get('/users', (c) => c.json({ who: who(c) }))",
-        '',
-      ].join('\n'),
-    )
-  })
-})
-
-describe('mergeHandlerFile: an inline defineHandler in a route call', () => {
-  it('keeps the handler and the middleware before it; the options are the spec’s again', () => {
-    const existing = [
-      "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
-      "import * as z from 'zod'",
-      '',
-      'export const api = new Hono()',
-      '  /** Lists the pets. */',
-      "  .get('/pets', defineHandler({ query: z.object({}) })(count, async (c, { query }) => []))",
-      "  .post('/pets', defineHandler({ json: PetSchema })(async (c, { json }) => {}))",
-      "  .on('HEAD', '/pets', defineHandler(async (c) => c.body(null, 200)))",
-      '',
-    ].join('\n')
-    // The generated code as the generator hands it to the merge: one line, formatted after.
-    const generated = [
-      "import { Hono } from 'hono'",
-      "import { defineHandler } from 'hono/factory'",
-      "import * as z from 'zod'",
-      '',
-      "export const api = new Hono().get('/pets', defineHandler({ query: z.object({ limit: z.string() }) })(async (c, { query }) => {})).post('/pets', defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {})).on('HEAD', '/pets', defineHandler({ header: z.object({}) })(async (c, { header }) => {}))",
-      '',
-    ].join('\n')
-    expect(mergeHandlerFile(existing, generated)).toBe(
-      [
-        "import { Hono } from 'hono'",
-        "import { defineHandler } from 'hono/factory'",
-        "import * as z from 'zod'",
-        '',
-        'export const api = new Hono()',
-        '  /** Lists the pets. */',
-        "  .get('/pets', defineHandler({ query: z.object({ limit: z.string() }) })(count, async (c, { query }) => [])).post('/pets', defineHandler({ json: PetSchema, response: PetSchema })(async (c, { json }) => {})).on('HEAD', '/pets', defineHandler({ header: z.object({}) })(async (c) => c.body(null, 200)))",
         '',
       ].join('\n'),
     )

@@ -33,13 +33,15 @@ type HandlerContext = {
   /** Component identifiers the handler may reference, with their module specifier. */
   readonly imports: readonly ImportEntry[]
   /**
-   * Hono's `defineHandler` (`hono/factory`): one `<method><Path>Handler` per operation, which
-   * validates the request and the response inside the handler, registered on the group's
-   * `new Hono()` in place of the validator middleware.
+   * Hono's `defineHandler` (`hono/factory`): the definitions module declares one
+   * `<method><Path>Handler = defineHandler({...})` per operation, and the handler file calls
+   * each with its handler (`getPetsHandler(async (c, { query }) => {})`) in place of the
+   * validator middleware. `names` is the definition of each route, `from` the module.
    */
-  readonly defineHandler?: boolean
-  /** Names an operation handler of the file must not take: the group exports of the app. */
-  readonly taken?: readonly string[]
+  readonly defineHandler?: {
+    readonly from: string
+    readonly names: ReadonlyMap<Route, string>
+  }
 }
 
 /** The request targets `defineHandler` validates, in the order its options are written. */
@@ -313,12 +315,13 @@ export function toOperationVarName(method: string, path: string) {
 }
 
 /**
- * `defineHandler({...})(async(c,{...})=>{})`: the validators of the operation as
- * `defineHandler` options, each a Standard Schema, the response schema under `response`, and
- * a stub handler that takes the validated targets apart for the merge to fill. An operation
- * that validates nothing is `defineHandler(async(c)=>{})`.
+ * The definition of an operation, `export const <name>=defineHandler({...})`: its validators as
+ * `defineHandler` options, each a Standard Schema, and the response schema under `response`.
+ * It is the function that takes the handler, which the handler file calls; an operation that
+ * validates nothing is `defineHandler({})`, so that every operation is called the same way.
  */
-function makeDefineHandlerExpression(
+function makeDefinitionCode(
+  name: string,
   route: Route,
   context: HandlerContext,
   adapter: ComponentAdapter,
@@ -329,64 +332,59 @@ function makeDefineHandlerExpression(
       `defineHandler takes Standard Schema validators, which ${context.lib} has none of`,
     )
   }
-  const validators = makeValidators(route, context.components, adapter)
-  const byTarget = new Map(validators)
-  const targets = DEFINE_HANDLER_TARGETS.filter((target) => byTarget.has(target))
+  const byTarget = new Map(makeValidators(route, context.components, adapter))
   const response = makeResponseSchema(route.operation, context.components, adapter)
   const options = [
-    ...targets.map((target) => `${target}:${toDefineHandlerSchema(byTarget.get(target) ?? '')}`),
+    ...DEFINE_HANDLER_TARGETS.flatMap((target) => {
+      const expr = byTarget.get(target)
+      return expr === undefined ? [] : [`${target}:${toDefineHandlerSchema(expr)}`]
+    }),
     ...(response === undefined ? [] : [`response:${toDefineHandlerSchema(response)}`]),
   ]
-  const input = targets.length > 0 ? `,{${targets.join(',')}}` : ''
-  const stub = `async(c${input})=>{}`
-  return options.length > 0
-    ? `defineHandler({${options.join(',')}})(${stub})`
-    : `defineHandler(${stub})`
+  return `export const ${name}=defineHandler({${options.join(',')}})`
 }
 
-/** The operation's `defineHandler` as a declaration of its own, `export const <name>=...`. */
-function makeDefineHandlerCode(
-  name: string,
-  route: Route,
-  context: HandlerContext,
-  adapter: ComponentAdapter,
-) {
-  return `export const ${name}=${makeDefineHandlerExpression(route, context, adapter)}`
+/** The request targets a definition validates: what its handler takes apart. */
+function validatedTargets(route: Route, context: HandlerContext, adapter: ComponentAdapter) {
+  const byTarget = new Map(makeValidators(route, context.components, adapter))
+  return DEFINE_HANDLER_TARGETS.filter((target) => byTarget.has(target))
 }
 
 /**
- * The operations of a group as `defineHandler` declarations, each named by its method and
- * path, and the group's `new Hono()` registering them. A name a group export takes, or an
- * earlier operation of the file, is numbered (`postCommentsHandler2`).
+ * The definition name of every route, in order: its method and path, numbered when a name is
+ * taken (`postCommentsHandler2` beside the group export of `/post-comments`, which the handler
+ * file that imports the definition exports) or already given to an earlier route.
  */
-function makeDefineHandlerModule(
-  varName: string,
-  routes: readonly Route[],
-  context: HandlerContext,
-  adapter: ComponentAdapter,
-) {
-  const taken = new Set([varName, ...(context.taken ?? [])])
-  const named = routes.map((route) => {
-    const name = freeName(toOperationVarName(route.method, route.path), taken)
-    taken.add(name)
-    return { route, name }
-  })
-  const handlers = named.map(({ route, name }) =>
-    makeDefineHandlerCode(name, route, context, adapter),
+export function nameOperations(routes: readonly Route[], taken: Iterable<string>) {
+  const names = new Set(taken)
+  return new Map(
+    routes.map((route) => {
+      const name = freeName(toOperationVarName(route.method, route.path), names)
+      names.add(name)
+      return [route, name] as const
+    }),
   )
-  const calls = named.map(({ route, name }) =>
-    makeRouteCall(route.method, [`'${route.path}'`, name]),
-  )
-  return `${handlers.join('\n\n')}\n\nexport const ${varName}=new Hono()${calls.join('')}`
 }
 
 /**
- * The one-shot output (`takibi-hono <input> -o <output.ts>`): the document's
- * `components.schemas` and `api`, a Hono registering every operation, in one file. Nothing
- * here is split into files, so each `defineHandler` is written inline in the route call, as
- * Hono's own example writes it; a handler file of a config, which is a file of its own beside
- * the app, declares each operation's handler by name instead. `api` is mounted by the app
- * (`new Hono().route('/', api)`), so that middleware and a base path stay the app's own.
+ * The definitions module: one `defineHandler({...})` per route, by the name `names` gives it,
+ * importing the schemas it refers to. Nothing in it is the user's, so it is written over.
+ */
+export function makeDefinitionsCode(
+  names: ReadonlyMap<Route, string>,
+  context: Omit<HandlerContext, 'defineHandler' | 'responseRefs' | 'openapi'>,
+) {
+  const full: HandlerContext = { ...context, openapi: false, responseRefs: false }
+  const adapter = makeInlineAdapter(context.lib, { resolver: false })
+  const body = [...names].map(([route, name]) => makeDefinitionCode(name, route, full, adapter))
+  return withImports(body.join('\n\n'), [...makeLibraryImports(context.lib), ...context.imports])
+}
+
+/**
+ * The one-shot output (`takibi-hono <input> -o <output.ts>`), as hono-takibi's `-o` writes the
+ * route definitions its handlers import: the document's `components.schemas` and the
+ * definition of every operation, in one file. The Hono that registers them is the user's,
+ * calling each definition with its handler (`getPetsHandler(async (c, { query }) => ...)`).
  */
 export function makeSingleFileCode(openapi: OpenAPI, lib: SchemaLib) {
   const components = openapi.components
@@ -403,18 +401,12 @@ export function makeSingleFileCode(openapi: OpenAPI, lib: SchemaLib) {
     components,
     responseRefs: false,
     imports: [],
-    defineHandler: true,
   }
   const adapter = makeInlineAdapter(lib, { resolver: false })
-  const calls = routes.map((route) =>
-    makeRouteCall(route.method, [
-      `'${route.path}'`,
-      makeDefineHandlerExpression(route, context, adapter),
-    ]),
-  )
+  const names = nameOperations(routes, [])
   const body = [
     ...schemas.map((schema) => schema.code),
-    `export const api=new Hono()${calls.join('')}`,
+    ...[...names].map(([route, name]) => makeDefinitionCode(name, route, context, adapter)),
   ]
   return withImports(body.join('\n\n'), makeLibraryImports(lib))
 }
@@ -442,10 +434,23 @@ export function makeHandlerCode(
     ...(context.openapi && { slots: ['response-content'] as const }),
   })
   const identifiers = makeSchemaIdentifiers(context.components?.schemas ?? {})
-  if (context.defineHandler === true) {
-    return withImports(makeDefineHandlerModule(varName, routes, context, adapter), [
-      ...makeLibraryImports(context.lib),
-      ...context.imports,
+  const definitions = context.defineHandler
+  if (definitions) {
+    // Each route call takes the definition with the stub handler, which takes the validated
+    // targets apart for the merge to fill; the definitions are imported from their module.
+    const calls = routes.map((route) => {
+      const name = definitions.names.get(route) ?? toOperationVarName(route.method, route.path)
+      const targets = validatedTargets(route, context, adapter)
+      const input = targets.length > 0 ? `,{${targets.join(',')}}` : ''
+      return makeRouteCall(route.method, [`'${route.path}'`, `${name}(async(c${input})=>{})`])
+    })
+    const body = `export const ${varName}=new Hono()${calls.join('')}`
+    const imported = routes
+      .map((route) => definitions.names.get(route))
+      .filter((n) => n !== undefined)
+    return withImports(body, [
+      { name: 'Hono', from: 'hono' },
+      ...[...new Set(imported)].map((name) => ({ name, from: definitions.from })),
     ])
   }
   const validator = context.openapi

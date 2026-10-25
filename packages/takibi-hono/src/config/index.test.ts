@@ -134,10 +134,10 @@ describe('parseConfig', () => {
     expect(await parse(config)).toStrictEqual(config)
   })
 
-  it('accepts defineHandler', async () => {
-    expect(await parse({ ...base, defineHandler: true })).toStrictEqual({
+  it.each([true, { output: 'src/definitions.ts' }])('accepts defineHandler %j', async (value) => {
+    expect(await parse({ ...base, defineHandler: value })).toStrictEqual({
       ...base,
-      defineHandler: true,
+      defineHandler: value,
     })
   })
 

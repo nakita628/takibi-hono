@@ -1,9 +1,7 @@
 import { Hono } from 'hono'
-import { defineHandler } from 'hono/factory'
-import * as v from 'valibot'
+import { getHandler } from '../routes'
 
-export const getHandler = defineHandler({ response: v.object({ status: v.literal('ok') }) })(async (
-  c,
-) => {})
-
-export const rootHandler = new Hono().get('/', getHandler)
+export const rootHandler = new Hono().get(
+  '/',
+  getHandler(async (c) => {}),
+)

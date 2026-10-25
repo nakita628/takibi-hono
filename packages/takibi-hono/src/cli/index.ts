@@ -44,7 +44,7 @@ const commandLine = {
     Flag.withAlias('o'),
     Flag.withSchema(OutputSchema),
     Flag.withDescription(
-      'One-shot mode: write the schemas, one defineHandler per operation and the app to this file',
+      'One-shot mode: write the schemas and the defineHandler definition of every operation to this file',
     ),
     Flag.withMetavar('output.ts'),
     Flag.optional,
@@ -95,8 +95,8 @@ function findInput() {
 
 /**
  * The one-shot mode, `takibi-hono [input] -o <output.ts> [--schema <lib>]`: no config file,
- * one file holding the schemas, a `defineHandler` per operation and the app that registers
- * them. The library is zod unless the command line says otherwise.
+ * one file holding the schemas and the `defineHandler` definition of every operation, for the
+ * user's handlers to import. The library is zod unless the command line says otherwise.
  */
 function generateFile(args: Args, output: string) {
   return Effect.gen(function* () {
@@ -177,11 +177,11 @@ const cli = Command.make(COMMAND_NAME, commandLine, generate).pipe(
       description: 'Run a config file from another location',
     },
     {
-      command: `${COMMAND_NAME} openapi.yaml -o src/api.ts`,
-      description: 'Write schemas, a defineHandler per operation and the app to one file',
+      command: `${COMMAND_NAME} openapi.yaml -o src/routes.ts`,
+      description: 'Write the schemas and a defineHandler definition per operation to one file',
     },
     {
-      command: `${COMMAND_NAME} -o src/api.ts --schema valibot`,
+      command: `${COMMAND_NAME} -o src/routes.ts --schema valibot`,
       description:
         'The same, from the openapi.yaml / openapi.json / main.tsp in the current directory',
     },
