@@ -89,7 +89,7 @@ each case), and `conformance/<name>/app.ts` reshapes a validation failure into t
 paths the suites expect of their own host.
 
 It runs on request, `pnpm -F @takibi-hono/test conformance`, and it is red: it measures how far
-schema-to-library's coercion is from hono-takibi's, parameter by parameter, and is the list of
+schema-truth's coercion is from hono-takibi's, parameter by parameter, and is the list of
 what to report upstream. Nothing in it is adjusted to pass; a suite that cannot load is noted at
 the top of its document (the `format: trim` parameters). It is not part of `pnpm test` or CI.
 `TAKIBI_HONO_CONFORMANCE_LIB=valibot` (or `arktype`, `effect`) runs the suites against the

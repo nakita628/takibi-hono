@@ -24,15 +24,15 @@ commit.
 1. Reproduce it as a failing test at the smallest document that shows it, asserting the exact
    generated source.
 2. Find the layer that owns the mistake — parsing and Components (oas-truth), a schema expression
-   (schema-to-library), a code builder (`generator/`), composition (`helper/`), the program
+   (schema-truth), a code builder (`generator/`), composition (`helper/`), the program
    (`core/`), the merge (`merge/`) — and fix it there, not downstream. A mistake in oas-truth or
-   schema-to-library is fixed upstream, never by string-patching its output here.
+   schema-truth is fixed upstream, never by string-patching its output here.
 3. Check whether the other four schema libraries, and `openapi: false`, have the same mistake.
 
 ## A request to support a vendor extension (`x-*`)
 
 1. Classify it with the architecture rule's three layers.
-2. A or B: it belongs in schema-to-library (and oas-truth's `Schema` type), not here — takibi-hono
+2. A or B: it belongs in schema-truth (and oas-truth's `Schema` type), not here — takibi-hono
    only passes it through. Add a transparency test here only if the pass-through itself changes.
 3. C (code injection): decline, citing the architecture rule. Do not add a flag, an option or an
    allowlist for it.
@@ -84,9 +84,8 @@ For a change to the Vite plugin, the handler / app output or the merge:
 1. Find the `effect` release the client-generation dependency (`hono-takibi`) pins; that is the
    target, because its Effects are composed in `src/core/client.ts`.
 2. Change `effect` and `@effect/platform-node` in `packages/takibi-hono/package.json` (both exact)
-   and in `test/package.json`, then `pnpm install`. The `@effect/platform-node-shared` override in
-   `pnpm-workspace.yaml` is scoped to schema-to-library's release candidate and stays as it is
-   until oas-truth moves off it.
+   and in `test/package.json`, then `pnpm install`. If schema-truth (through oas-truth) pins a
+   different `effect`, check that both trees resolve consistently in `pnpm-lock.yaml`.
 3. `pnpm check`. A release moves the Schema and CLI APIs, so expect errors in `config/` and
    `cli/`.
 4. `pnpm test`, and read every behavior difference rather than adjusting an assertion to match.
@@ -106,7 +105,7 @@ For a change to the Vite plugin, the handler / app output or the merge:
    `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (and drop entries that no longer need it).
 2. `pnpm install`, `pnpm test`. A changed expectation is a changed generated output: read it and
    decide whether it is right before updating the test.
-3. If oas-truth moved schema-to-library to a new Effect RC, do the effect bump in the same change.
+3. If oas-truth moved schema-truth to a new `effect`, do the effect bump in the same change.
 
 ## Release (only when asked)
 
