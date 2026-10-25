@@ -4,26 +4,21 @@ import { Effect } from 'effect'
 import type { OpenAPI } from 'oas-truth'
 import { makeSchemaIdentifiers, toIdentifierPascalCase } from 'oas-truth'
 
-import { emit } from '../emit/index.js'
+import { emit, emitFiles } from '../emit/index.js'
 import { readdir, readFile, unlink } from '../file/index.js'
 import {
   makeAppCode,
-  makeDefinitionsCode,
+  makeDefinitionEntries,
   makeHandlerCode,
   nameOperations,
   toHandlerVarName,
 } from '../generator/handler.js'
-import { makeBarrel } from '../helper/imports.js'
+import { makeBarrel, withImports } from '../helper/imports.js'
+import { makeLibraryImports } from '../helper/library.js'
 import { collectRoutes, collectWebhookRoutes } from '../helper/operations.js'
 import { mergeAppFile, mergeHandlerFile } from '../merge/index.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'
-import { makeSpecifier } from './layout.js'
-
-/** The specifier a module in `fromDir` imports `file` by: relative, without `.ts`. */
-function toImport(fromDir: string, file: string) {
-  const rel = path.relative(fromDir, file).replaceAll('\\', '/').replace(/\.ts$/u, '')
-  return rel.startsWith('.') ? rel : `./${rel}`
-}
+import { makeSpecifier, targetDirectory } from './layout.js'
 
 /** Writes `code`, keeping the hand-written parts of an existing file via `merge`. */
 function writeMerged(
@@ -64,22 +59,39 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
           }))
         : []),
     ]
-    // The definitions module, when `defineHandler` is set: one definition per route of every
-    // group, named so that none takes a group export's name (`postCommentsHandler` beside
-    // `/post-comments`), which the handler file importing it exports. Nothing in it is the
-    // user's, so it is written over.
+    // The definitions, when `defineHandler` is set: one per route of every group, named so
+    // that none takes a group export's name (`postCommentsHandler` beside `/post-comments`),
+    // which the handler file importing it exports. One file, or one per definition and a
+    // barrel (`split`). Nothing in them is the user's, so they are written over.
     const definitions = layout.definitions
     const named =
       definitions === undefined
         ? undefined
         : nameOperations([...groups.values()].flat(), [...groups.keys()].map(toHandlerVarName))
     if (definitions !== undefined && named !== undefined && named.size > 0) {
-      const code = makeDefinitionsCode(named, {
-        lib: config.schema,
-        components,
-        imports: componentImports(path.dirname(definitions)),
-      })
-      yield* emit(code, path.dirname(definitions), definitions)
+      const dir = targetDirectory(definitions)
+      const entries = makeDefinitionEntries(named, { lib: config.schema, components, imports: [] })
+      const module = (code: string) =>
+        withImports(code, [...makeLibraryImports(config.schema), ...componentImports(dir)])
+      yield* emitFiles(
+        definitions.split
+          ? [
+              ...entries.map((entry) => ({
+                path: path.join(dir, `${entry.fileName}.ts`),
+                code: module(entry.code),
+              })),
+              {
+                path: path.join(dir, 'index.ts'),
+                code: makeBarrel(entries.map((entry) => entry.fileName)),
+              },
+            ]
+          : [
+              {
+                path: definitions.output,
+                code: module(entries.map((entry) => entry.code).join('\n\n')),
+              },
+            ],
+      )
     }
     const context = {
       lib: config.schema,
@@ -89,7 +101,7 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
       imports: componentImports(handlersDir),
       ...(definitions !== undefined &&
         named !== undefined && {
-          defineHandler: { from: toImport(handlersDir, definitions), names: named },
+          defineHandler: { from: makeSpecifier(layout, handlersDir, definitions), names: named },
         }),
     }
     const webhooks = useOpenAPI ? collectWebhookRoutes(openapi) : []
@@ -114,9 +126,11 @@ export function writeHandlers(openapi: OpenAPI, config: TakibiHonoConfig, layout
     const expected = new Set([
       ...files.map((file) => `${file.name}.ts`),
       'index.ts',
-      // A definitions module written into the handlers directory is not a stale handler file.
-      ...(definitions !== undefined && path.dirname(definitions) === handlersDir
-        ? [path.basename(definitions)]
+      // A definitions file written into the handlers directory is not a stale handler file.
+      ...(definitions !== undefined &&
+      !definitions.split &&
+      path.dirname(definitions.output) === handlersDir
+        ? [path.basename(definitions.output)]
         : []),
     ])
     const entries = yield* readdir(handlersDir)

@@ -71,10 +71,11 @@ export type TakibiHonoConfig = ClientConfig & {
   readonly basePath?: string | undefined
   readonly openapi?: boolean | undefined
   /**
-   * Hono's `defineHandler` in place of the validator middleware: a definitions module
-   * (`<appDir>/routes.ts`, or `output`) the handler files import.
+   * Hono's `defineHandler` in place of the validator middleware: the definitions the handler
+   * files import, as `routes.ts` beside the app entry (`true`) or as a target of their own —
+   * a file, or a directory with one file per definition (`split`), in this or another package.
    */
-  readonly defineHandler?: boolean | { readonly output: string } | undefined
+  readonly defineHandler?: boolean | TargetConfig | undefined
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
   /** One export, and one client, for each handler file. */
@@ -98,8 +99,8 @@ export type Target = {
 export type Layout = {
   readonly handlersDir: string
   readonly appDir: string
-  /** The `defineHandler` definitions module, when `defineHandler` is set. */
-  readonly definitions: string | undefined
+  /** The `defineHandler` definitions, when `defineHandler` is set. */
+  readonly definitions: Target | undefined
   /** The typed client, when the `client` block is set. */
   readonly client: Target | undefined
   /** The directories the typed client, rpc and the query hooks are written into. */
@@ -164,9 +165,7 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
     definitions:
       define === undefined || define === false
         ? undefined
-        : define === true
-          ? path.join(appDir, 'routes.ts')
-          : define.output,
+        : toTarget(define === true ? { output: path.join(appDir, 'routes.ts') } : define),
     client:
       client === undefined
         ? undefined
@@ -240,28 +239,42 @@ export function makeSpecifier(layout: Layout, fromDir: string, target: Target) {
 }
 
 /**
- * Fails when a generated file would import a component output of another package that
- * names no `package`: the import could not be written. The handlers import the schemas and
- * the responses; every other component kind imports the schemas — each only when the
- * document declares some.
+ * Fails when a generated file would import an output of another package that names no
+ * `package`: the import could not be written. The handlers import the schemas and the
+ * responses (or, with `defineHandler`, the definitions, which import the schemas); every
+ * other component kind imports the schemas — each only when the document declares some.
  */
 export function checkPackages(openapi: OpenAPI, layout: Layout) {
   const declared = (kind: 'schemas' | 'responses') =>
     Object.keys(openapi.components?.[kind] ?? {}).length > 0
   const schemas = layout.targets.schemas
   const responses = layout.targets.responses
+  const definitions = layout.definitions
+  const schemaReader = definitions
+    ? (['defineHandler', targetDirectory(definitions)] as const)
+    : (['handlers', layout.handlersDir] as const)
   const edges = [
-    ...(schemas && declared('schemas')
-      ? [['handlers', layout.handlersDir, 'schemas', schemas] as const]
+    ...(definitions
+      ? [['handlers', layout.handlersDir, 'defineHandler', definitions] as const]
       : []),
-    ...(responses && declared('responses')
-      ? [['handlers', layout.handlersDir, 'responses', responses] as const]
+    ...(schemas && declared('schemas')
+      ? [[...schemaReader, 'components.schemas', schemas] as const]
+      : []),
+    ...(responses && declared('responses') && !definitions
+      ? [['handlers', layout.handlersDir, 'components.responses', responses] as const]
       : []),
     ...(schemas && declared('schemas')
       ? COMPONENT_KINDS.flatMap((kind) => {
           const target = layout.targets[kind]
           return target
-            ? [[`components.${kind}`, targetDirectory(target), 'schemas', schemas] as const]
+            ? [
+                [
+                  `components.${kind}`,
+                  targetDirectory(target),
+                  'components.schemas',
+                  schemas,
+                ] as const,
+              ]
             : []
         })
       : []),
@@ -273,10 +286,10 @@ export function checkPackages(openapi: OpenAPI, layout: Layout) {
         layout.packageRoot(targetModule(target)),
   )
   if (missing === undefined) return Effect.void
-  const [from, , name, target] = missing
+  const [from, , key, target] = missing
   return Effect.fail(
     new LayoutError({
-      message: `${from} imports components.${name} from another package: set components.${name}.package to the name of the package ${target.output} is written into.`,
+      message: `${from} imports ${key} from another package: set ${key}.package to the name of the package ${target.output} is written into.`,
     }),
   )
 }

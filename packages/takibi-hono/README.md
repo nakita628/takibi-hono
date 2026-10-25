@@ -58,13 +58,17 @@ export default defineConfig({
   // Enable hono-openapi style output (@see https://hono.dev/examples/hono-openapi)
   openapi: true,
 
-  // Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware. A
-  // definitions module, `routes.ts` beside the app entry (or `{ output }`), declares one
-  // `<method><Path>Handler = defineHandler({...})` per operation (`postPetsHandler`), validating
-  // the request targets and the response; each handler file calls its definitions with the
-  // handlers. Not combined with `openapi` (hono-openapi reads validators in front of a handler)
-  // nor with `schema: 'typebox'` (no Standard Schema interface). See [defineHandler](#definehandler).
+  // Hono's `defineHandler` (hono/factory, Hono 5) in place of the validator middleware. The
+  // definitions, one `<method><Path>Handler = defineHandler({...})` per operation
+  // (`postPetsHandler`) validating the request targets and the response, go to `routes.ts`
+  // beside the app entry (`true`), or to a target as a component kind's: `output` a file or,
+  // with `split`, a directory with one file per definition and an index.ts barrel, and
+  // `package` for the files of other packages. Each handler file calls its definitions with
+  // the handlers. Not combined with `openapi` (hono-openapi reads validators in front of a
+  // handler) nor with `schema: 'typebox'` (no Standard Schema interface). See
+  // [defineHandler](#definehandler).
   // defineHandler: true,
+  // defineHandler: { output: 'src/routes', split: true, package: '@packages/routes' },
 
   // oxfmt FormatConfig for generated code output
   // format: {},
@@ -249,8 +253,8 @@ The plugin watches your OpenAPI/TypeSpec files and config, automatically regener
 `defineHandler: true` generates Hono 5's
 [`defineHandler`](https://hono.dev/docs/helpers/factory#definehandler) from `hono/factory`, laid
 out as hono-takibi lays out its routes and handlers. A definitions module, `routes.ts` beside the
-app entry (or `defineHandler: { output }`), declares one definition per operation, named by its
-method and path (`postPetsHandler` where hono-takibi has `postPetsRoute`):
+app entry, declares one definition per operation, named by its method and path (`postPetsHandler`
+where hono-takibi has `postPetsRoute`):
 
 ```ts
 // src/routes.ts
@@ -300,6 +304,12 @@ export const petsHandler = new Hono()
 On regeneration a call you gave a handler, or middleware before it, is kept as it is
 (`postPetsHandler(auth, async (c, { json }) => ...)`); a call that still holds the stub is
 written again, so a definition whose targets changed gets a stub that matches.
+
+The definitions are a target like a component kind's, as hono-takibi's `routes` are:
+`defineHandler: { output }` names their file, `split: true` makes `output` a directory with one
+file per definition (`getPets.ts`) and an `index.ts` barrel, and `package` the name the files of
+other packages import them by. The handler files import them relatively, under `pathAlias`, or
+by `package`, as they import the components.
 
 `defineHandler` validates with Standard Schema, so `schema` is `zod`, `valibot`, `arktype`
 or `effect`; an arktype `Type` is handed over as its `~standard` object, which keeps Hono's

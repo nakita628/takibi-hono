@@ -70,6 +70,37 @@ describe('resolveLayout', () => {
   })
 })
 
+describe('resolveLayout: defineHandler', () => {
+  it('has no definitions without defineHandler', () => {
+    expect(resolveLayout(base).definitions).toBe(undefined)
+  })
+
+  it('places the definitions in routes.ts beside the app entry for `true`', () => {
+    expect(
+      resolveLayout({ ...base, output: 'app/handlers', defineHandler: true }).definitions,
+    ).toStrictEqual({
+      output: 'app/routes.ts',
+      split: false,
+      exportTypes: false,
+      package: undefined,
+    })
+  })
+
+  it('takes a target of their own, as a component kind', () => {
+    expect(
+      resolveLayout({
+        ...base,
+        defineHandler: { output: 'packages/routes/src', split: true, package: '@acme/routes' },
+      }).definitions,
+    ).toStrictEqual({
+      output: 'packages/routes/src',
+      split: true,
+      exportTypes: false,
+      package: '@acme/routes',
+    })
+  })
+})
+
 // `packages/` is a package of its own; everything else is the app's.
 const twoPackages = (file: string) => (/(?:^|\/)packages\//u.test(file) ? '/pkg' : '/app')
 

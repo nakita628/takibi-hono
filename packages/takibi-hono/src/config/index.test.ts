@@ -134,10 +134,18 @@ describe('parseConfig', () => {
     expect(await parse(config)).toStrictEqual(config)
   })
 
-  it.each([true, { output: 'src/definitions.ts' }])('accepts defineHandler %j', async (value) => {
+  it.each([
+    [true, true],
+    [{ output: 'src/definitions.ts' }, { output: 'src/definitions.ts' }],
+    [{ output: 'src/definitions' }, { output: 'src/definitions/index.ts' }],
+    [
+      { output: 'src/definitions', split: true, package: '@acme/definitions' },
+      { output: 'src/definitions', split: true, package: '@acme/definitions' },
+    ],
+  ])('accepts defineHandler %j, as a component kind', async (value, decoded) => {
     expect(await parse({ ...base, defineHandler: value })).toStrictEqual({
       ...base,
-      defineHandler: value,
+      defineHandler: decoded,
     })
   })
 

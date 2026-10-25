@@ -366,17 +366,33 @@ export function nameOperations(routes: readonly Route[], taken: Iterable<string>
   )
 }
 
+/** What a definitions module is built from: the library and the schemas it may refer to. */
+export type DefinitionsContext = Omit<HandlerContext, 'defineHandler' | 'responseRefs' | 'openapi'>
+
 /**
- * The definitions module: one `defineHandler({...})` per route, by the name `names` gives it,
- * importing the schemas it refers to. Nothing in it is the user's, so it is written over.
+ * The definition of every route, by the name `names` gives it, without imports: `fileName` is
+ * the file a split target writes it to (`getPets.ts` for `getPetsHandler`). Nothing in a
+ * definition is the user's, so a definitions module is written over.
  */
-export function makeDefinitionsCode(
+export function makeDefinitionEntries(
   names: ReadonlyMap<Route, string>,
-  context: Omit<HandlerContext, 'defineHandler' | 'responseRefs' | 'openapi'>,
+  context: DefinitionsContext,
 ) {
   const full: HandlerContext = { ...context, openapi: false, responseRefs: false }
   const adapter = makeInlineAdapter(context.lib, { resolver: false })
-  const body = [...names].map(([route, name]) => makeDefinitionCode(name, route, full, adapter))
+  return [...names].map(([route, name]) => ({
+    name,
+    fileName: name.replace(/Handler(\d*)$/u, '$1'),
+    code: makeDefinitionCode(name, route, full, adapter),
+  }))
+}
+
+/** The definitions as one module, importing the schemas it refers to. */
+export function makeDefinitionsCode(
+  names: ReadonlyMap<Route, string>,
+  context: DefinitionsContext,
+) {
+  const body = makeDefinitionEntries(names, context).map((entry) => entry.code)
   return withImports(body.join('\n\n'), [...makeLibraryImports(context.lib), ...context.imports])
 }
 
