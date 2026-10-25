@@ -57,6 +57,17 @@ const INTEGER = {
   valibot: { type: 'integer' },
 }
 
+// schema-truth writes `minLength` as valibot's `v.minCodePoints` (JSON Schema counts code
+// points), which @valibot/to-json-schema does not document, so valibot's `name` loses it.
+const NAME = {
+  zod: { type: 'string', minLength: 1 },
+  valibot: { type: 'string' },
+}
+
+// hono-openapi documents a schema reached from a response as its output, and a zod object's
+// output admits no other key; `NewPet`, reached only from a request body, stays open.
+const CLOSED = { zod: { additionalProperties: false }, valibot: {} }
+
 describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
   it('registers every components.schemas entry under its name', async () => {
     const document = await loadDocument(`openapi-${lib}`)
@@ -65,10 +76,11 @@ describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
       Tag: { type: 'string', enum: ['dog', 'cat', 'bird'] },
       Pet: {
         type: 'object',
+        ...CLOSED[lib],
         description: 'A pet in the store',
         properties: {
           id: INTEGER[lib],
-          name: { type: 'string', minLength: 1 },
+          name: NAME[lib],
           tag: { $ref: '#/components/schemas/Tag' },
         },
         required: ['id', 'name'],
@@ -76,13 +88,14 @@ describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
       NewPet: {
         type: 'object',
         properties: {
-          name: { type: 'string', minLength: 1 },
+          name: NAME[lib],
           tag: { $ref: '#/components/schemas/Tag' },
         },
         required: ['name'],
       },
       Error: {
         type: 'object',
+        ...CLOSED[lib],
         properties: { message: { type: 'string' } },
         required: ['message'],
       },
@@ -169,10 +182,9 @@ describe.each(['zod', 'valibot'] as const)('openapi-%s', (lib) => {
           in: 'path',
           name: 'petId',
           required: true,
-          schema:
-            lib === 'zod'
-              ? { type: 'integer', minimum: 1, maximum: 9_007_199_254_740_991 }
-              : { type: 'integer', minimum: 1 },
+          // A path parameter is coerced from text to a safe integer in both libraries
+          // (valibot's `v.safeInteger()`), which documents the upper bound.
+          schema: { type: 'integer', minimum: 1, maximum: 9_007_199_254_740_991 },
         },
       ],
     })
