@@ -241,6 +241,37 @@ describe('takibiHonoVite', () => {
     expect(vi.mocked(hono).mock.calls.at(-1)).toStrictEqual([next])
   })
 
+  it('removes the typed client when the reloaded config no longer names it', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const plugin = takibiHonoVite()
+    const base = { input: 'openapi.yaml', schema: 'zod' }
+    const { server, sentMessages, state } = createMockServer({
+      ...base,
+      client: { output: 'old/client.ts', baseUrl: '/' },
+      rpc: { output: 'old/rpc.ts' },
+    })
+    const cwd = process.cwd()
+    write(path.join(cwd, 'old/client.ts'))
+    write(path.join(cwd, 'old/rpc.ts'))
+    plugin.configureServer(server)
+    await vi.waitFor(() => {
+      expect(sentMessages.length).toBe(1)
+    })
+
+    state.config = {
+      ...base,
+      client: { output: 'new/client.ts', baseUrl: '/' },
+      rpc: { output: 'new/rpc.ts' },
+    }
+    plugin.handleHotUpdate({ file: path.join(cwd, 'takibi-hono.config.ts'), server })
+    await vi.waitFor(() => {
+      expect(sentMessages.length).toBe(2)
+    })
+    expect(fs.existsSync(path.join(cwd, 'old/client.ts'))).toBe(false)
+    expect(fs.existsSync(path.join(cwd, 'old/rpc.ts'))).toBe(false)
+    expect(log.mock.calls).toContainEqual([`🧹 cleanup: ${path.join(cwd, 'old/client.ts')}`])
+  })
+
   it('empties split directories before generating, leaving handlers and other files alone', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const cwd = process.cwd()

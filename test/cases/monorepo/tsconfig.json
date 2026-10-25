@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
+      "@acme/api": ["../../__app__/monorepo/apps/api/src/index.ts"],
+      "@acme/client": ["../../__app__/monorepo/packages/client/src/index.ts"],
       "@acme/components": ["../../__app__/monorepo/packages/components/src/index.ts"]
     }
   },

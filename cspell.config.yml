@@ -34,7 +34,7 @@ ignorePaths:
   # The API reference hono-takibi's docs generator writes, pinned as golden output in test/: its
   # anchors are slugs made of an operation id glued to a prefix, not words. The generated
   # TypeScript beside it is checked.
-  - test/cases/*/expected/src/docs
+  - test/cases/*/expected/src/docs.md
   # hono-takibi's conformance documents and suites, copied as they are: their spelling is
   # hono-takibi's, and a word changed here would be a test changed.
   - test/specs/conformance-*.yaml

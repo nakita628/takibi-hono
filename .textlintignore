@@ -1,0 +1,10 @@
+# What textlint skips (its default ignore file). It is .gitignore's list in textlint's glob
+# form, where a directory needs `/**`, plus the Markdown hono-takibi's docs generator writes,
+# pinned as golden output in test/: its prose is hono-takibi's.
+node_modules/**
+coverage/**
+dist/**
+test/__generated__/**
+test/__app__/**
+test/*/__generated__/**
+test/cases/*/expected/**
