@@ -224,22 +224,37 @@ export function mergeAppFile(existingCode: string, generatedCode: string) {
   const existingFile = parseSnippet(existingCode)
   if (existingFile.errors.length > 0) return existingCode
   const generatedFile = parseSnippet(generatedCode)
-  const existingApiStmt = findApiStatement(existingFile)
-  const generatedApiStmt = findApiStatement(generatedFile)
-  if (!existingApiStmt || !generatedApiStmt) return generatedCode
+  const existingRoutes = routeExports(existingFile)
+  const generatedRoutes = routeExports(generatedFile)
+  const [existingFirst, generatedFirst] = [existingRoutes[0], generatedRoutes[0]]
+  const [existingLast, generatedLast] = [existingRoutes.at(-1), generatedRoutes.at(-1)]
+  if (!existingFirst || !existingLast || !generatedFirst || !generatedLast) return generatedCode
   const generatedImportText = extractImportSection(generatedFile)
   const mergedImports = mergeAppImports(existingFile, generatedImportText)
   const existingImportText = extractImportSection(existingFile)
-  const betweenImportsAndApi = existingCode.slice(existingImportText.length, existingApiStmt.start)
-  const afterApi = existingCode.slice(existingApiStmt.end)
-  return `${[mergedImports.trimEnd(), '\n', betweenImportsAndApi, generatedApiStmt.text, afterApi]
+  const betweenImportsAndRoutes = existingCode.slice(existingImportText.length, existingFirst.start)
+  const routes = generatedCode.slice(generatedFirst.start, generatedLast.end)
+  const afterRoutes = existingCode.slice(existingLast.end)
+  return `${[mergedImports.trimEnd(), '\n', betweenImportsAndRoutes, routes, afterRoutes]
     .join('')
     .replaceAll(/\n{3,}/gu, '\n\n')
     .trim()}\n`
 }
 
-function findApiStatement(source: Source) {
-  return variableStatements(source).find((stmt) => stmt.exported && stmt.names.includes('api'))
+// `export const <name>=<app>.route('/',<file>Handler)…`: a group of a split app, as the
+// generator writes it.
+const GROUP_EXPORT =
+  /^export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*[A-Za-z_$][\w$]*(?:\s*\.route\(\s*['"]\/['"]\s*,\s*[A-Za-z_$][\w$]*Handler\s*,?\s*\))+\s*;?$/u
+
+/**
+ * The exports the generator owns: `api`, the whole app, or the groups of a split one. The
+ * span from the first to the last is what a regeneration replaces, so switching `split` on or
+ * off swaps one form for the other; any other export of the user's is kept.
+ */
+function routeExports(source: Source) {
+  return variableStatements(source).filter(
+    (stmt) => stmt.exported && (stmt.names.includes('api') || GROUP_EXPORT.test(stmt.text)),
+  )
 }
 
 /** Puts each route's JSDoc back above the first occurrence of its regenerated call. */

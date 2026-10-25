@@ -55,3 +55,14 @@ export function collectFreeIdentifiers(code: string): ReadonlySet<string> {
       .filter((name) => !declared.has(name)),
   )
 }
+
+/**
+ * A name free of the ones taken: `base` itself, or `base` followed by the first number from 2
+ * on that no one has. What a generated file binds for itself (`app`) is named this way, so
+ * that a group of the same name keeps it.
+ */
+export function freeName(base: string, taken: Iterable<string>) {
+  const names = new Set(taken)
+  const free = (n: number): string => (names.has(`${base}${n}`) ? free(n + 1) : `${base}${n}`)
+  return names.has(base) ? free(2) : base
+}

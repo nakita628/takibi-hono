@@ -72,6 +72,8 @@ export type TakibiHonoConfig = ClientConfig & {
   readonly openapi?: boolean | undefined
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
+  /** One export, and one client, for each handler file. */
+  readonly split?: boolean | undefined
   readonly pathAlias?: string | undefined
   readonly components?:
     | ({ readonly output?: string | undefined; readonly package?: string | undefined } & {

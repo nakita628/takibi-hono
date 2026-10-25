@@ -96,6 +96,7 @@ export function writeApp(
 ) {
   const code = makeAppCode(handlerFileNames, {
     basePath: config.basePath,
+    split: config.split,
     handlersImport: `./${path.relative(layout.appDir, layout.handlersDir).replaceAll('\\', '/')}`,
   })
   return writeMerged(path.join(layout.appDir, 'index.ts'), code, mergeAppFile)

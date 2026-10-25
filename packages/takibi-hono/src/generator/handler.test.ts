@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import { makeAppCode, makeHandlerCode, toHandlerVarName } from './handler.js'
+import { makeAppCode, makeHandlerCode, toGroupName, toHandlerVarName } from './handler.js'
 
 const components = {
   parameters: { Limit: { name: 'limit', in: 'query', schema: { type: 'integer' } } },
@@ -355,6 +355,18 @@ describe('toHandlerVarName', () => {
   })
 })
 
+describe('toGroupName', () => {
+  it.each([
+    ['users', 'users'],
+    ['__root', '__root'],
+    ['user-profiles', 'userProfiles'],
+    ['2010-04-01', '_20100401'],
+    ['delete', '__delete'],
+  ])('%s → %s', (fileName, expected) => {
+    expect(toGroupName(fileName)).toBe(expected)
+  })
+})
+
 describe('makeAppCode', () => {
   it('routes every handler, sorted by file name, under the base path', () => {
     expect(
@@ -367,5 +379,45 @@ const app=new Hono().basePath("/api")
 export const api=app.route('/',rootHandler).route('/',petsHandler).route('/',usersHandler)
 
 export default app`)
+  })
+
+  it('exports each handler file as a group with split, all on the one app', () => {
+    expect(
+      makeAppCode(['users', '__root', 'user-profiles'], {
+        basePath: '/api',
+        handlersImport: './handlers',
+        split: true,
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{rootHandler,userProfilesHandler,usersHandler}from'./handlers'
+
+const app=new Hono().basePath("/api")
+
+export const __root=app.route('/',rootHandler)
+
+export const userProfiles=app.route('/',userProfilesHandler)
+
+export const users=app.route('/',usersHandler)
+
+export default app`)
+  })
+
+  it('binds the app under another name when a group is called app', () => {
+    expect(
+      makeAppCode(['app', 'pets'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+        split: true,
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{appHandler,petsHandler}from'./handlers'
+
+const app2=new Hono()
+
+export const app=app2.route('/',appHandler)
+
+export const pets=app2.route('/',petsHandler)
+
+export default app2`)
   })
 })

@@ -71,13 +71,18 @@ function escapes(output: string) {
 async function generate(
   dir: string,
   keys: ClientConfig,
-  options: { readonly basePath?: string; readonly packageOf?: (file: string) => string } = {},
+  options: {
+    readonly basePath?: string
+    readonly split?: boolean
+    readonly packageOf?: (file: string) => string
+  } = {},
 ) {
   const config = {
     input: specPath,
     schema: 'zod',
     ...keys,
     ...(options.basePath !== undefined && { basePath: options.basePath }),
+    ...(options.split !== undefined && { split: options.split }),
   } as const
   const { packageOf } = options
   const layout: Layout = {
@@ -186,6 +191,33 @@ import { client } from './lib/client'
 
 export async function getPing(options?: ClientRequestOptions) {
   return await client.ping.$get(undefined, options)
+}
+`)
+  })
+
+  it.concurrent('writes a client per group of a split app, which rpc calls', async () => {
+    const d = tmpDir('split')
+    await runGenerator(
+      await generate(
+        d,
+        { client: client('client.ts'), rpc: { output: 'rpc.ts' } },
+        { basePath: '/api', split: true },
+      ),
+    )
+    expect(await read(d, 'client.ts')).toBe(`import { hc } from 'hono/client'
+import type { ping } from './src'
+
+type PingClient = ReturnType<typeof hc<typeof ping>>
+
+const hcPingWithType = (...args: Parameters<typeof hc>): PingClient => hc<typeof ping>(...args)
+
+export const pingClient = hcPingWithType('/').api
+`)
+    expect(await read(d, 'rpc.ts')).toBe(`import type { ClientRequestOptions } from 'hono/client'
+import { pingClient } from './client'
+
+export async function getPing(options?: ClientRequestOptions) {
+  return await pingClient.ping.$get(undefined, options)
 }
 `)
   })

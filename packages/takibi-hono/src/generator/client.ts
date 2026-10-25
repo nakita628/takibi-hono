@@ -1,3 +1,5 @@
+import { freeName } from '../helper/identifiers.js'
+
 /**
  * What the typed client is created with, `hc(baseUrl)`: `/` for the same origin, an
  * environment variable read when the client is created, or a property of an environment
@@ -18,6 +20,8 @@ type ClientCodeOptions = {
   /** The app's `basePath`; the client is handed out from below it. */
   readonly basePath: string | undefined
   readonly credentials: Credentials | undefined
+  /** The groups of a split app, one client each. Left out, one client for the whole app. */
+  readonly groups?: readonly string[] | undefined
 }
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/u
@@ -63,30 +67,56 @@ function makeBaseUrl(baseUrl: BaseUrl) {
   }
 }
 
+// `books` to `Books`, and `__root` to `__Root`: the letter is what is capitalized.
+function capitalizeFirst(name: string) {
+  return name.replace(
+    /^([_$]*)(.)/u,
+    (_, lead: string, first: string) => `${lead}${first.toUpperCase()}`,
+  )
+}
+
 /**
- * The typed client of the generated app, as the `hcWithType` of the Hono guide: the type of
- * the client is declared once, so that it is worked out when this file is compiled and not
- * again by every file that calls `hc`. rpc and the query hooks import it as `client`.
+ * The typed clients of the generated app, as the `hcWithType` of the Hono guide: the type of a
+ * client is declared once, so that it is worked out when this file is compiled and not again
+ * by every file that calls it. The whole app is `client`; a split app has one client for each
+ * group, `petsClient` for `pets`, typed by the routes of that group alone. rpc and the query
+ * hooks import them.
  */
 export function makeClientCode(options: ClientCodeOptions) {
   const { imports, declarations, url, names } = makeBaseUrl(options.baseUrl)
-  // The app is imported as `api` unless the file binds that name itself (an environment
-  // object exported as `api`).
-  const app = names.includes('api') ? 'apiApp' : 'api'
-  const specifier = app === 'api' ? 'api' : `api as ${app}`
+  const apps = options.groups ?? ['api']
+  const clients = apps.map((app) =>
+    options.groups === undefined
+      ? { app, client: 'client', type: 'Client', factory: 'hcWithType' }
+      : {
+          app,
+          client: `${app}Client`,
+          type: capitalizeFirst(`${app}Client`),
+          factory: `hc${capitalizeFirst(app)}WithType`,
+        },
+  )
+  // An app is imported under its own name, unless the file binds that name itself: an
+  // environment object exported as `api`, or a group `hc`. It is then imported as `<app>App`.
+  const own = ['hc', ...names, ...clients.flatMap((c) => [c.client, c.type, c.factory])]
+  const imported = (app: string) =>
+    own.includes(app) ? freeName(`${app}App`, [...own, ...apps]) : app
+  const specifiers = apps.map((app) => (imported(app) === app ? app : `${app} as ${imported(app)}`))
   const init =
     options.credentials === undefined
       ? ''
       : `,{init:{credentials:${JSON.stringify(options.credentials)}}}`
+  const access = makeBasePathAccess(options.basePath)
   return [
     [
       "import{hc}from'hono/client'",
-      `import type{${specifier}}from'${options.appImport}'`,
+      `import type{${specifiers.join(',')}}from'${options.appImport}'`,
       ...imports,
     ].join('\n'),
     ...declarations,
-    `type Client=ReturnType<typeof hc<typeof ${app}>>`,
-    `const hcWithType=(...args:Parameters<typeof hc>):Client=>hc<typeof ${app}>(...args)`,
-    `export const client=hcWithType(${url}${init})${makeBasePathAccess(options.basePath)}`,
+    ...clients.flatMap(({ app, client, type, factory }) => [
+      `type ${type}=ReturnType<typeof hc<typeof ${imported(app)}>>`,
+      `const ${factory}=(...args:Parameters<typeof hc>):${type}=>hc<typeof ${imported(app)}>(...args)`,
+      `export const ${client}=${factory}(${url}${init})${access}`,
+    ]),
   ].join('\n\n')
 }
