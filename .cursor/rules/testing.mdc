@@ -62,7 +62,7 @@ the workspace root for every case and writes two trees per case:
 A case is `cases/<name>/takibi-hono.config.ts` with `input` under `specs/` and every output under
 `__generated__/<name>/`; a `seed/` is copied in before the CLI runs (the merge case). A case
 without a `tsconfig.json` is golden only, and its config says why (the typebox + hono-openapi
-bridge, an upstream effect default). The Vite plugin case is self-contained in `vite-plugin/`
+bridge). The Vite plugin case is self-contained in `vite-plugin/`
 because the plugin reads its config from the working directory.
 
 - A change in generated output fails `golden.test.ts` with a diff of the generated source. Read
