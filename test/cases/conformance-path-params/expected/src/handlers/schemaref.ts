@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as z from 'zod'
-import { CountSchema, EchoResponse } from '../components'
+import { EchoResponse } from '../components'
 
 export const schemarefHandler = new Hono().get(
   '/schemaref/:value',
   describeRoute({ operationId: 'schemarefParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: CountSchema })),
+  validator('param', z.object({ value: z.coerce.number().int().min(0) })),
   (c) => {},
 )

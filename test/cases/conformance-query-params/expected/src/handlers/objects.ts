@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as z from 'zod'
-import { RangeSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const objectsHandler = new Hono().get(
   '/objects',
@@ -45,7 +45,9 @@ export const objectsHandler = new Hono().get(
             .exactOptional(),
         })
         .exactOptional(),
-      deep_ref: RangeSchema.exactOptional(),
+      deep_ref: z
+        .object({ from: z.coerce.number().int(), to: z.coerce.number().int().exactOptional() })
+        .exactOptional(),
       spread: z
         .object({
           sort: z.enum(['asc', 'desc']).exactOptional(),

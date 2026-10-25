@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as v from 'valibot'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const absentHandler = new Hono().get(
   '/absent',
@@ -15,7 +15,10 @@ export const absentHandler = new Hono().get(
         '7',
       ),
       empty_str: v.optional(v.string()),
-      ref_def: v.optional(CountSchema, '3'),
+      ref_def: v.optional(
+        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+        '3',
+      ),
     }),
   ),
   (c) => {},

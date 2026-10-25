@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import { type } from 'arktype'
-import { CountSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const optionalHandler = new Hono().get(
   '/optional',
@@ -71,7 +71,12 @@ export const optionalHandler = new Hono().get(
           'x-pattern?': type('string').and(/^[a-z]+-\d{1,3}$/),
           'x-tx-lower?': type('string.lower'),
           'x-tx-email?': type('string.lower').to('string.email'),
-          'x-ref-int?': CountSchema,
+          'x-ref-int?': type('string')
+            .pipe((data, ctx) => {
+              const value = Number(data)
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+            })
+            .to('number.integer >= 0'),
           'x-str-arr?': type('unknown')
             .pipe((data) => (data === undefined || Array.isArray(data) ? data : [data]))
             .to('string[]'),

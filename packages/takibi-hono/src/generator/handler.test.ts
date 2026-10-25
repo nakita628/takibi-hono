@@ -203,6 +203,52 @@ import*as z from'zod'
 export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.coerce.number().int().exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.coerce.number().int().exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
   })
 
+  it('expands a referenced component that reads differently from text', () => {
+    const schemaComponents = {
+      schemas: {
+        Count: { type: 'integer', minimum: 0 },
+        Tag: { type: 'string', enum: ['dog', 'cat'] },
+        Upload: { type: 'object', properties: { size: { $ref: '#/components/schemas/Count' } } },
+        Node: { type: 'object', properties: { next: { $ref: '#/components/schemas/Node' } } },
+      },
+    }
+    const route = {
+      method: 'post',
+      path: '/uploads',
+      parameters: [],
+      operation: {
+        parameters: [
+          { name: 'count', in: 'query', schema: { $ref: '#/components/schemas/Count' } },
+          { name: 'tag', in: 'query', schema: { $ref: '#/components/schemas/Tag' } },
+          { name: 'node', in: 'cookie', schema: { $ref: '#/components/schemas/Node' } },
+        ],
+        requestBody: {
+          content: {
+            'multipart/form-data': { schema: { $ref: '#/components/schemas/Upload' } },
+          },
+        },
+        responses: {},
+      },
+    }
+    expect(
+      makeHandlerCode('uploadsHandler', [route] as never, {
+        lib: 'zod',
+        openapi: false,
+        components: schemaComponents as never,
+        responseRefs: false,
+        imports: [
+          { name: 'TagSchema', from: '../components' },
+          { name: 'NodeSchema', from: '../components' },
+        ],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{sValidator}from'@hono/standard-validator'
+import*as z from'zod'
+import{TagSchema,NodeSchema}from'../components'
+
+export const uploadsHandler=new Hono().post('/uploads',sValidator('query',z.object({count:z.coerce.number().int().min(0).exactOptional(),tag:TagSchema.exactOptional()})),sValidator('cookie',z.object({node:NodeSchema.exactOptional()})),sValidator('form',z.object({size:z.coerce.number().int().min(0).exactOptional()})),(c)=>{})`)
+  })
+
   it('reads a header parameter under its lowercased name, as Hono hands it over', () => {
     const route = {
       method: 'get',

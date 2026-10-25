@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
 import * as z from 'zod'
-import { CountSchema, FlagSchema, FieldsResponse } from '../components'
+import { FieldsResponse } from '../components'
 
 export const urlencodedHandler = new Hono().post(
   '/urlencoded',
@@ -25,8 +25,8 @@ export const urlencodedHandler = new Hono().post(
           .exactOptional(),
         agreed: z.stringbool().pipe(z.literal(true)).exactOptional(),
         limit: z.coerce.number().int().default(20).exactOptional(),
-        count: CountSchema.exactOptional(),
-        flag: FlagSchema.exactOptional(),
+        count: z.coerce.number().int().min(0).exactOptional(),
+        flag: z.stringbool().exactOptional(),
         tags: z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
