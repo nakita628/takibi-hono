@@ -43,4 +43,7 @@
   // `gitignore: true` drops node_modules, dist and coverage, so this never drifts from .gitignore.
   "globs": ["**/*.md", ".cursor/rules/*.mdc"],
   "gitignore": true,
+  // The Markdown hono-takibi's docs generator writes, pinned as golden output in test/: its
+  // structure is hono-takibi's, and a heading changed here would be a test changed.
+  "ignores": ["test/cases/*/expected/**"],
 }

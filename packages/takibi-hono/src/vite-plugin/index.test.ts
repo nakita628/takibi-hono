@@ -247,7 +247,8 @@ describe('takibiHonoVite', () => {
     const base = { input: 'openapi.yaml', schema: 'zod' }
     const { server, sentMessages, state } = createMockServer({
       ...base,
-      client: { output: 'old/client.ts', rpc: { output: 'old/rpc.ts' } },
+      client: { output: 'old/client.ts', baseUrl: '/' },
+      rpc: { output: 'old/rpc.ts' },
     })
     const cwd = process.cwd()
     write(path.join(cwd, 'old/client.ts'))
@@ -257,7 +258,11 @@ describe('takibiHonoVite', () => {
       expect(sentMessages.length).toBe(1)
     })
 
-    state.config = { ...base, client: { output: 'new/client.ts', rpc: { output: 'new/rpc.ts' } } }
+    state.config = {
+      ...base,
+      client: { output: 'new/client.ts', baseUrl: '/' },
+      rpc: { output: 'new/rpc.ts' },
+    }
     plugin.handleHotUpdate({ file: path.join(cwd, 'takibi-hono.config.ts'), server })
     await vi.waitFor(() => {
       expect(sentMessages.length).toBe(2)

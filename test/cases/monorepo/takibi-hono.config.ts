@@ -19,6 +19,6 @@ export default defineConfig({
     baseUrl: { env: 'API_URL', source: 'process.env' },
     import: '@acme/api',
     package: '@acme/client',
-    rpc: { output: '__generated__/monorepo/apps/web/src/rpc.ts' },
   },
+  rpc: { output: '__generated__/monorepo/apps/web/src/rpc.ts' },
 })

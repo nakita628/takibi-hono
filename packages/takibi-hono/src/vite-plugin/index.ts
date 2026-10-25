@@ -134,6 +134,21 @@ function isSplitOutput(value: unknown): value is { readonly output: string } {
   )
 }
 
+/** The client-side keys, each a single generated file. */
+const CLIENT_KEYS = [
+  'client',
+  'rpc',
+  'swr',
+  'tanstack-query',
+  'preact-query',
+  'solid-query',
+  'vue-query',
+  'svelte-query',
+  'angular-query',
+  'type',
+  'docs',
+] as const
+
 /**
  * The fully generated outputs. The handlers directory is left out: it holds hand-written
  * handler bodies, and `writeHandlers` already removes the files no route maps to.
@@ -143,12 +158,11 @@ function extractOutputPaths(config: Config) {
     key !== 'output' && isOutputConfig(value) ? [value.output] : [],
   )
   const baseOutput = config.components?.output === undefined ? [] : [config.components.output]
-  const clientOutputs = Object.values(config.client ?? {}).flatMap((value) =>
-    isOutputConfig(value) ? [value.output] : [],
-  )
-  // The typed client is `client.output` itself, not a block under `client`.
-  const typedClient = config.client?.output === undefined ? [] : [config.client.output]
-  return [...componentOutputs, ...baseOutput, ...clientOutputs, ...typedClient].map(toAbsolutePath)
+  const clientOutputs = CLIENT_KEYS.flatMap((key) => {
+    const value = config[key]
+    return isOutputConfig(value) ? [value.output] : []
+  })
+  return [...componentOutputs, ...baseOutput, ...clientOutputs].map(toAbsolutePath)
 }
 
 /** Removes generated outputs the previous config wrote and the current one no longer names. */

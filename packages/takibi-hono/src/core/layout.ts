@@ -8,48 +8,52 @@ import type { BaseUrl, Credentials } from '../generator/client.js'
 import type { ComponentKind } from '../generator/components.js'
 import { COMPONENT_KINDS } from '../generator/components.js'
 
-/** Shared shape for the framework query-hook generators (swr / tanstack / vue / ...). */
-type ClientQueryOptions = {
-  /** One `.ts` file (`parseConfig` normalizes a directory to `<dir>/index.ts`). */
-  readonly output: string
-}
+/** One `.ts` file (`parseConfig` normalizes a directory to `<dir>/index.ts`). */
+type CallerOptions = { readonly output: string }
 
-/**
- * The typed client (`output`, which rpc and the query hooks import), and the client-code
- * generators delegated to `hono-takibi`. Each entry is opt-in.
- */
+/** The query-hook generators, keyed as hono-takibi keys them. */
+export const HOOK_LIBRARIES = [
+  'swr',
+  'tanstack-query',
+  'preact-query',
+  'solid-query',
+  'vue-query',
+  'svelte-query',
+  'angular-query',
+] as const
+
+export type HookLibrary = (typeof HOOK_LIBRARIES)[number]
+
+/** The typed client: the `client` block, as hono-takibi's. */
 export type ClientOptions = {
-  readonly output?: string | undefined
-  readonly baseUrl?: BaseUrl | undefined
-  readonly credentials?: Credentials | undefined
+  readonly output: string
+  readonly baseUrl: BaseUrl
   /** The module the client imports the type of the app from. */
   readonly import?: string | undefined
   /** The name other packages import the client by: the package it is written into. */
   readonly package?: string | undefined
+  readonly credentials?: Credentials | undefined
+}
+
+/** The client-side keys of the config, each opt-in, keyed as hono-takibi keys them. */
+export type ClientConfig = {
+  readonly client?: ClientOptions | undefined
   readonly rpc?:
-    | (ClientQueryOptions & {
+    | (CallerOptions & {
         readonly parseResponse?: boolean | undefined
         readonly docs?: boolean | undefined
       })
     | undefined
-  readonly swr?: ClientQueryOptions | undefined
-  readonly tanstackQuery?: ClientQueryOptions | undefined
-  readonly svelteQuery?: ClientQueryOptions | undefined
-  readonly vueQuery?: ClientQueryOptions | undefined
-  readonly preactQuery?: ClientQueryOptions | undefined
-  readonly solidQuery?: ClientQueryOptions | undefined
-  readonly angularQuery?: ClientQueryOptions | undefined
   readonly type?: { readonly output: string; readonly readonly?: boolean | undefined } | undefined
   readonly docs?:
     | {
         readonly output: string
+        readonly curl: boolean
         readonly entry?: string | undefined
-        readonly basePath?: string | undefined
-        readonly curl?: boolean | undefined
         readonly baseUrl?: string | undefined
       }
     | undefined
-}
+} & { readonly [K in HookLibrary]?: CallerOptions | undefined }
 
 type TargetConfig = {
   readonly output: string
@@ -60,7 +64,7 @@ type TargetConfig = {
 }
 
 /** The `takibi-hono` config `hono()` runs from (the shape `parseConfig` returns). */
-export type TakibiHonoConfig = {
+export type TakibiHonoConfig = ClientConfig & {
   readonly input: string
   readonly schema: 'zod' | 'valibot' | 'typebox' | 'arktype' | 'effect'
   readonly output?: string | undefined
@@ -69,7 +73,6 @@ export type TakibiHonoConfig = {
   readonly format?: FormatConfig | undefined
   readonly readonly?: boolean | undefined
   readonly pathAlias?: string | undefined
-  readonly client?: ClientOptions | undefined
   readonly components?:
     | ({ readonly output?: string | undefined; readonly package?: string | undefined } & {
         readonly [K in 'schemas' | ComponentKind]?: TargetConfig | undefined
@@ -88,7 +91,7 @@ export type Target = {
 export type Layout = {
   readonly handlersDir: string
   readonly appDir: string
-  /** The typed client, when `client.output` is set. */
+  /** The typed client, when the `client` block is set. */
   readonly client: Target | undefined
   /** The directories the typed client, rpc and the query hooks are written into. */
   readonly clientDirs: readonly string[]
@@ -106,18 +109,6 @@ export type Layout = {
 
 /** A generated file would import another package that names no `package`. */
 export class LayoutError extends Data.TaggedError('LayoutError')<{ readonly message: string }> {}
-
-/** The client generators that import the typed client. */
-export const CLIENT_IMPORTERS = [
-  'rpc',
-  'swr',
-  'tanstackQuery',
-  'svelteQuery',
-  'vueQuery',
-  'preactQuery',
-  'solidQuery',
-  'angularQuery',
-] as const
 
 /** Every component kind the layout places: the schemas, then the other Components kinds. */
 const KINDS = ['schemas', ...COMPONENT_KINDS] as const
@@ -160,12 +151,14 @@ export function resolveLayout(config: TakibiHonoConfig): Layout {
     handlersDir,
     appDir: path.dirname(handlersDir),
     client:
-      client?.output === undefined
+      client === undefined
         ? undefined
         : { output: client.output, split: false, exportTypes: false, package: client.package },
-    clientDirs: [client?.output, ...CLIENT_IMPORTERS.map((key) => client?.[key]?.output)].flatMap(
-      (output) => (output === undefined ? [] : [path.dirname(output)]),
-    ),
+    clientDirs: [
+      client?.output,
+      config.rpc?.output,
+      ...HOOK_LIBRARIES.map((library) => config[library]?.output),
+    ].flatMap((output) => (output === undefined ? [] : [path.dirname(output)])),
     pathAlias: config.pathAlias,
     packageRoot: () => undefined,
   }

@@ -146,47 +146,49 @@ export default defineConfig({
     },
   },
 
-  // The typed Hono client of the generated app (the `hcWithType` of the Hono guide),
-  // exported as `client`; rpc and the query hooks import it. With `basePath` it is handed
-  // out from below the base path, so `client.pets.$get` addresses `/api/pets`. `baseUrl` is
-  // '/' (the default) for the same origin, `{ env }` for an environment variable read when
-  // the client is created (`import.meta.env`, or `source: 'process.env'`), or
-  // `{ env, import, name }` for a property of the environment object a module of yours
-  // exports. A fixed URL is not taken: it differs between environments.
-  // The client-code generators (RPC + framework query hooks + types + docs) each write one
-  // file: `output` (a directory is normalized to `<dir>/index.ts`). Query-hook keys are
-  // camelCase (`tanstackQuery`, ...).
+  // The typed Hono client of the generated app, exported as `client`. Its type is declared
+  // once (the `hcWithType` of the Hono guide), so it is worked out when this file is compiled
+  // and not again by every file that calls the client. With `basePath` it is handed out from
+  // below the base path, so `client.pets.$get` addresses `/api/pets`. `baseUrl` is '/' (the
+  // default) for the same origin, `{ env }` for an environment variable read when the client
+  // is created (`import.meta.env`, or `source: 'process.env'`), or `{ env, import, name }`
+  // for a property of the environment object a module of yours exports. A fixed URL is not
+  // taken: it differs between environments.
   client: {
     output: 'src/client.ts',
     baseUrl: { env: 'VITE_API_URL' },
     credentials: 'include', // 'include' | 'same-origin' | 'omit'
     // import: '@packages/server', // the app's package, when the client is written into another
     // package: '@packages/client', // the name other packages import the client by
-    rpc: {
-      output: 'src/rpc.ts',
-      parseResponse: true,
-      docs: false, // operation summary/description as JSDoc
-    },
-    swr: { output: 'src/swr.ts' },
-    tanstackQuery: { output: 'src/tanstack-query.ts' },
-    svelteQuery: { output: 'src/svelte-query.ts' },
-    vueQuery: { output: 'src/vue-query.ts' },
-    preactQuery: { output: 'src/preact-query.ts' },
-    solidQuery: { output: 'src/solid-query.ts' },
-    angularQuery: { output: 'src/angular-query.ts' },
-    // Self-contained `App` type for RPC client distribution
-    type: {
-      output: 'src/types.ts',
-      readonly: true,
-    },
-    // API reference docs
-    docs: {
-      output: 'src/docs',
-      entry: 'src/index.ts',
-      basePath: '/api',
-      curl: true,
-      baseUrl: 'http://localhost:3000',
-    },
+  },
+
+  // RPC functions and framework query hooks over the client. Each writes one file: `output`
+  // (a directory is normalized to `<dir>/index.ts`). They need `client`.
+  rpc: {
+    output: 'src/rpc.ts',
+    parseResponse: true,
+    docs: false, // operation summary/description as JSDoc
+  },
+  swr: { output: 'src/swr.ts' },
+  'tanstack-query': { output: 'src/tanstack-query.ts' },
+  'svelte-query': { output: 'src/svelte-query.ts' },
+  'vue-query': { output: 'src/vue-query.ts' },
+  'preact-query': { output: 'src/preact-query.ts' },
+  'solid-query': { output: 'src/solid-query.ts' },
+  'angular-query': { output: 'src/angular-query.ts' },
+
+  // Self-contained `App` type for RPC client distribution
+  type: {
+    output: 'src/types.ts',
+    readonly: true,
+  },
+
+  // API reference docs (Markdown). `curl: true` writes curl commands against `baseUrl`;
+  // otherwise Hono request examples importing `entry`.
+  docs: {
+    output: 'docs/api.md',
+    curl: true,
+    baseUrl: 'http://localhost:3000',
   },
 })
 ```

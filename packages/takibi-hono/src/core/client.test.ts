@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 import { parseOpenAPI } from '../openapi/index.js'
 import { runGenerator, runGeneratorError } from '../testing/index.js'
 import { ClientError, makeClients } from './client.js'
-import type { ClientOptions, Layout } from './layout.js'
+import type { ClientConfig, ClientOptions, Layout } from './layout.js'
 import { resolveLayout } from './layout.js'
 
 const MINI_YAML = `openapi: 3.0.3
@@ -65,18 +65,18 @@ function escapes(output: string) {
 }
 
 /**
- * `makeClients` over a config with `client` (the app entry at `src/index.ts`) and its layout.
- * `packageOf` names the package a path is written into; by default there is one.
+ * `makeClients` over a config with the client-side keys (the app entry at `src/index.ts`) and
+ * its layout. `packageOf` names the package a path is written into; by default there is one.
  */
 async function generate(
   dir: string,
-  client: ClientOptions,
+  keys: ClientConfig,
   options: { readonly basePath?: string; readonly packageOf?: (file: string) => string } = {},
 ) {
   const config = {
     input: specPath,
     schema: 'zod',
-    client,
+    ...keys,
     ...(options.basePath !== undefined && { basePath: options.basePath }),
   } as const
   const { packageOf } = options
@@ -86,6 +86,13 @@ async function generate(
   }
   return makeClients(await openapi(), config, layout, dir)
 }
+
+/** The typed client at `output`, created for the same origin unless the test says otherwise. */
+const client = (output: string, rest: Partial<ClientOptions> = {}): ClientOptions => ({
+  output,
+  baseUrl: '/',
+  ...rest,
+})
 
 const read = (dir: string, file: string) => fsp.readFile(path.join(dir, file), 'utf-8')
 
@@ -97,17 +104,17 @@ describe('makeClients', () => {
     const d = tmpDir('all')
     await runGenerator(
       await generate(d, {
-        output: 'client.ts',
+        client: client('client.ts'),
         rpc: { output: 'rpc.ts' },
         swr: { output: 'swr.ts' },
-        tanstackQuery: { output: 'tanstack.ts' },
-        svelteQuery: { output: 'svelte.ts' },
-        vueQuery: { output: 'vue.ts' },
-        preactQuery: { output: 'preact.ts' },
-        solidQuery: { output: 'solid.ts' },
-        angularQuery: { output: 'angular.ts' },
+        'tanstack-query': { output: 'tanstack.ts' },
+        'svelte-query': { output: 'svelte.ts' },
+        'vue-query': { output: 'vue.ts' },
+        'preact-query': { output: 'preact.ts' },
+        'solid-query': { output: 'solid.ts' },
+        'angular-query': { output: 'angular.ts' },
         type: { output: 'types.ts' },
-        docs: { output: 'docs.md' },
+        docs: { output: 'docs.md', curl: false },
       }),
     )
     for (const file of [
@@ -130,7 +137,11 @@ describe('makeClients', () => {
   it.concurrent('writes the typed client of the app entry, below the base path', async () => {
     const d = tmpDir('typed_client')
     await runGenerator(
-      await generate(d, { output: 'client.ts', credentials: 'include' }, { basePath: '/v1' }),
+      await generate(
+        d,
+        { client: client('client.ts', { credentials: 'include' }) },
+        { basePath: '/v1' },
+      ),
     )
     expect(await read(d, 'client.ts')).toBe(`import { hc } from 'hono/client'
 import type { api } from './src'
@@ -147,8 +158,9 @@ export const client = hcWithType('/', { init: { credentials: 'include' } }).v1
     const d = tmpDir('env_client')
     await runGenerator(
       await generate(d, {
-        output: 'src/client.ts',
-        baseUrl: { env: 'VITE_API_URL', source: 'import.meta.env' },
+        client: client('src/client.ts', {
+          baseUrl: { env: 'VITE_API_URL', source: 'import.meta.env' },
+        }),
       }),
     )
     expect(await read(d, 'src/client.ts')).toBe(`import { hc } from 'hono/client'
@@ -166,7 +178,9 @@ export const client = hcWithType(baseUrl)
 
   it.concurrent('delegated rpc output imports the generated client', async () => {
     const d = tmpDir('rpc_content')
-    await runGenerator(await generate(d, { output: 'lib/client.ts', rpc: { output: 'rpc.ts' } }))
+    await runGenerator(
+      await generate(d, { client: client('lib/client.ts'), rpc: { output: 'rpc.ts' } }),
+    )
     expect(await read(d, 'rpc.ts')).toBe(`import type { ClientRequestOptions } from 'hono/client'
 import { client } from './lib/client'
 
@@ -196,7 +210,7 @@ export default routes
     await runGenerator(
       await generate(
         d,
-        { output: 'client.ts', rpc: { output: 'rpc.ts', parseResponse: true } },
+        { client: client('client.ts'), rpc: { output: 'rpc.ts', parseResponse: true } },
         { basePath: '/v1' },
       ),
     )
@@ -216,7 +230,10 @@ export async function getPing(options?: ClientRequestOptions) {
     await runGenerator(
       await generate(
         d,
-        { output: 'client.ts', package: '@acme/client', rpc: { output: 'web/rpc.ts' } },
+        {
+          client: client('client.ts', { package: '@acme/client' }),
+          rpc: { output: 'web/rpc.ts' },
+        },
         { packageOf },
       ),
     )
@@ -226,12 +243,16 @@ export async function getPing(options?: ClientRequestOptions) {
   it.concurrent('fails when rpc imports the client of another package that names none', async () => {
     const d = tmpDir('client_package_missing')
     const error = await runGeneratorError(
-      await generate(d, { output: 'client.ts', rpc: { output: 'web/rpc.ts' } }, { packageOf }),
+      await generate(
+        d,
+        { client: client('client.ts'), rpc: { output: 'web/rpc.ts' } },
+        { packageOf },
+      ),
     )
     expect(error).toStrictEqual(
       new ClientError({
         message:
-          'client.rpc imports the client from another package: set client.package to the name of the package client.ts is written into.',
+          'rpc imports the client from another package: set client.package to the name of the package client.ts is written into.',
       }),
     )
     expect(fs.existsSync(path.join(d, 'web', 'rpc.ts'))).toBe(false)
@@ -240,7 +261,11 @@ export async function getPing(options?: ClientRequestOptions) {
   it.concurrent('imports the app of another package by client.import', async () => {
     const d = tmpDir('app_import')
     await runGenerator(
-      await generate(d, { output: 'web/client.ts', import: '@acme/api' }, { packageOf }),
+      await generate(
+        d,
+        { client: client('web/client.ts', { import: '@acme/api' }) },
+        { packageOf },
+      ),
     )
     expect(await read(d, 'web/client.ts')).toContain("import type { api } from '@acme/api'")
   })
@@ -248,7 +273,7 @@ export async function getPing(options?: ClientRequestOptions) {
   it.concurrent('fails when the client imports the app of another package unnamed', async () => {
     const d = tmpDir('app_import_missing')
     const error = await runGeneratorError(
-      await generate(d, { output: 'web/client.ts' }, { packageOf }),
+      await generate(d, { client: client('web/client.ts') }, { packageOf }),
     )
     expect(error).toStrictEqual(
       new ClientError({
@@ -267,29 +292,29 @@ export async function getPing(options?: ClientRequestOptions) {
   it.concurrent.each([
     [
       'a relative output that traverses outside',
-      { output: 'client.ts', rpc: { output: '../escape.ts' } },
+      { client: client('client.ts'), rpc: { output: '../escape.ts' } },
       '../escape.ts',
     ],
-    ['a typed client that traverses outside', { output: '../client.ts' }, '../client.ts'],
-    ['an output that is exactly the parent (..)', { docs: { output: '..' } }, '..'],
+    ['a typed client that traverses outside', { client: client('../client.ts') }, '../client.ts'],
+    ['an output that is exactly the parent (..)', { docs: { output: '..', curl: false } }, '..'],
     [
       'an absolute output outside',
       {
-        output: 'client.ts',
-        tanstackQuery: { output: path.join(os.tmpdir(), 'takibi-hono-escape-abs.ts') },
+        client: client('client.ts'),
+        'tanstack-query': { output: path.join(os.tmpdir(), 'takibi-hono-escape-abs.ts') },
       },
       path.join(os.tmpdir(), 'takibi-hono-escape-abs.ts'),
     ],
-  ] as const)('rejects %s the base dir', async (_, client, output) => {
+  ] as const)('rejects %s the base dir', async (_, keys, output) => {
     const d = tmpDir('traversal')
-    const error = await runGeneratorError(await generate(d, client))
+    const error = await runGeneratorError(await generate(d, keys))
     expect(error).toStrictEqual(escapes(output))
     expect(fs.existsSync(path.resolve(d, output))).toBe(output === '..')
   })
 
   it.concurrent('allows a normal name that merely begins with ".." (..foo)', async () => {
     const d = tmpDir('dot_dot_prefix')
-    await runGenerator(await generate(d, { docs: { output: '..foo/api.md' } }))
+    await runGenerator(await generate(d, { docs: { output: '..foo/api.md', curl: false } }))
     expect(fs.existsSync(path.join(d, '..foo', 'api.md'))).toBe(true)
   })
 
@@ -297,7 +322,7 @@ export async function getPing(options?: ClientRequestOptions) {
     const d = tmpDir('type_not_ts')
     const error = await runGeneratorError(await generate(d, { type: { output: 'types.txt' } }))
     expect(error).toStrictEqual(
-      new ClientError({ message: 'Client type output "types.txt" must end with ".ts".' }),
+      new ClientError({ message: 'type output "types.txt" must end with ".ts".' }),
     )
   })
 
@@ -307,14 +332,17 @@ export async function getPing(options?: ClientRequestOptions) {
     // A file blocks the directory the generator needs to create.
     fs.writeFileSync(path.join(d, 'blocker'), 'not a directory')
     const error = await runGeneratorError(
-      await generate(d, { output: 'client.ts', tanstackQuery: { output: 'blocker/q.ts' } }),
+      await generate(d, {
+        client: client('client.ts'),
+        'tanstack-query': { output: 'blocker/q.ts' },
+      }),
     )
     expect(error._tag).toBe('ClientError')
   })
 
   it.concurrent('allows an absolute output that stays inside the base dir', async () => {
     const d = tmpDir('abs_inside')
-    await runGenerator(await generate(d, { docs: { output: path.join(d, 'api.md') } }))
+    await runGenerator(await generate(d, { docs: { output: path.join(d, 'api.md'), curl: false } }))
     expect(fs.existsSync(path.join(d, 'api.md'))).toBe(true)
   })
 })

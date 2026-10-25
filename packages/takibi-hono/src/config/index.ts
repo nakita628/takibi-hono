@@ -115,18 +115,32 @@ const OutputSchema = splitUnion({})
 
 const ExportTypesOutputSchema = splitUnion({ exportTypes: Schema.optionalKey(Schema.Boolean) })
 
-const ClientQuerySchema = Schema.Struct({
+/** The query-hook generators, keyed as hono-takibi keys them. */
+const HOOK_LIBRARIES = [
+  'swr',
+  'tanstack-query',
+  'preact-query',
+  'solid-query',
+  'vue-query',
+  'svelte-query',
+  'angular-query',
+] as const
+
+/** What rpc and every query hook share: one file, and the client the `client` block generates. */
+const CLIENT_CALLER_FIELDS = {
   output: FileOutputSchema,
   import: removed(
-    'import was removed: rpc and the query hooks import the client takibi-hono generates. Set client.output, and client.package when they are written into another package.',
+    'import was removed: rpc and the hooks import the client the client block generates. A file written into another package imports it by client.package.',
   ),
   client: removed(
-    'client was removed: the generated client is exported as `client`, and rpc and the query hooks import it by that name.',
+    'client was removed: the generated client is exported as `client`, and rpc and the hooks import it by that name.',
   ),
   split: removed(
-    'split was removed: hono-takibi generates rpc and the query hooks into a single file. Set output to a .ts file (a directory is normalized to <dir>/index.ts) and delete the directory a previous run wrote.',
+    'split was removed: rpc and hooks are always generated into a single file. Set output to a .ts file path and delete the directory the previous run wrote.',
   ),
-})
+}
+
+const HookSchema = Schema.Struct(CLIENT_CALLER_FIELDS)
 
 const EnvNameSchema = Schema.String.check(
   Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u, {
@@ -142,7 +156,7 @@ const EnvNameSchema = Schema.String.check(
 const BaseUrlSchema = Schema.Union([
   Schema.Literal('/').annotate({
     message:
-      "must be '/' for the same origin: a fixed URL differs between environments, so read it from the environment with { env } or { env, import }",
+      "a fixed URL was removed: leave baseUrl out (or set '/') for the same origin, or read it from the environment with { env } or { env, import }",
   }),
   Schema.Struct({
     env: EnvNameSchema,
@@ -159,36 +173,30 @@ const BaseUrlSchema = Schema.Union([
       Schema.withDecodingDefault(Effect.succeed('import.meta.env')),
     ),
   }),
-]).annotate({
-  description:
-    "`hc(baseUrl)`: '/' (the default) for the same origin; { env } reads an environment variable when the client is created (`import.meta.env` by default, or `process.env`), asserted present; { env, import } reads a property of an environment object a module of yours exports (`env` by default).",
-})
+])
+  .pipe(Schema.withDecodingDefault(Effect.succeed('/')))
+  .annotate({
+    description:
+      "`hc(baseUrl)`: '/' (the default) for the same origin; { env } reads an environment variable when the client is created (`import.meta.env` by default, or `process.env`), asserted present; { env, import } reads a property of an environment object a module of yours exports (`env` by default).",
+  })
 
-/** The typed-client keys, which are only read with `client.output`. */
-const TYPED_CLIENT_KEYS = ['baseUrl', 'credentials', 'import', 'package'] as const
+/** A generator that sat under `client`, and is the top-level key `key` now. */
+function moved(old: string, key: string) {
+  return removed(
+    `client.${old} moved: ${key} is a top-level key, as in hono-takibi, and the client block is the typed client itself (output, baseUrl, import, package, credentials).`,
+  )
+}
 
-/** The client generators that import the typed client. */
-const CLIENT_IMPORTERS = [
-  'rpc',
-  'swr',
-  'tanstackQuery',
-  'svelteQuery',
-  'vueQuery',
-  'preactQuery',
-  'solidQuery',
-  'angularQuery',
-] as const
-
+/**
+ * The typed client, as hono-takibi's `client` block. The generators that used to sit under
+ * `client` are top-level keys now, as in hono-takibi; naming one here says where it went.
+ */
 const ClientSchema = Schema.Struct({
-  output: Schema.optionalKey(FileOutputSchema).annotate({
+  output: TypeScriptPathSchema.annotate({
     description:
-      'The typed Hono client of the generated app, exported as `client`. rpc and the query hooks import it.',
+      'The typed Hono client of the generated app, exported as `client`, with its type declared once so that it is worked out when the file is compiled. rpc and the hooks import it.',
   }),
-  baseUrl: Schema.optionalKey(BaseUrlSchema),
-  credentials: Schema.optionalKey(Schema.Literals(['include', 'same-origin', 'omit'])).annotate({
-    description:
-      'The `credentials` of every request the client sends, `hc(baseUrl, { init: { credentials } })`. Left out, nothing is written.',
-  }),
+  baseUrl: BaseUrlSchema,
   import: Schema.optionalKey(PackageSchema).annotate({
     description:
       'The module the client imports the type of the app from. Left out, the app entry is imported relatively; name the package of the app when the client is written into another package.',
@@ -197,55 +205,71 @@ const ClientSchema = Schema.Struct({
     description:
       'The name the files of other packages import the client by: the package it is written into.',
   }),
+  credentials: Schema.optionalKey(Schema.Literals(['include', 'same-origin', 'omit'])).annotate({
+    description:
+      'The `credentials` of every request the client sends, `hc(baseUrl, { init: { credentials } })`. Left out, nothing is written.',
+  }),
+  rpc: moved('rpc', 'rpc'),
+  swr: moved('swr', 'swr'),
+  tanstackQuery: moved('tanstackQuery', 'tanstack-query'),
+  svelteQuery: moved('svelteQuery', 'svelte-query'),
+  vueQuery: moved('vueQuery', 'vue-query'),
+  preactQuery: moved('preactQuery', 'preact-query'),
+  solidQuery: moved('solidQuery', 'solid-query'),
+  angularQuery: moved('angularQuery', 'angular-query'),
+  type: moved('type', 'type'),
+  docs: moved('docs', 'docs'),
+}).annotate({ title: 'Typed client' })
+
+const DocsOutputSchema = Schema.declare<`${string}.md`>(
+  Schema.is(Schema.TemplateLiteral([Schema.String, '.md'])),
+  { message: 'must be .md file' },
+)
+
+const DocsUrlSchema = Schema.String.check(
+  Schema.isPattern(/^[^\s'"`\\]+$/u, { message: 'must be a URL, with no whitespace or quotes' }),
+)
+
+/** Discriminated on `curl`, as hono-takibi's: with it `baseUrl` is required and `entry` refused. */
+const DocsSchema = Schema.Union([
+  Schema.Struct({
+    output: DocsOutputSchema,
+    curl: Schema.Literal(true),
+    baseUrl: DocsUrlSchema.pipe(
+      Schema.annotateKey({ messageMissingKey: 'baseUrl is required when curl is true' }),
+    ),
+    entry: removed('entry cannot be specified when curl is true'),
+  }),
+  Schema.Struct({
+    output: DocsOutputSchema,
+    curl: Schema.Literal(false).pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+    entry: Schema.optionalKey(Schema.String),
+    baseUrl: Schema.optionalKey(DocsUrlSchema),
+  }),
+])
+
+/** The client-side keys, each opt-in and keyed as hono-takibi keys them. */
+const CLIENT_FIELDS = {
+  type: Schema.optionalKey(
+    Schema.Struct({ output: TypeScriptPathSchema, readonly: Schema.optionalKey(Schema.Boolean) }),
+  ),
+  client: Schema.optionalKey(ClientSchema),
   rpc: Schema.optionalKey(
     Schema.Struct({
-      ...ClientQuerySchema.fields,
+      ...CLIENT_CALLER_FIELDS,
       parseResponse: Schema.optionalKey(Schema.Boolean),
       docs: Schema.optionalKey(Schema.Boolean),
     }),
   ),
-  swr: Schema.optionalKey(ClientQuerySchema),
-  tanstackQuery: Schema.optionalKey(ClientQuerySchema),
-  svelteQuery: Schema.optionalKey(ClientQuerySchema),
-  vueQuery: Schema.optionalKey(ClientQuerySchema),
-  preactQuery: Schema.optionalKey(ClientQuerySchema),
-  solidQuery: Schema.optionalKey(ClientQuerySchema),
-  angularQuery: Schema.optionalKey(ClientQuerySchema),
-  type: Schema.optionalKey(
-    Schema.Struct({ output: TypeScriptPathSchema, readonly: Schema.optionalKey(Schema.Boolean) }),
-  ),
-  docs: Schema.optionalKey(
-    Schema.Struct({
-      output: Schema.String,
-      entry: Schema.optionalKey(Schema.String),
-      basePath: Schema.optionalKey(Schema.String),
-      curl: Schema.optionalKey(Schema.Boolean),
-      baseUrl: Schema.optionalKey(Schema.String),
-    }),
-  ),
-})
-  .check(
-    Schema.makeFilter(
-      (client) =>
-        client.output !== undefined || CLIENT_IMPORTERS.every((key) => client[key] === undefined),
-      {
-        message:
-          'rpc and the query hooks import the client takibi-hono generates: set client.output to the file it is written into.',
-      },
-    ),
-    Schema.makeFilter(
-      (client) =>
-        client.output !== undefined || TYPED_CLIENT_KEYS.every((key) => client[key] === undefined),
-      {
-        message:
-          'baseUrl, credentials, import and package describe the typed client: they go with client.output.',
-      },
-    ),
-  )
-  .annotate({
-    description:
-      'The typed client (output), and the client-code generators delegated to hono-takibi. Each is opt-in.',
-  })
+  swr: Schema.optionalKey(HookSchema),
+  'tanstack-query': Schema.optionalKey(HookSchema),
+  'preact-query': Schema.optionalKey(HookSchema),
+  'solid-query': Schema.optionalKey(HookSchema),
+  'vue-query': Schema.optionalKey(HookSchema),
+  'svelte-query': Schema.optionalKey(HookSchema),
+  'angular-query': Schema.optionalKey(HookSchema),
+  docs: Schema.optionalKey(DocsSchema),
+}
 
 const ComponentsSchema = Schema.Struct({
   output: Schema.optionalKey(TypeScriptPathSchema),
@@ -296,7 +320,7 @@ const ConfigSchema = Schema.Struct({
     ),
   ),
   readonly: Schema.optionalKey(Schema.Boolean),
-  client: Schema.optionalKey(ClientSchema),
+  ...CLIENT_FIELDS,
   pathAlias: Schema.optionalKey(Schema.String),
   components: Schema.optionalKey(ComponentsSchema),
   // Test generation is not provided. hono-takibi once scaffolded a test file per handler and
@@ -306,7 +330,22 @@ const ConfigSchema = Schema.Struct({
     'test is not provided: takibi-hono generates no test files. Write them against the handlers it generates.',
   ),
   testFramework: removed('testFramework is not provided: takibi-hono generates no test files.'),
-}).annotate({ title: 'takibi-hono config' })
+})
+  .check(
+    Schema.makeFilter(
+      (config) => {
+        if (config.client !== undefined) return true
+        const missing = (['rpc', ...HOOK_LIBRARIES] as const).find(
+          (kind) => config[kind] !== undefined,
+        )
+        return missing === undefined
+          ? true
+          : `${missing} needs client: rpc and the hooks call the client the client block generates.`
+      },
+      { message: 'a generator that calls the client needs the client block' },
+    ),
+  )
+  .annotate({ title: 'takibi-hono config' })
 
 /** A validated config: component outputs normalized. */
 export type Config = typeof ConfigSchema.Type

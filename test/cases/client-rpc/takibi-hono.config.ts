@@ -10,13 +10,10 @@ export default defineConfig({
   basePath: '/api',
   output: '__generated__/client-rpc/src/handlers',
   components: { output: '__generated__/client-rpc/src/components/index.ts' },
-  client: {
-    output: '__generated__/client-rpc/src/client.ts',
-    credentials: 'include',
-    rpc: {
-      output: '__generated__/client-rpc/src/rpc.ts',
-      parseResponse: true,
-      docs: true,
-    },
+  client: { output: '__generated__/client-rpc/src/client.ts', credentials: 'include' },
+  rpc: {
+    output: '__generated__/client-rpc/src/rpc.ts',
+    parseResponse: true,
+    docs: true,
   },
 })

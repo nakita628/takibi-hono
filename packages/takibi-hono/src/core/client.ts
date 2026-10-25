@@ -9,25 +9,17 @@ import type { OpenAPI } from 'oas-truth'
 
 import { emit } from '../emit/index.js'
 import { makeClientCode } from '../generator/client.js'
-import type { ClientOptions, Layout, Target, TakibiHonoConfig } from './layout.js'
-import { makeSpecifier, targetModule } from './layout.js'
+import type { ClientOptions, HookLibrary, Layout, Target, TakibiHonoConfig } from './layout.js'
+import { HOOK_LIBRARIES, makeSpecifier, targetModule } from './layout.js'
 
 // The client generators are delegated to hono-takibi; their entrypoint type is
 // the single source of truth for the OpenAPI shape they accept.
 type ClientOpenAPI = Parameters<typeof rpc>[0]
 
-// takibi-hono's config keys stay camelCase; hono-takibi's `hooks` takes the
-// library as a kebab-case literal. `satisfies` makes a hono-takibi rename of a
-// library surface here as a build error instead of a silent runtime miss.
-const HOOKS = [
-  ['swr', 'swr'],
-  ['tanstackQuery', 'tanstack-query'],
-  ['svelteQuery', 'svelte-query'],
-  ['vueQuery', 'vue-query'],
-  ['preactQuery', 'preact-query'],
-  ['solidQuery', 'solid-query'],
-  ['angularQuery', 'angular-query'],
-] as const satisfies readonly (readonly [keyof ClientOptions, Parameters<typeof hooks>[3]])[]
+// The config keys the hooks as hono-takibi's `hooks` names the library. This makes a
+// hono-takibi rename of a library surface here as a build error instead of a silent miss.
+const HOOKS: readonly Parameters<typeof hooks>[3][] =
+  HOOK_LIBRARIES satisfies readonly HookLibrary[]
 
 const isTsPath = (output: string): output is `${string}.ts` => output.endsWith('.ts')
 
@@ -90,33 +82,29 @@ function clientSpecifier(layout: Layout, key: string, output: string) {
   if (target === undefined) {
     return Effect.fail(
       new ClientError({
-        message: `client.${key} imports the generated client: set client.output.`,
+        message: `${key} needs client: rpc and the hooks call the client the client block generates.`,
       }),
     )
   }
   return crossesPackage(layout, output, target) && target.package === undefined
     ? Effect.fail(
         new ClientError({
-          message: `client.${key} imports the client from another package: set client.package to the name of the package ${target.output} is written into.`,
+          message: `${key} imports the client from another package: set client.package to the name of the package ${target.output} is written into.`,
         }),
       )
     : Effect.succeed(makeSpecifier(layout, path.dirname(output), target))
 }
 
 /** Writes the typed client, which rpc and the query hooks import as `client`. */
-function writeClient(
-  config: TakibiHonoConfig,
-  client: ClientOptions,
-  layout: Layout,
-  baseDir: string,
-) {
+function writeClient(config: TakibiHonoConfig, layout: Layout, baseDir: string) {
   return Effect.gen(function* () {
+    const client = config.client
     const target = layout.client
-    if (target === undefined) return
+    if (client === undefined || target === undefined) return
     const output = yield* resolveWithin(baseDir, target.output)
     const code = makeClientCode({
       appImport: yield* appSpecifier(layout, client, target),
-      baseUrl: client.baseUrl ?? '/',
+      baseUrl: client.baseUrl,
       basePath: config.basePath,
       credentials: client.credentials,
     })
@@ -136,34 +124,32 @@ export function makeClients(
   layout: Layout,
   baseDir: string,
 ) {
-  const client = config.client ?? {}
-  const basePath = config.basePath
   return Effect.gen(function* () {
-    yield* writeClient(config, client, layout, baseDir)
-    yield* delegateClients(openapi, client, layout, baseDir, basePath)
+    yield* writeClient(config, layout, baseDir)
+    yield* delegateClients(openapi, config, layout, baseDir)
   })
 }
 
 /** rpc, the query hooks, the types and the docs, by hono-takibi. */
 function delegateClients(
   openapi: OpenAPI,
-  client: ClientOptions,
+  config: TakibiHonoConfig,
   layout: Layout,
   baseDir: string,
-  basePath: string | undefined,
 ) {
+  const { basePath } = config
   return Effect.gen(function* () {
     // hono-takibi declares its own (structurally equivalent) OpenAPI document type.
     // oxlint-disable-next-line typescript/consistent-type-assertions, typescript/no-unsafe-type-assertion -- see above
     const oa = openapi as ClientOpenAPI
     yield* Effect.forEach(
       HOOKS,
-      ([key, library]) => {
-        const cfg = client[key]
+      (library) => {
+        const cfg = config[library]
         return cfg
           ? Effect.gen(function* () {
               const output = yield* resolveWithin(baseDir, cfg.output)
-              const importPath = yield* clientSpecifier(layout, key, cfg.output)
+              const importPath = yield* clientSpecifier(layout, library, cfg.output)
               yield* hooks(oa, output, importPath, library, {
                 clientName: 'client',
                 ...(basePath !== undefined && { basePath }),
@@ -173,38 +159,31 @@ function delegateClients(
       },
       { discard: true },
     )
-    if (client.rpc) {
-      const output = yield* resolveWithin(baseDir, client.rpc.output)
-      const importPath = yield* clientSpecifier(layout, 'rpc', client.rpc.output)
+    if (config.rpc) {
+      const output = yield* resolveWithin(baseDir, config.rpc.output)
+      const importPath = yield* clientSpecifier(layout, 'rpc', config.rpc.output)
       yield* rpc(
         oa,
         output,
         importPath,
         'client',
-        client.rpc.parseResponse,
+        config.rpc.parseResponse,
         basePath,
-        client.rpc.docs,
+        config.rpc.docs,
       )
     }
-    if (client.type) {
-      const output = yield* resolveWithin(baseDir, client.type.output)
+    if (config.type) {
+      const output = yield* resolveWithin(baseDir, config.type.output)
       if (!isTsPath(output)) {
         return yield* new ClientError({
-          message: `Client type output "${client.type.output}" must end with ".ts".`,
+          message: `type output "${config.type.output}" must end with ".ts".`,
         })
       }
-      yield* typeModule.type(oa, output, client.type.readonly)
+      yield* typeModule.type(oa, output, config.type.readonly)
     }
-    if (client.docs) {
-      const output = yield* resolveWithin(baseDir, client.docs.output)
-      yield* docs(
-        oa,
-        output,
-        client.docs.entry,
-        client.docs.basePath,
-        client.docs.curl,
-        client.docs.baseUrl,
-      )
+    if (config.docs) {
+      const output = yield* resolveWithin(baseDir, config.docs.output)
+      yield* docs(oa, output, config.docs.entry, basePath, config.docs.curl, config.docs.baseUrl)
     }
     return undefined
   }).pipe(
