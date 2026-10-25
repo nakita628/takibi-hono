@@ -9,7 +9,13 @@ export const timeHandler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.String.check(Schema.isPattern(/^\d{2}:\d{2}:\d{2}/)) }),
+      Schema.Struct({
+        value: Schema.String.check(
+          Schema.isPattern(
+            /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/,
+          ),
+        ),
+      }),
     ),
   ),
   (c) => {},

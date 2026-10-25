@@ -7,7 +7,7 @@ export type Tag = v.InferOutput<typeof TagSchema>
 export const PetSchema = v.pipe(
   v.object({
     id: v.pipe(v.number(), v.integer()),
-    name: v.pipe(v.string(), v.minLength(1)),
+    name: v.pipe(v.string(), v.minCodePoints(1)),
     tag: v.optional(TagSchema),
   }),
   v.description('A pet in the store'),
@@ -16,7 +16,7 @@ export const PetSchema = v.pipe(
 export type Pet = v.InferOutput<typeof PetSchema>
 
 export const NewPetSchema = v.object({
-  name: v.pipe(v.string(), v.minLength(1)),
+  name: v.pipe(v.string(), v.minCodePoints(1)),
   tag: v.optional(TagSchema),
 })
 
@@ -30,7 +30,7 @@ export const LimitParamsSchema = v.pipe(
   v.string(),
   v.transform(Number),
   v.number(),
-  v.integer(),
+  v.safeInteger(),
   v.minValue(1),
   v.maxValue(100),
 )

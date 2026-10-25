@@ -8,7 +8,14 @@ export const exclusiveHandler = new Hono().get(
   describeRoute({ operationId: 'exclusiveParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    type({ value: type('string.numeric.parse').to(type('number > 0').and(type('number < 1'))) }),
+    type({
+      value: type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isFinite(value) ? value : ctx.error('a number')
+        })
+        .to('number > 0 & number < 1'),
+    }),
   ),
   (c) => {},
 )

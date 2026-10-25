@@ -13,7 +13,7 @@ export const sharedHandler = new Hono().get(
         filter: Schema.optional(
           Schema.Struct({
             name: Schema.optional(Schema.String),
-            age: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+            age: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
           }),
         ),
         sort: Schema.optional(

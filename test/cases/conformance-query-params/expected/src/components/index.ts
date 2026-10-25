@@ -9,7 +9,11 @@ export const CountAliasSchema = CountSchema
 
 export type CountAlias = z.infer<typeof CountAliasSchema>
 
-export const BigSchema = z.int64().meta({ ref: 'Big' })
+export const BigSchema = z
+  .union([z.bigint(), z.number().int(), z.string().regex(/^-?\d+$/)])
+  .transform((val) => BigInt(val))
+  .pipe(z.int64())
+  .meta({ ref: 'Big' })
 
 export type Big = z.infer<typeof BigSchema>
 

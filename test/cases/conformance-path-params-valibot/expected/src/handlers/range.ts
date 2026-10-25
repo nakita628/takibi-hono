@@ -13,7 +13,7 @@ export const rangeHandler = new Hono().get(
         v.string(),
         v.transform(Number),
         v.number(),
-        v.integer(),
+        v.safeInteger(),
         v.minValue(1),
         v.maxValue(10),
       ),

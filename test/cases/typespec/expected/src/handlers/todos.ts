@@ -20,8 +20,9 @@ export const todosHandler = new Hono()
       v.partial(
         v.object({
           done: v.pipe(
-            v.picklist(['true', 'false']),
-            v.transform((input) => input === 'true'),
+            v.string(),
+            v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
           ),
         }),
       ),
@@ -55,7 +56,16 @@ export const todosHandler = new Hono()
     }),
     validator(
       'param',
-      v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+      v.object({
+        id: v.pipe(
+          v.string(),
+          v.transform(Number),
+          v.number(),
+          v.safeInteger(),
+          v.minValue(-2147483648),
+          v.maxValue(2147483647),
+        ),
+      }),
     ),
     (c) => {},
   )

@@ -8,7 +8,13 @@ export const paramrefHandler = new Hono().get(
   describeRoute({ operationId: 'paramrefParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    Schema.toStandardSchemaV1(Schema.Struct({ id: Schema.NumberFromString.check(Schema.isInt()) })),
+    Schema.toStandardSchemaV1(
+      Schema.Struct({
+        id: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+        ),
+      }),
+    ),
   ),
   (c) => {},
 )

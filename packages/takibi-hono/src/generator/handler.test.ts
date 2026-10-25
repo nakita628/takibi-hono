@@ -121,7 +121,7 @@ import{sValidator}from'@hono/standard-validator'
 import*as v from'valibot'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.transform(Number),v.number(),v.integer())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.transform(Number),v.number(),v.safeInteger())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
     ],
     [
       'typebox',
@@ -139,7 +139,7 @@ import{sValidator}from'@hono/standard-validator'
 import{type}from'arktype'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',type({id:"string"})),sValidator('query',type({"q?":"string.integer.parse"})),sValidator('json',ItemSchema),sValidator('form',type({"file?":"string"})),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',type({id:"string"})),sValidator('query',type({"q?":type("string").pipe((data, ctx) => { const value = Number(data); return Number.isSafeInteger(value) ? value : ctx.error("an integer") })})),sValidator('json',ItemSchema),sValidator('form',type({"file?":"string"})),(c)=>{})`,
     ],
     [
       'effect',
@@ -148,7 +148,7 @@ import{sValidator}from'@hono/standard-validator'
 import{Schema}from'effect'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String}))),sValidator('query',Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.NumberFromString.check(Schema.isInt()))}))),sValidator('json',Schema.toStandardSchemaV1(ItemSchema)),sValidator('form',Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)}))),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.toStandardSchemaV1(Schema.Struct({id:Schema.String}))),sValidator('query',Schema.toStandardSchemaV1(Schema.Struct({q:Schema.optional(Schema.FiniteFromString.check(Schema.isInt()))}))),sValidator('json',Schema.toStandardSchemaV1(ItemSchema)),sValidator('form',Schema.toStandardSchemaV1(Schema.Struct({file:Schema.optional(Schema.String)}))),(c)=>{})`,
     ],
   ] as const)('%s without hono-openapi: plain validator middleware', (lib, expected) => {
     expect(
@@ -160,6 +160,76 @@ export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.
         imports: [{ name: 'ItemSchema', from: '../components' }],
       }),
     ).toBe(expected)
+  })
+
+  it('coerces header, cookie and form body values from text', () => {
+    const route = {
+      method: 'post',
+      path: '/uploads',
+      parameters: [],
+      operation: {
+        parameters: [
+          { name: 'x-count', in: 'header', schema: { type: 'integer' } },
+          { name: 'debug', in: 'cookie', schema: { type: 'boolean' } },
+        ],
+        requestBody: {
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  size: { type: 'integer' },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {},
+      },
+    }
+    expect(
+      makeHandlerCode('uploadsHandler', [route] as never, {
+        lib: 'zod',
+        openapi: false,
+        components: undefined,
+        responseRefs: false,
+        imports: [],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{sValidator}from'@hono/standard-validator'
+import*as z from'zod'
+
+export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.coerce.number().int().exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.coerce.number().int().exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
+  })
+
+  it('reads a header parameter under its lowercased name, as Hono hands it over', () => {
+    const route = {
+      method: 'get',
+      path: '/limits',
+      parameters: [{ name: 'X-Rate-Limit', in: 'header', schema: { type: 'integer' } }],
+      operation: {
+        // The operation-level parameter overrides the Path Item's, whatever the case.
+        parameters: [
+          { name: 'x-rate-limit', in: 'header', required: true, schema: { type: 'integer' } },
+          { name: 'X-Request-Id', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        responses: {},
+      },
+    }
+    expect(
+      makeHandlerCode('limitsHandler', [route] as never, {
+        lib: 'zod',
+        openapi: false,
+        components: undefined,
+        responseRefs: false,
+        imports: [],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{sValidator}from'@hono/standard-validator'
+import*as z from'zod'
+
+export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object({"x-rate-limit":z.coerce.number().int(),"x-request-id":z.string()})),(c)=>{})`)
   })
 
   it.each([

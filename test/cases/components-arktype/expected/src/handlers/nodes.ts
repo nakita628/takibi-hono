@@ -14,6 +14,16 @@ export const nodesHandler = new Hono().get(
       },
     },
   }),
-  validator('query', type({ 'page?': type('string.integer.parse').to('number.integer >= 1') })),
+  validator(
+    'query',
+    type({
+      'page?': type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= 1'),
+    }),
+  ),
   (c) => {},
 )

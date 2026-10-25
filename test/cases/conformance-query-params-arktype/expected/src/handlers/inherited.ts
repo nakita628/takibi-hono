@@ -8,13 +8,37 @@ export const inheritedHandler = new Hono().get(
   describeRoute({ operationId: 'queryInherited', responses: { '200': FieldsResponse } }),
   validator(
     'query',
-    type({
-      toString: 'string',
-      'valueOf?': 'string.integer.parse',
-      'hasOwnProperty?': type("'true' | 'false'").pipe((data) => data === 'true'),
-      'isPrototypeOf?': 'string.integer.parse[]',
-      'toLocaleString?': 'string.integer.parse',
-    }),
+    type('object')
+      .pipe(
+        (data) =>
+          typeof data === 'object' && data !== null && !Array.isArray(data)
+            ? Object.assign(Object.create(null), data)
+            : data,
+        type({
+          toString: 'string',
+          'valueOf?': type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+          'hasOwnProperty?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe(
+            (data) => /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+          ),
+          'isPrototypeOf?': type('unknown').pipe(
+            (data) => (data === undefined || Array.isArray(data) ? data : [data]),
+            type(
+              type('string').pipe((data, ctx) => {
+                const value = Number(data)
+                return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+              }),
+            ).array(),
+          ),
+          'toLocaleString?': type('string').pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          }),
+        }),
+      )
+      .pipe((data) => ({ ...data })),
   ),
   (c) => {},
 )

@@ -200,7 +200,7 @@ export const petsHandler = new Hono()
     sValidator(
       'query',
       v.partial(
-        v.object({ limit: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+        v.object({ limit: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
       ),
     ),
     (c) => {},

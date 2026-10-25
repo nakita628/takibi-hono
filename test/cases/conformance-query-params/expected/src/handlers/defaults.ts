@@ -16,8 +16,20 @@ export const defaultsHandler = new Hono().get(
       bool_def_true: z.stringbool().default(true).exactOptional(),
       str_def: z.string().default('fallback').exactOptional(),
       enum_def: z.enum(['asc', 'desc']).default('asc').exactOptional(),
-      arr_def: z.array(z.string()).default([]).exactOptional(),
-      arr_int_def: z.array(z.coerce.number().int()).default([1, 2]).exactOptional(),
+      arr_def: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.string()),
+        )
+        .default([])
+        .exactOptional(),
+      arr_int_def: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()),
+        )
+        .default([1, 2])
+        .exactOptional(),
     }),
   ),
   (c) => {},

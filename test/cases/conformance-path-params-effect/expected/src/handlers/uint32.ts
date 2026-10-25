@@ -9,7 +9,7 @@ export const uint32Handler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.NumberFromString.check(Schema.isInt()) }),
+      Schema.Struct({ value: Schema.FiniteFromString.check(Schema.isUint32()) }),
     ),
   ),
   (c) => {},

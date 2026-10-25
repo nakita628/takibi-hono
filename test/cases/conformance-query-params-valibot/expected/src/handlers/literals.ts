@@ -10,37 +10,97 @@ export const literalsHandler = new Hono().get(
     'query',
     v.partial(
       v.object({
-        ienum: v.union([v.literal(1), v.literal(2), v.literal(3)]),
-        nenum: v.union([v.literal(1.5), v.literal(2.5)]),
-        benum: v.literal(true),
-        iconst: v.literal(7),
+        ienum: v.pipe(
+          v.string(),
+          v.transform(Number),
+          v.union([v.literal(1), v.literal(2), v.literal(3)]),
+        ),
+        nenum: v.pipe(v.string(), v.transform(Number), v.union([v.literal(1.5), v.literal(2.5)])),
+        benum: v.pipe(
+          v.string(),
+          v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+          v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+          v.literal(true),
+        ),
+        iconst: v.pipe(v.string(), v.transform(Number), v.literal(7)),
         senum: v.picklist(['asc', 'desc']),
         sconst: v.literal('fixed'),
         numericsenum: v.picklist(['1', '02', 'true']),
-        inull: v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
-        bnull: v.nullable(
-          v.pipe(
-            v.picklist(['true', 'false']),
-            v.transform((input) => input === 'true'),
+        inull: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === 'null' ? null : input)),
+          v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+        ),
+        bnull: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === 'null' ? null : input)),
+          v.nullable(
+            v.pipe(
+              v.string(),
+              v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+              v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+            ),
           ),
         ),
-        nullof: v.union([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-          v.nullable(v.null()),
-        ]),
-        inull_arr: v.array(
-          v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
+        nullof: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === 'null' ? null : input)),
+          v.nullable(
+            v.union([
+              v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              v.pipe(
+                v.unknown(),
+                v.transform((input) => (input === 'null' ? null : input)),
+                v.nullable(v.null()),
+              ),
+            ]),
+          ),
         ),
-        inull_list: v.nullable(
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
+        inull_arr: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+          v.array(
+            v.pipe(
+              v.unknown(),
+              v.transform((input) => (input === 'null' ? null : input)),
+              v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            ),
+          ),
+        ),
+        inull_list: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === 'null' ? null : input)),
+          v.nullable(
+            v.pipe(
+              v.unknown(),
+              v.transform((input) =>
+                input === undefined || Array.isArray(input) ? input : [input],
+              ),
+              v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            ),
+          ),
         ),
         snull: v.nullable(v.string()),
         ioneof: v.union([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           v.literal('all'),
         ]),
-        ienum_arr: v.array(v.union([v.literal(1), v.literal(2), v.literal(3)])),
-        senum_arr: v.array(v.picklist(['asc', 'desc'])),
+        ienum_arr: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.transform(Number),
+              v.union([v.literal(1), v.literal(2), v.literal(3)]),
+            ),
+          ),
+        ),
+        senum_arr: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+          v.array(v.picklist(['asc', 'desc'])),
+        ),
       }),
     ),
   ),

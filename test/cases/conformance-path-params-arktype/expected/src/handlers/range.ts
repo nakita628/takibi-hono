@@ -9,9 +9,12 @@ export const rangeHandler = new Hono().get(
   validator(
     'param',
     type({
-      value: type('string.integer.parse').to(
-        type('number.integer >= 1').and(type('number.integer <= 10')),
-      ),
+      value: type('string')
+        .pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        })
+        .to('number.integer >= 1 & number.integer <= 10'),
     }),
   ),
   (c) => {},

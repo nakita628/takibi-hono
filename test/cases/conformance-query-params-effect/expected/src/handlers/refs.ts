@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 import {
   CountSchema,
   BigSchema,
@@ -26,7 +26,18 @@ export const refsHandler = new Hono().get(
         ref_enum: Schema.optional(LevelSchema),
         ref_str: Schema.optional(NameSchema),
         ref_arr: Schema.optional(CountsSchema),
-        arr_ref: Schema.optional(Schema.Array(CountSchema)),
+        arr_ref: Schema.optional(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(Schema.Array(CountSchema)),
+          ),
+        ),
         allof_ref: Schema.optional(CountSchema.annotate({ description: 'A count.' })),
         ref_ref: Schema.optional(CountSchema),
       }),

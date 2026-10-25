@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const hexHandler = new Hono().get(
   '/hex/:value',
   describeRoute({ operationId: 'hexParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.string() })),
+  validator('param', z.object({ value: z.hex() })),
   (c) => {},
 )

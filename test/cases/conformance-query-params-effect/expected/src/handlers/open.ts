@@ -10,9 +10,9 @@ export const openHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        page: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+        page: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
         extra: Schema.optional(
-          Schema.Record(Schema.String, Schema.NumberFromString.check(Schema.isInt())),
+          Schema.Record(Schema.String, Schema.FiniteFromString.check(Schema.isInt())),
         ),
       }),
     ),

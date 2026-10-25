@@ -14,16 +14,29 @@ export const objectsHandler = new Hono().get(
           name: z.string().exactOptional(),
           age: z.coerce.number().int().min(0).exactOptional(),
           active: z.stringbool().exactOptional(),
-          ids: z.array(z.coerce.number().int()).exactOptional(),
-          points: z
-            .array(
-              z.object({
-                x: z.coerce.number().int().exactOptional(),
-                y: z.coerce.number().int().exactOptional(),
-              }),
+          ids: z
+            .preprocess(
+              (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+              z.array(z.coerce.number().int()),
             )
             .exactOptional(),
-          tags: z.array(z.string()).exactOptional(),
+          points: z
+            .preprocess(
+              (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+              z.array(
+                z.object({
+                  x: z.coerce.number().int().exactOptional(),
+                  y: z.coerce.number().int().exactOptional(),
+                }),
+              ),
+            )
+            .exactOptional(),
+          tags: z
+            .preprocess(
+              (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+              z.array(z.string()),
+            )
+            .exactOptional(),
           range: z
             .object({
               min: z.coerce.number().int().exactOptional(),

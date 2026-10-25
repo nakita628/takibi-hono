@@ -33,18 +33,33 @@ export type Post = v.InferOutput<typeof PostSchema>
 
 export const UserSchema = v.pipe(
   v.object({
-    id: v.pipe(v.string(), v.uuid()),
+    id: v.pipe(
+      v.string(),
+      v.regex(
+        /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
+      ),
+    ),
     email: v.pipe(v.string(), v.email()),
-    role: v.optional(v.optional(v.picklist(['admin', 'member']), 'member')),
+    role: v.optional(v.picklist(['admin', 'member']), 'member'),
   }),
   v.metadata({ ref: 'User' }),
 )
 
 export type User = v.InferOutput<typeof UserSchema>
 
-export const UserIdParamsSchema = resolver(v.pipe(v.string(), v.uuid()))
+export const UserIdParamsSchema = resolver(
+  v.pipe(
+    v.string(),
+    v.regex(
+      /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
+    ),
+  ),
+)
 export const PageParamsSchema = resolver(
-  v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(1)), '1'),
+  v.optional(
+    v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+    '1',
+  ),
 )
 
 export const RateLimitHeaderSchema = resolver(v.pipe(v.number(), v.integer()))

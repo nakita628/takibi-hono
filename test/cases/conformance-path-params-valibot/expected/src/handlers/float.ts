@@ -6,6 +6,18 @@ import { EchoResponse } from '../components'
 export const floatHandler = new Hono().get(
   '/float/:value',
   describeRoute({ operationId: 'floatParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.pipe(v.string(), v.transform(Number), v.number()) })),
+  validator(
+    'param',
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.transform(Number),
+        v.number(),
+        v.finite(),
+        v.minValue(-3.4028234663852886e38),
+        v.maxValue(3.4028234663852886e38),
+      ),
+    }),
+  ),
   (c) => {},
 )

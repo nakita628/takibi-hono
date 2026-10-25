@@ -10,14 +10,12 @@ export const absentHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        empty_ok: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
-        empty_def: Schema.NumberFromString.check(Schema.isInt()).pipe(
-          Schema.withDecodingDefault(Effect.succeed(7)),
+        empty_ok: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        empty_def: Schema.FiniteFromString.check(Schema.isInt()).pipe(
+          Schema.withDecodingDefaultType(Effect.succeed(7)),
         ),
         empty_str: Schema.optional(Schema.String),
-        ref_def: CountSchema.pipe(Schema.withDecodingDefault(Effect.succeed(3))).pipe(
-          Schema.withDecodingDefault(Effect.succeed(3)),
-        ),
+        ref_def: CountSchema.pipe(Schema.withDecodingDefaultType(Effect.succeed(3))),
       }),
     ),
   ),

@@ -25,7 +25,10 @@ export const refsHandler = new Hono().get(
       'ref_enum?': LevelSchema,
       'ref_str?': NameSchema,
       'ref_arr?': CountsSchema,
-      'arr_ref?': type(CountSchema).array(),
+      'arr_ref?': type('unknown').pipe(
+        (data) => (data === undefined || Array.isArray(data) ? data : [data]),
+        type(CountSchema).array(),
+      ),
       'allof_ref?': CountSchema.describe('A count.'),
       'ref_ref?': CountSchema,
     }),

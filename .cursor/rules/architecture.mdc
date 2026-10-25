@@ -80,8 +80,8 @@ outputs are single files).
 
 - OpenAPI types (`OpenAPI`, `Schema`, `Components`, …) and `parseOpenAPI` are imported straight
   from `oas-truth`; there is no re-export module.
-- **No direct dependency on schema-to-library.** Every validator expression comes from oas-truth's
-  adapter (`toExpression`), so schema-to-library's version is decided by oas-truth and the output
+- **No direct dependency on schema-truth.** Every validator expression comes from oas-truth's
+  adapter (`toExpression`), so schema-truth's version is decided by oas-truth and the output
   cannot drift.
   - Named `components.schemas` declarations come from oas-truth's `makeSchemaDeclarations`. This
     package passes `typeAlias: 'key'` (the OpenAPI key as the type name) and, with
@@ -94,13 +94,17 @@ outputs are single files).
 - Values are emitted with `valueToCode` / `makeSchemaReplacements`. `resolver(...)` wraps **only
   response `content` schemas** in `describeRoute`: that is all hono-openapi resolves; header
   schemas stay plain JSON Schema. Collision maps come from oas-truth's `makeSchemaIdentifiers`.
-- Query and path parameters are coerced by schema-to-library's `paramIn`
-  (`adapter.toExpression(schema, paramIn)`), one synthesized object schema per location. This was
-  once kept here because the five libraries had no symmetric coercion. schema-to-library 0.4
-  covers all of them, so it is delegated: zod `z.coerce`, valibot `v.transform(Number)`, typebox
-  `Codec`, arktype `.parse` and effect `NumberFromString`.
+- Path, query, header and cookie parameters are coerced by schema-truth's `paramIn`
+  (`adapter.toExpression(schema, location)`), one synthesized object schema per location, and a
+  form body by `paramIn: 'formData'`. This was once kept here because the five libraries had no
+  symmetric coercion; schema-truth covers all of them, so it is delegated: zod `z.coerce`, valibot
+  `v.transform(Number)`, typebox `Codec`, arktype `.pipe` and effect `FiniteFromString`.
+  A parameter's `style` / `explode` / `allowEmptyValue` are not passed by the handler validators:
+  `toExpression` applies them to the expression's root, which is the synthesized object, not the
+  parameter. `components.parameters` (oas-truth's `makeParametersCode`) applies them per
+  parameter.
 - **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
-  schema-to-library.
+  schema-truth.
 
 ## Ref registration (hono-openapi `components.schemas`)
 
@@ -109,9 +113,9 @@ With `openapi: true`, every `components.schemas` declaration is registered under
 
 - zod `.meta({ ref })`, valibot `v.pipe(x, v.metadata({ ref }))`, arktype `.configure({ ref })`,
   effect `.annotate({ identifier })` are **added on the outside only** — inner meta is inherited.
-- typebox puts `ref` in the outermost builder's options argument (schema-to-library / the
+- typebox puts `ref` in the outermost builder's options argument (schema-truth / the
   adapter's `toExpression(..., { ref })`).
-- The `description` / `examples` / `deprecated` meta schema-to-library emits is never rewritten.
+- The `description` / `examples` / `deprecated` meta schema-truth emits is never rewritten.
 
 ## Vendor extensions (`x-*`)
 
@@ -119,31 +123,31 @@ Three layers, decided 2026-05-24:
 
 - **A — messages**: supported, always on; emitted as validator error messages. `x-error-message`,
   `x-pattern-message`, `x-minimum-message`, `x-required-message` and the rest of the family.
-- **B — transforms**: supported, always on; declarative keys schema-to-library emits per lib.
+- **B — transforms**: supported, always on; declarative keys schema-truth emits per lib.
   `x-trim`, `x-coerce`, `x-readonly`, `x-stringbool`, `x-brand`, `x-normalize` and the like.
 - **C — code injection**: **unsupported, permanently.** The ten keys are `x-refine`,
   `x-superRefine`, `x-preprocess`, `x-codec`, `x-transform`, `x-pipe`, `x-check`, `x-filter`,
   `x-narrow` and `x-morph`.
-  schema-to-library's `unsafeCodeExtensions` is never passed, by takibi-hono or by oas-truth's
+  schema-truth's `unsafeCodeExtensions` is never passed, by takibi-hono or by oas-truth's
   adapter.
 
 <!-- The bypass examples below split a word on purpose. cspell:ignore tructor -->
 
 Why C stays sealed: it pastes spec strings into generated code verbatim, which is remote code
-execution wherever a spec crosses a trust boundary (a SaaS, a playground); schema-to-library's
+execution wherever a spec crosses a trust boundary (a SaaS, a playground); schema-truth's
 denylist can be bypassed through built-in prototypes, such as
 `String.prototype.concat.call('proc','ess')`, `this['cons'+'tructor']` and `(0).constructor`; an
 opt-in is one config line away from being enabled by mistake; and one RCE after opening it would
 be irreversible. Reopening needs all of: a sandboxed
-evaluator in schema-to-library instead of the denylist, a fresh threat-model review, and published
+evaluator in schema-truth instead of the denylist, a fresh threat-model review, and published
 operating guidance for SaaS / playground use. Until then a proposal to expose it is declined.
 
 **Transparency contract:** takibi-hono and oas-truth's adapter pass **every** `x-*` key through to
-schema-to-library unfiltered. C-layer keys disappear only because schema-to-library defaults
+schema-truth unfiltered. C-layer keys disappear only because schema-truth defaults
 `unsafeCodeExtensions` to `false` — never because takibi-hono strips them.
 `generator/schemas.test.ts` (all five libs: A and B applied, C dropped) and
 `helper/library.test.ts` (the inline path drops C) pin that. Per-extension behavior is
-schema-to-library's to test.
+schema-truth's to test.
 
 ## Public API
 

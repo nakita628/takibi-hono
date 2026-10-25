@@ -8,7 +8,18 @@ export const openHandler = new Hono().get(
   describeRoute({ operationId: 'cookieOpen', responses: { '200': FieldsResponse } }),
   validator(
     'cookie',
-    type({ 'page?': 'number.integer', 'bag?': type({ '[string]': 'number.integer' }) }),
+    type({
+      'page?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'bag?': type({
+        '[string]': type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    }),
   ),
   (c) => {},
 )

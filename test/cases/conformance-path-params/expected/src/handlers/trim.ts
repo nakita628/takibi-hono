@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const trimHandler = new Hono().get(
   '/trim/:value',
   describeRoute({ operationId: 'trimParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.trim() })),
+  validator('param', z.object({ value: z.string().trim() })),
   (c) => {},
 )

@@ -6,6 +6,9 @@ import { EchoResponse } from '../components'
 export const ienumHandler = new Hono().get(
   '/ienum/:value',
   describeRoute({ operationId: 'ienumParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.union([z.literal(1), z.literal(2)]) })),
+  validator(
+    'param',
+    z.object({ value: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])) }),
+  ),
   (c) => {},
 )

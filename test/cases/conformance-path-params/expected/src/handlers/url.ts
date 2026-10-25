@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const urlHandler = new Hono().get(
   '/url/:value',
   describeRoute({ operationId: 'urlParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.string() })),
+  validator('param', z.object({ value: z.url() })),
   (c) => {},
 )

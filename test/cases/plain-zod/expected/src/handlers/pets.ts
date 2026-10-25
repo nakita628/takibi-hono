@@ -13,20 +13,20 @@ export const petsHandler = new Hono()
         tag: TagSchema.exactOptional(),
       }),
     ),
-    sValidator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    sValidator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     sValidator('cookie', z.object({ session: z.string().exactOptional() })),
     (c) => {},
   )
   .post(
     '/pets',
-    sValidator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    sValidator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     sValidator('json', NewPetSchema),
     (c) => {},
   )
   .on(
     'HEAD',
     '/pets',
-    sValidator('header', z.object({ 'X-Request-Id': z.string().exactOptional() })),
+    sValidator('header', z.object({ 'x-request-id': z.string().exactOptional() })),
     (c) => {},
   )
   .get(
@@ -44,7 +44,7 @@ export const petsHandler = new Hono()
     sValidator('param', z.object({ petId: z.coerce.number().int() })),
     sValidator(
       'form',
-      z.object({ caption: z.string().min(1), featured: z.boolean().exactOptional() }),
+      z.object({ caption: z.string().min(1), featured: z.stringbool().exactOptional() }),
     ),
     (c) => {},
   )

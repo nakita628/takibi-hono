@@ -40,7 +40,14 @@ export const UserSchema = type({
 export type User = typeof UserSchema.infer
 
 export const UserIdParamsSchema = resolver(type('string.uuid'))
-export const PageParamsSchema = resolver(type('string.integer.parse').to('number.integer >= 1'))
+export const PageParamsSchema = resolver(
+  type('string')
+    .pipe((data, ctx) => {
+      const value = Number(data)
+      return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+    })
+    .to('number.integer >= 1'),
+)
 
 export const RateLimitHeaderSchema = resolver(type('number.integer'))
 

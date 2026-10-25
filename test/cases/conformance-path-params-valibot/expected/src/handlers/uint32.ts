@@ -8,7 +8,16 @@ export const uint32Handler = new Hono().get(
   describeRoute({ operationId: 'uint32Param', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.transform(Number),
+        v.number(),
+        v.safeInteger(),
+        v.minValue(0),
+        v.maxValue(4294967295),
+      ),
+    }),
   ),
   (c) => {},
 )

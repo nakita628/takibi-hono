@@ -9,8 +9,14 @@ export const absentHandler = new Hono().get(
   validator(
     'query',
     type({
-      'empty_ok?': 'string.integer.parse',
-      'empty_def?': 'string.integer.parse',
+      'empty_ok?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'empty_def?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
       'empty_str?': 'string',
       'ref_def?': CountSchema,
     }),

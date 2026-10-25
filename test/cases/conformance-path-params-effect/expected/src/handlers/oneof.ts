@@ -10,7 +10,7 @@ export const oneofHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.Union([Schema.NumberFromString.check(Schema.isInt()), Schema.Literal('all')]),
+        value: Schema.Union([Schema.FiniteFromString.check(Schema.isInt()), Schema.Literal('all')]),
       }),
     ),
   ),

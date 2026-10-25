@@ -15,7 +15,14 @@ export const CountAliasSchema = CountSchema
 
 export type CountAlias = typeof CountAliasSchema.infer
 
-export const BigSchema = type('number.integer').configure({ ref: 'Big' })
+export const BigSchema = type('bigint | number.integer')
+  .or(/^-?\d+$/)
+  .pipe((data) => BigInt(data))
+  .narrow(
+    (data, ctx) =>
+      (data >= -9223372036854775808n && data <= 9223372036854775807n) || ctx.mustBe('an int64'),
+  )
+  .configure({ ref: 'Big' })
 
 export type Big = typeof BigSchema.infer
 
@@ -31,7 +38,9 @@ export const LevelSchema = type('1 | 2 | 3').configure({ ref: 'Level' })
 
 export type Level = typeof LevelSchema.infer
 
-export const NameSchema = type('string >= 2').configure({ ref: 'Name' })
+export const NameSchema = type('string')
+  .narrow((data, ctx) => [...data].length >= 2 || ctx.mustBe('at least 2 characters'))
+  .configure({ ref: 'Name' })
 
 export type Name = typeof NameSchema.infer
 

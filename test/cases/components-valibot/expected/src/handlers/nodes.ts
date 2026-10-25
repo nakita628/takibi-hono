@@ -16,14 +16,12 @@ export const nodesHandler = new Hono().get(
   }),
   validator(
     'query',
-    v.partial(
-      v.object({
-        page: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(1)),
-          '1',
-        ),
-      }),
-    ),
+    v.object({
+      page: v.optional(
+        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+        '1',
+      ),
+    }),
   ),
   (c) => {},
 )

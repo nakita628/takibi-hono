@@ -9,7 +9,7 @@ export const PetSchema = v.pipe(
   v.pipe(
     v.object({
       id: v.pipe(v.number(), v.integer()),
-      name: v.pipe(v.string(), v.minLength(1)),
+      name: v.pipe(v.string(), v.minCodePoints(1)),
       tag: v.optional(TagSchema),
     }),
     v.description('A pet in the store'),
@@ -20,7 +20,7 @@ export const PetSchema = v.pipe(
 export type Pet = v.InferOutput<typeof PetSchema>
 
 export const NewPetSchema = v.pipe(
-  v.object({ name: v.pipe(v.string(), v.minLength(1)), tag: v.optional(TagSchema) }),
+  v.object({ name: v.pipe(v.string(), v.minCodePoints(1)), tag: v.optional(TagSchema) }),
   v.metadata({ ref: 'NewPet' }),
 )
 
@@ -31,7 +31,14 @@ export const ErrorSchema = v.pipe(v.object({ message: v.string() }), v.metadata(
 export type Error = v.InferOutput<typeof ErrorSchema>
 
 export const LimitParamsSchema = resolver(
-  v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+  v.pipe(
+    v.string(),
+    v.transform(Number),
+    v.number(),
+    v.safeInteger(),
+    v.minValue(1),
+    v.maxValue(100),
+  ),
 )
 export const RequestIdParamsSchema = resolver(v.string())
 

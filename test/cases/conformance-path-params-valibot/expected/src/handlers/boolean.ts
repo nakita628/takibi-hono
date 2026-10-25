@@ -10,8 +10,9 @@ export const booleanHandler = new Hono().get(
     'param',
     v.object({
       value: v.pipe(
-        v.picklist(['true', 'false']),
-        v.transform((input) => input === 'true'),
+        v.string(),
+        v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
       ),
     }),
   ),

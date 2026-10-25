@@ -22,8 +22,8 @@ export const nodesHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        page: Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)).pipe(
-          Schema.withDecodingDefault(Effect.succeed(1)),
+        page: Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)).pipe(
+          Schema.withDecodingDefaultType(Effect.succeed(1)),
         ),
       }),
     ),

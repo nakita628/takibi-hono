@@ -9,7 +9,14 @@ export const exclusiveHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.pipe(v.string(), v.transform(Number), v.number(), v.gtValue(0), v.ltValue(1)),
+      value: v.pipe(
+        v.string(),
+        v.transform(Number),
+        v.number(),
+        v.finite(),
+        v.gtValue(0),
+        v.ltValue(1),
+      ),
     }),
   ),
   (c) => {},

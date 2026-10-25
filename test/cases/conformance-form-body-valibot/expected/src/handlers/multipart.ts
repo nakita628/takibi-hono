@@ -9,10 +9,22 @@ export const multipartHandler = new Hono().post(
   validator(
     'form',
     v.object({
-      file: v.string(),
-      age: v.optional(v.pipe(v.number(), v.integer())),
-      active: v.optional(v.boolean()),
-      ids: v.optional(v.array(v.pipe(v.number(), v.integer()))),
+      file: v.file(),
+      age: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      active: v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+          v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+        ),
+      ),
+      ids: v.optional(
+        v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+        ),
+      ),
     }),
   ),
   (c) => {},

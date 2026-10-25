@@ -10,9 +10,11 @@ export const orgsHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        orgId: Schema.NumberFromString.check(Schema.isInt()),
+        orgId: Schema.FiniteFromString.check(Schema.isInt()),
         repoId: Schema.String.check(Schema.isUUID()),
-        issueId: Schema.NumberFromString.check(Schema.isInt()),
+        issueId: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+        ),
       }),
     ),
   ),

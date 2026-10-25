@@ -11,38 +11,68 @@ export const combinatorsHandler = new Hono().get(
     v.partial(
       v.object({
         allof: v.intersect([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-          v.any(),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.finite(), v.minValue(5)),
         ]),
         allof_range: v.intersect([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(1)),
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.maxValue(10)),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.maxValue(10)),
         ]),
         oneof_is: v.union([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           v.string(),
         ]),
         oneof_ib: v.union([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           v.pipe(
-            v.picklist(['true', 'false']),
-            v.transform((input) => input === 'true'),
+            v.string(),
+            v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
           ),
         ]),
-        anyof_ns: v.union([v.pipe(v.string(), v.transform(Number), v.number()), v.string()]),
-        mixed: v.union([v.literal(1), v.literal('a'), v.literal('2')]),
-        not_zero: v.custom<unknown>((input) => input !== 0),
-        not_enum: v.custom<unknown>((input) => ![1, 2].some((item) => item === input)),
-        not_string: v.custom<unknown>((input) => typeof input !== 'string'),
-        typeless_min: v.any(),
-        typeless_len: v.any(),
-        nconst: v.literal(2),
-        multi: v.string(),
-        multi_nb: v.pipe(v.string(), v.transform(Number), v.number()),
-        tuple: v.tuple([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+        anyof_ns: v.union([
+          v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
           v.string(),
         ]),
+        mixed: v.union([v.literal(1), v.literal('a'), v.literal('2')]),
+        not_zero: v.pipe(
+          v.string(),
+          v.transform(Number),
+          v.number(),
+          v.safeInteger(),
+          v.check((input) => input !== 0),
+        ),
+        not_enum: v.custom<unknown>((input) => ![1, 2].some((item) => item === input)),
+        not_string: v.custom<unknown>((input) => typeof input !== 'string'),
+        typeless_min: v.pipe(
+          v.string(),
+          v.transform(Number),
+          v.number(),
+          v.finite(),
+          v.minValue(1),
+        ),
+        typeless_len: v.pipe(v.string(), v.minCodePoints(3)),
+        nconst: v.pipe(v.string(), v.transform(Number), v.literal(2)),
+        multi: v.union([
+          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.string(),
+        ]),
+        multi_nb: v.union([
+          v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+          v.pipe(
+            v.string(),
+            v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+          ),
+        ]),
+        tuple: v.pipe(
+          v.unknown(),
+          v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+          v.tuple([
+            v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            v.string(),
+          ]),
+        ),
       }),
     ),
   ),

@@ -8,7 +8,11 @@ export const nenumHandler = new Hono().get(
   describeRoute({ operationId: 'nenumParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    Schema.toStandardSchemaV1(Schema.Struct({ value: Schema.Literals([0.5, 2.5]) })),
+    Schema.toStandardSchemaV1(
+      Schema.Struct({
+        value: Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([0.5, 2.5]))),
+      }),
+    ),
   ),
   (c) => {},
 )

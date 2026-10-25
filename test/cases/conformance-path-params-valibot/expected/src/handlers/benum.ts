@@ -6,6 +6,16 @@ import { EchoResponse } from '../components'
 export const benumHandler = new Hono().get(
   '/benum/:value',
   describeRoute({ operationId: 'benumParam', responses: { '200': EchoResponse } }),
-  validator('param', v.object({ value: v.literal(true) })),
+  validator(
+    'param',
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+        v.literal(true),
+      ),
+    }),
+  ),
   (c) => {},
 )

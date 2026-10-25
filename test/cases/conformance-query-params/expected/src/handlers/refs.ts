@@ -25,7 +25,12 @@ export const refsHandler = new Hono().get(
       ref_enum: LevelSchema.exactOptional(),
       ref_str: NameSchema.exactOptional(),
       ref_arr: CountsSchema.exactOptional(),
-      arr_ref: z.array(CountSchema).exactOptional(),
+      arr_ref: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(CountSchema),
+        )
+        .exactOptional(),
       allof_ref: CountSchema.meta({ description: 'A count.' }).exactOptional(),
       ref_ref: CountSchema.exactOptional(),
     }),

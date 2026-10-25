@@ -9,15 +9,26 @@ export const requiredHandler = new Hono().get(
   validator(
     'query',
     v.object({
-      id: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
-      big: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+      id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+      big: v.pipe(
+        v.string(),
+        v.regex(/^-?\d+$/),
+        v.transform((input) => BigInt(input)),
+        v.minValue(-9223372036854775808n),
+        v.maxValue(9223372036854775807n),
+      ),
       flag: v.pipe(
-        v.picklist(['true', 'false']),
-        v.transform((input) => input === 'true'),
+        v.string(),
+        v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
       ),
       name: v.string(),
-      tags: v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
-      note: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.integer())),
+      tags: v.pipe(
+        v.unknown(),
+        v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
+        v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      ),
+      note: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
     }),
   ),
   (c) => {},

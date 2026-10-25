@@ -6,6 +6,6 @@ import { EchoResponse } from '../components'
 export const iconstHandler = new Hono().get(
   '/iconst/:value',
   describeRoute({ operationId: 'iconstParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.literal(7) })),
+  validator('param', z.object({ value: z.coerce.number().pipe(z.literal(7)) })),
   (c) => {},
 )

@@ -10,7 +10,7 @@ export const exclusiveHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.NumberFromString.check(Schema.isGreaterThan(0), Schema.isLessThan(1)),
+        value: Schema.FiniteFromString.check(Schema.isGreaterThan(0), Schema.isLessThan(1)),
       }),
     ),
   ),

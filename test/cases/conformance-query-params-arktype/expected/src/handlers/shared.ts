@@ -9,7 +9,13 @@ export const sharedHandler = new Hono().get(
   validator(
     'query',
     type({
-      'filter?': type({ 'name?': 'string', 'age?': 'string.integer.parse' }),
+      'filter?': type({
+        'name?': 'string',
+        'age?': type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
       'sort?': type({ 'name?': 'string', 'dir?': "'asc' | 'desc'" }),
     }),
   ),

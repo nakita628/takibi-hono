@@ -11,7 +11,7 @@ export const simpleobjxHandler = new Hono().get(
     Schema.toStandardSchemaV1(
       Schema.Struct({
         value: Schema.Struct({
-          a: Schema.optional(Schema.NumberFromString.check(Schema.isInt())),
+          a: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
           b: Schema.optional(Schema.String),
         }),
       }),

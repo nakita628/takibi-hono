@@ -13,7 +13,7 @@ export const sharedHandler = new Hono().get(
         filter: v.partial(
           v.object({
             name: v.string(),
-            age: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+            age: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
           }),
         ),
         sort: v.partial(v.object({ name: v.string(), dir: v.picklist(['asc', 'desc']) })),

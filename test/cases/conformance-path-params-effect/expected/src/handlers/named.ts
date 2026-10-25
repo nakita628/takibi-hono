@@ -10,13 +10,15 @@ export const namedHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        'user-id': Schema.NumberFromString.check(Schema.isInt()),
-        post_id: Schema.Literals(['true', 'false']).pipe(
+        'user-id': Schema.FiniteFromString.check(Schema.isInt()),
+        post_id: Schema.String.check(
+          Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+        ).pipe(
           Schema.decodeTo(
             Schema.Boolean,
             SchemaTransformation.transform({
-              decode: (input) => input === 'true',
-              encode: (input) => (input ? 'true' : 'false'),
+              decode: (input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input),
+              encode: (output) => (output ? 'true' : 'false'),
             }),
           ),
         ),

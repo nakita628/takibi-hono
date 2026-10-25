@@ -8,7 +8,7 @@ export const matrixHandler = new Hono().get(
   describeRoute({ operationId: 'matrixParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
   ),
   (c) => {},
 )

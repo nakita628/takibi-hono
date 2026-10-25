@@ -1,5 +1,5 @@
 import { resolver } from 'hono-openapi'
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 
 export const CountSchema = Schema.Number.check(
   Schema.isInt(),
@@ -12,7 +12,22 @@ export const CountAliasSchema = CountSchema
 
 export type CountAlias = Schema.Schema.Type<typeof CountAliasSchema>
 
-export const BigSchema = Schema.Number.check(Schema.isInt()).annotate({ identifier: 'Big' })
+export const BigSchema = Schema.Union([
+  Schema.BigInt,
+  Schema.Number.check(Schema.isInt()),
+  Schema.String.check(Schema.isPattern(/^-?\d+$/)),
+])
+  .pipe(
+    Schema.decodeTo(
+      Schema.BigInt,
+      SchemaTransformation.transform({
+        decode: (input) => BigInt(input),
+        encode: (output) => output,
+      }),
+    ),
+  )
+  .check(Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }))
+  .annotate({ identifier: 'Big' })
 
 export type Big = Schema.Schema.Type<typeof BigSchema>
 
@@ -28,9 +43,11 @@ export const LevelSchema = Schema.Literals([1, 2, 3]).annotate({ identifier: 'Le
 
 export type Level = Schema.Schema.Type<typeof LevelSchema>
 
-export const NameSchema = Schema.String.check(Schema.isMinLength(2)).annotate({
-  identifier: 'Name',
-})
+export const NameSchema = Schema.String.check(
+  Schema.makeFilter((input) => [...input].length >= 2, {
+    expected: 'a string of at least 2 characters',
+  }),
+).annotate({ identifier: 'Name' })
 
 export type Name = Schema.Schema.Type<typeof NameSchema>
 

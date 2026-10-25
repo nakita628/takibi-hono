@@ -9,11 +9,11 @@ export const requiredHandler = new Hono().get(
   validator(
     'cookie',
     z.object({
-      id: z.int(),
-      big: z.int64(),
-      flag: z.boolean(),
+      id: z.coerce.number().int(),
+      big: z.coerce.bigint().pipe(z.int64()),
+      flag: z.stringbool(),
       name: z.string(),
-      note: z.int().exactOptional(),
+      note: z.coerce.number().int().exactOptional(),
     }),
   ),
   (c) => {},

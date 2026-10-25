@@ -10,7 +10,7 @@ export const rangeHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.NumberFromString.check(
+        value: Schema.FiniteFromString.check(
           Schema.isInt(),
           Schema.isGreaterThanOrEqualTo(1),
           Schema.isLessThanOrEqualTo(10),

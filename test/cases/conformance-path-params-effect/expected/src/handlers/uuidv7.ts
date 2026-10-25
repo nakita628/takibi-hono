@@ -6,6 +6,9 @@ import { EchoResponse } from '../components'
 export const uuidv7Handler = new Hono().get(
   '/uuidv7/:value',
   describeRoute({ operationId: 'uuidv7Param', responses: { '200': EchoResponse } }),
-  validator('param', Schema.toStandardSchemaV1(Schema.Struct({ value: Schema.String }))),
+  validator(
+    'param',
+    Schema.toStandardSchemaV1(Schema.Struct({ value: Schema.String.check(Schema.isUUID(7)) })),
+  ),
   (c) => {},
 )

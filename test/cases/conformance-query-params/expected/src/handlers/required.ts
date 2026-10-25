@@ -13,7 +13,10 @@ export const requiredHandler = new Hono().get(
       big: z.coerce.bigint().pipe(z.int64()),
       flag: z.stringbool(),
       name: z.string(),
-      tags: z.array(z.coerce.number().int()),
+      tags: z.preprocess(
+        (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+        z.array(z.coerce.number().int()),
+      ),
       note: z.coerce.number().int().exactOptional(),
     }),
   ),

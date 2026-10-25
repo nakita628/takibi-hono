@@ -9,7 +9,9 @@ export const uriHandler = new Hono().get(
   validator(
     'param',
     Schema.toStandardSchemaV1(
-      Schema.Struct({ value: Schema.String.check(Schema.isPattern(/^https?:\/\//)) }),
+      Schema.Struct({
+        value: Schema.String.check(Schema.makeFilter((input) => URL.canParse(input))),
+      }),
     ),
   ),
   (c) => {},

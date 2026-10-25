@@ -28,13 +28,16 @@ export const petsHandler = new Hono()
     validator(
       'query',
       type({
-        'limit?': type('string.integer.parse').to(
-          type('number.integer >= 1').and(type('number.integer <= 100')),
-        ),
+        'limit?': type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1 & number.integer <= 100'),
         'tag?': TagSchema,
       }),
     ),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     validator('cookie', type({ 'session?': 'string' })),
     (c) => {},
   )
@@ -53,7 +56,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     validator('json', NewPetSchema),
     (c) => {},
   )
@@ -61,7 +64,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', type({ 'X-Request-Id?': 'string' })),
+    validator('header', type({ 'x-request-id?': 'string' })),
     (c) => {},
   )
   .get(
@@ -77,13 +80,31 @@ export const petsHandler = new Hono()
         '404': NotFoundResponse,
       },
     }),
-    validator('param', type({ petId: type('string.integer.parse').to('number.integer >= 1') })),
+    validator(
+      'param',
+      type({
+        petId: type('string')
+          .pipe((data, ctx) => {
+            const value = Number(data)
+            return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+          })
+          .to('number.integer >= 1'),
+      }),
+    ),
     (c) => {},
   )
   .delete(
     '/pets/:petId',
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
-    validator('param', type({ petId: 'string.integer.parse' })),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
     (c) => {},
   )
   .post(
@@ -92,7 +113,25 @@ export const petsHandler = new Hono()
       operationId: 'uploadPhoto',
       responses: { '201': { description: 'Uploaded' } },
     }),
-    validator('param', type({ petId: 'string.integer.parse' })),
-    validator('form', type({ caption: type('string >= 1'), 'featured?': 'boolean' })),
+    validator(
+      'param',
+      type({
+        petId: type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
+    ),
+    validator(
+      'form',
+      type({
+        caption: type('string').narrow(
+          (data, ctx) => [...data].length >= 1 || ctx.mustBe('at least 1 character'),
+        ),
+        'featured?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
+          /^(?:true|1|yes|on|y|enabled)$/i.test(data),
+        ),
+      }),
+    ),
     (c) => {},
   )

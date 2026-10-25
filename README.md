@@ -197,8 +197,8 @@ npx takibi-hono --config config/api.config.ts # runs another config file (-c)
 
 ```ts
 // vite.config.ts
-import { defineConfig } from 'vite'
 import { takibiHonoVite } from 'takibi-hono/vite-plugin'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [takibiHonoVite()],
@@ -279,6 +279,7 @@ export const honoHandler = new Hono().get(
 ```ts
 // src/index.ts
 import { Hono } from 'hono'
+
 import { honoHandler } from './handlers'
 
 const app = new Hono()

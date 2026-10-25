@@ -18,12 +18,24 @@ export const limitsHandler = new Hono().get(
         .string()
         .regex(/^[a-z]+-\d{1,3}$/)
         .exactOptional(),
-      items: z.array(z.coerce.number().int()).min(2).max(3).exactOptional(),
-      unique: z
-        .array(z.coerce.number().int())
-        .refine((val) => new Set(val).size === val.length)
+      items: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()).min(2).max(3),
+        )
         .exactOptional(),
-      ranged_items: z.array(z.coerce.number().int().min(1).max(9)).exactOptional(),
+      unique: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int()).refine((val) => new Set(val).size === val.length),
+        )
+        .exactOptional(),
+      ranged_items: z
+        .preprocess(
+          (val) => (val === undefined || Array.isArray(val) ? val : [val]),
+          z.array(z.coerce.number().int().min(1).max(9)),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

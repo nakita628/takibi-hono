@@ -8,7 +8,10 @@ export const openHandler = new Hono().get(
   describeRoute({ operationId: 'cookieOpen', responses: { '200': FieldsResponse } }),
   validator(
     'cookie',
-    z.object({ page: z.int().exactOptional(), bag: z.record(z.string(), z.int()).exactOptional() }),
+    z.object({
+      page: z.coerce.number().int().exactOptional(),
+      bag: z.record(z.string(), z.coerce.number().int()).exactOptional(),
+    }),
   ),
   (c) => {},
 )

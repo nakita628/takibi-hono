@@ -10,10 +10,10 @@ export const int64rangeHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.NumberFromString.check(
-          Schema.isInt(),
-          Schema.isGreaterThanOrEqualTo(1),
-          Schema.isLessThanOrEqualTo(100),
+        value: Schema.BigIntFromString.check(
+          Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
+          Schema.isGreaterThanOrEqualToBigInt(1n),
+          Schema.isLessThanOrEqualToBigInt(100n),
         ),
       }),
     ),

@@ -9,8 +9,16 @@ export const openHandler = new Hono().get(
   validator(
     'query',
     type({
-      'page?': 'string.integer.parse',
-      'extra?': type({ '[string]': 'string.integer.parse' }),
+      'page?': type('string').pipe((data, ctx) => {
+        const value = Number(data)
+        return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+      }),
+      'extra?': type({
+        '[string]': type('string').pipe((data, ctx) => {
+          const value = Number(data)
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
+        }),
+      }),
     }),
   ),
   (c) => {},

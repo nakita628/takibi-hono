@@ -33,7 +33,7 @@ export const petsHandler = new Hono()
             v.string(),
             v.transform(Number),
             v.number(),
-            v.integer(),
+            v.safeInteger(),
             v.minValue(1),
             v.maxValue(100),
           ),
@@ -41,7 +41,7 @@ export const petsHandler = new Hono()
         }),
       ),
     ),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     validator('cookie', v.partial(v.object({ session: v.string() }))),
     (c) => {},
   )
@@ -60,7 +60,7 @@ export const petsHandler = new Hono()
         '400': BadRequestResponse,
       },
     }),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     validator('json', NewPetSchema),
     (c) => {},
   )
@@ -68,7 +68,7 @@ export const petsHandler = new Hono()
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', v.partial(v.object({ 'X-Request-Id': v.string() }))),
+    validator('header', v.partial(v.object({ 'x-request-id': v.string() }))),
     (c) => {},
   )
   .get(
@@ -87,7 +87,7 @@ export const petsHandler = new Hono()
     validator(
       'param',
       v.object({
-        petId: v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(1)),
+        petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
       }),
     ),
     (c) => {},
@@ -97,7 +97,7 @@ export const petsHandler = new Hono()
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
     validator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
     ),
     (c) => {},
   )
@@ -109,11 +109,20 @@ export const petsHandler = new Hono()
     }),
     validator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.integer()) }),
+      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
     ),
     validator(
       'form',
-      v.object({ caption: v.pipe(v.string(), v.minLength(1)), featured: v.optional(v.boolean()) }),
+      v.object({
+        caption: v.pipe(v.string(), v.minCodePoints(1)),
+        featured: v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
+            v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
+          ),
+        ),
+      }),
     ),
     (c) => {},
   )

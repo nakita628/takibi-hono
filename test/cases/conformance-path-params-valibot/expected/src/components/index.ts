@@ -9,7 +9,13 @@ export const CountSchema = v.pipe(
 export type Count = v.InferOutput<typeof CountSchema>
 
 export const IdParamsSchema = resolver(
-  v.pipe(v.string(), v.transform(Number), v.number(), v.integer()),
+  v.pipe(
+    v.string(),
+    v.regex(/^-?\d+$/),
+    v.transform((input) => BigInt(input)),
+    v.minValue(-9223372036854775808n),
+    v.maxValue(9223372036854775807n),
+  ),
 )
 
 export const EchoResponse = {
