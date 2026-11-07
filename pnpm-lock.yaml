@@ -24,6 +24,9 @@ catalogs:
     '@typespec/versioning':
       specifier: ^0.87.0
       version: 0.87.0
+    hono:
+      specifier: ^4.13.14
+      version: 4.13.14
 
 importers:
 
@@ -114,17 +117,17 @@ importers:
     dependencies:
       hono:
         specifier: ^4.13.13
-        version: 4.13.13
+        version: 4.13.14
       hono-openapi:
         specifier: ^1.5.0
-        version: 1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.13)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
+        version: 1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.14)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
       '@hono/vite-dev-server':
         specifier: 0.26.1
-        version: 0.26.1(hono@4.13.13)
+        version: 0.26.1(hono@4.13.14)
       takibi-hono:
         specifier: workspace:^
         version: link:../../packages/takibi-hono
@@ -139,17 +142,17 @@ importers:
     dependencies:
       hono:
         specifier: ^4.13.13
-        version: 4.13.13
+        version: 4.13.14
       hono-openapi:
         specifier: ^1.5.0
-        version: 1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.13)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
+        version: 1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.14)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
       '@hono/vite-dev-server':
         specifier: 0.26.1
-        version: 0.26.1(hono@4.13.13)
+        version: 0.26.1(hono@4.13.14)
       takibi-hono:
         specifier: workspace:^
         version: link:../../packages/takibi-hono
@@ -2778,8 +2781,8 @@ packages:
     resolution: {integrity: sha512-+zuPOk/Ylus4qToHjG0gH29jwdkBFaHeZOn/2XqlbLvl9XFcmvOAQkEfon2mpaWOsmEDaZdqGy02kS3GPQLnmw==}
     hasBin: true
 
-  hono@4.13.13:
-    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
+  hono@4.13.14:
+    resolution: {integrity: sha512-yhRLQ21U6qa9Hsu2N7Qcbh8tE+WKEcoErjIo56LeSGiGXGp9sA7UpE86Ui9uexb61KakiGwuHMn2QdV7w6i6kQ==}
     engines: {node: '>=16.9.0'}
 
   hono@5.0.0-rc.1:
@@ -4321,18 +4324,18 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@hono/node-server@1.19.14(hono@4.13.13)':
+  '@hono/node-server@1.19.14(hono@4.13.14)':
     dependencies:
-      hono: 4.13.13
+      hono: 4.13.14
 
   '@hono/node-server@1.19.14(hono@5.0.0-rc.1)':
     dependencies:
       hono: 5.0.0-rc.1
 
-  '@hono/standard-validator@0.4.0(@standard-schema/spec@1.1.0)(hono@4.13.13)':
+  '@hono/standard-validator@0.4.0(@standard-schema/spec@1.1.0)(hono@4.13.14)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      hono: 4.13.13
+      hono: 4.13.14
 
   '@hono/standard-validator@0.4.0(@standard-schema/spec@1.1.0)(hono@5.0.0-rc.1)':
     dependencies:
@@ -4344,10 +4347,10 @@ snapshots:
       hono: 5.0.0-rc.1
       typebox: 1.4.3
 
-  '@hono/vite-dev-server@0.26.1(hono@4.13.13)':
+  '@hono/vite-dev-server@0.26.1(hono@4.13.14)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.13.13)
-      hono: 4.13.13
+      '@hono/node-server': 1.19.14(hono@4.13.14)
+      hono: 4.13.14
       minimatch: 9.0.9
 
   '@hono/vite-dev-server@0.26.1(hono@5.0.0-rc.1)':
@@ -5919,14 +5922,14 @@ snapshots:
     dependencies:
       hookified: 1.15.1
 
-  hono-openapi@1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.13)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7):
+  hono-openapi@1.5.0(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(hono@4.13.14)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7):
     dependencies:
-      '@hono/standard-validator': 0.4.0(@standard-schema/spec@1.1.0)(hono@4.13.13)
+      '@hono/standard-validator': 0.4.0(@standard-schema/spec@1.1.0)(hono@4.13.14)
       '@standard-community/standard-json': 0.3.7(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
       '@standard-community/standard-openapi': 0.2.11(@standard-community/standard-json@0.3.7(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(@valibot/to-json-schema@1.7.0(valibot@1.5.0(typescript@7.0.2)))(arktype@2.2.9)(effect@3.21.2)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7))(@standard-schema/spec@1.1.0)(arktype@2.2.9)(effect@3.21.2)(openapi-types@12.1.3)(typebox@1.4.3)(valibot@1.5.0(typescript@7.0.2))(zod@4.6.7)
       '@standard-schema/spec': 1.1.0
       '@types/json-schema': 7.0.15
-      hono: 4.13.13
+      hono: 4.13.14
       openapi-types: 12.1.3
     transitivePeerDependencies:
       - '@valibot/to-json-schema'
@@ -5986,7 +5989,7 @@ snapshots:
       - utf-8-validate
       - vite-plus
 
-  hono@4.13.13: {}
+  hono@4.13.14: {}
 
   hono@5.0.0-rc.1: {}
 
