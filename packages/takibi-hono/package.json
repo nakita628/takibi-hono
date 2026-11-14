@@ -37,7 +37,7 @@
     "@typespec/compiler": "catalog:",
     "@typespec/openapi3": "catalog:",
     "effect": "4.0.5",
-    "hono-takibi": "0.24.0",
+    "hono-takibi": "0.30.0",
     "oas-truth": "^0.5.1",
     "oxc-parser": "^0.155.0",
     "oxfmt": "^0.74.0"
