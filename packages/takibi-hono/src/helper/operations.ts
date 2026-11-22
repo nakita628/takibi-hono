@@ -35,16 +35,43 @@ function makeRoutes(path: string, rawPathItem: PathItem, openapi: OpenAPI): read
   })
 }
 
-/** `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. */
-export function makeHandlerFileName(path: string) {
-  return path.split('/').find(Boolean)?.toLowerCase() ?? '__root'
+/**
+ * A path segment in kebab case: every run of what is no letter or digit is a word break, and so
+ * is a change of case, an acronym being one word. `realTimeEvents` as `real-time-events`,
+ * `userAPIKeys` as `user-api-keys`, `user_profiles` as `user-profiles`. As hono-takibi names its
+ * handler files.
+ */
+function toKebabCase(segment: string) {
+  return segment
+    .replaceAll(/\{([^}]+)\}/gu, '$1')
+    .replaceAll(/[^0-9A-Za-z]+/gu, '-')
+    .replaceAll(/([a-z0-9])([A-Z])/gu, '$1-$2')
+    .replaceAll(/([A-Z])([A-Z][a-z])/gu, '$1-$2')
+    .replaceAll(/^-+|-+$/gu, '')
+    .toLowerCase()
 }
 
-export function collectRoutes(openapi: OpenAPI) {
+/**
+ * `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. The first segment
+ * is lowercased, or with `fileNameCase: 'kebab-case'` written in kebab case
+ * (`/realTimeEvents` → `real-time-events`).
+ */
+export function makeHandlerFileName(path: string, fileNameCase?: 'kebab-case') {
+  const segment = path.split('/').find(Boolean)
+  const name =
+    segment === undefined
+      ? ''
+      : fileNameCase === 'kebab-case'
+        ? toKebabCase(segment)
+        : segment.toLowerCase()
+  return name === '' ? '__root' : name
+}
+
+export function collectRoutes(openapi: OpenAPI, fileNameCase?: 'kebab-case') {
   const paths: { readonly [path: string]: PathItem } = openapi.paths
   return Object.entries(paths).reduce((groups, [path, pathItem]) => {
     const routes = makeRoutes(path.replaceAll(/\{([^}]+)\}/gu, ':$1'), pathItem, openapi)
-    const name = makeHandlerFileName(path)
+    const name = makeHandlerFileName(path, fileNameCase)
     return routes.length > 0 ? groups.set(name, [...(groups.get(name) ?? []), ...routes]) : groups
   }, new Map<string, readonly Route[]>())
 }

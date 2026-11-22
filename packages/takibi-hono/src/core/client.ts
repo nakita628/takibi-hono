@@ -97,19 +97,36 @@ function clientSpecifier(layout: Layout, key: string, output: string) {
     : Effect.succeed(makeSpecifier(layout, path.dirname(output), target))
 }
 
+/** The handler file of each group, as `writeHandlers` answers it; a group missing from it is its own file. */
+type HandlerFiles = ReadonlyMap<string, string>
+
 /**
  * The group an operation of a split app belongs to, as rpc and the hooks are handed it: the
  * export of its handler file, as the app entry names it.
  */
-const grouping = (route: string) => toGroupName(makeHandlerFileName(route))
+function makeGrouping(config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
+  return (route: string) => {
+    const group = makeHandlerFileName(route, config.fileNameCase)
+    return toGroupName(handlerFiles.get(group) ?? group)
+  }
+}
 
 /** The groups of a split app, in the order the app entry exports them. */
-function makeGroups(openapi: OpenAPI) {
-  return [...collectRoutes(openapi).keys()].toSorted().map(toGroupName)
+function makeGroups(openapi: OpenAPI, config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
+  return [...collectRoutes(openapi, config.fileNameCase).keys()]
+    .map((group) => handlerFiles.get(group) ?? group)
+    .toSorted()
+    .map(toGroupName)
 }
 
 /** Writes the typed client (one per group of a split app), which rpc and the hooks import. */
-function writeClient(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout, baseDir: string) {
+function writeClient(
+  openapi: OpenAPI,
+  config: TakibiHonoConfig,
+  layout: Layout,
+  baseDir: string,
+  handlerFiles: HandlerFiles,
+) {
   return Effect.gen(function* () {
     const client = config.client
     const target = layout.client
@@ -120,7 +137,7 @@ function writeClient(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout,
       baseUrl: client.baseUrl,
       basePath: config.basePath,
       credentials: client.credentials,
-      ...(config.split === true && { groups: makeGroups(openapi) }),
+      ...(config.split === true && { groups: makeGroups(openapi, config, handlerFiles) }),
     })
     yield* emit(code, path.dirname(output), output)
   })
@@ -130,17 +147,19 @@ function writeClient(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout,
  * Writes the typed client, then generates the rest of the client code by delegating to
  * hono-takibi. Every output path passes through `resolveWithin` before reaching
  * hono-takibi's unvalidated emit layer. Runs after the server pipeline; reuses the
- * already-parsed spec.
+ * already-parsed spec. `handlerFiles` is what `writeHandlers` answered, so that the groups are
+ * the ones the app entry exports.
  */
 export function makeClients(
   openapi: OpenAPI,
   config: TakibiHonoConfig,
   layout: Layout,
   baseDir: string,
+  handlerFiles: HandlerFiles = new Map(),
 ) {
   return Effect.gen(function* () {
-    yield* writeClient(openapi, config, layout, baseDir)
-    yield* delegateClients(openapi, config, layout, baseDir)
+    yield* writeClient(openapi, config, layout, baseDir, handlerFiles)
+    yield* delegateClients(openapi, config, layout, baseDir, handlerFiles)
   })
 }
 
@@ -150,8 +169,10 @@ function delegateClients(
   config: TakibiHonoConfig,
   layout: Layout,
   baseDir: string,
+  handlerFiles: HandlerFiles,
 ) {
   const { basePath } = config
+  const grouping = makeGrouping(config, handlerFiles)
   return Effect.gen(function* () {
     // hono-takibi declares its own (structurally equivalent) OpenAPI document type.
     // oxlint-disable-next-line typescript/consistent-type-assertions, typescript/no-unsafe-type-assertion -- see above

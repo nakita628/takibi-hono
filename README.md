@@ -82,6 +82,15 @@ export default defineConfig({
   // registered on the one app.
   split: false,
 
+  // Handler files are named by the first segment of the path, lowercased:
+  // `/realTimeEvents` → `src/handlers/realtimeevents.ts`. `'kebab-case'` names them in kebab
+  // case instead (`real-time-events.ts`, `/user_profiles` → `user-profiles.ts`), as
+  // hono-takibi does. Only the file name changes: the export (`realTimeEventsHandler`), the
+  // group of `split` and the client keep camelCase names. An existing handler file whose name
+  // matches once case, `-` and `_` are ignored stays the file of its group, so switching this
+  // renames nothing and a file renamed by hand is regenerated in place.
+  // fileNameCase: 'kebab-case',
+
   // Generated files import one another relatively, under `pathAlias` when the target is in
   // the directory of the app entry (matches the `paths` in your tsconfig, e.g. "@/*":
   // ["src/*"]), and by the target's `package` from another package: the nearest
@@ -338,6 +347,8 @@ When regenerating, takibi-hono **preserves your hand-written code**:
 - JSDoc comments on routes — restored after regeneration
 
 Route metadata (describeRoute, validators) is updated from the spec. New routes are added with a stub `(c) => {}`. Deleted routes are removed.
+
+A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers. A handler file no route maps to any more is deleted.
 
 ## Example
 

@@ -19,6 +19,7 @@ openssf
 petstore
 picklist
 pipefail
+realtimeevents
 rhysd
 sapegin
 stringbool

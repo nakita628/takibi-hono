@@ -84,6 +84,11 @@ function list(dir: string) {
     .sort()
 }
 
+/** Gives the handler of `/realTimeEvents` a body, whatever file it is in. */
+async function implement(file: string) {
+  await fsp.writeFile(file, read(file).replace('(c) => {})', "(c) => c.text('live'))"))
+}
+
 describe('hono', () => {
   it('hono-openapi mode: components, handlers, webhooks and the app', async () => {
     await runGenerator(
@@ -291,6 +296,128 @@ export const api = app.route('/', petsHandler).route('/', usersHandler)
 
 export default app
 `)
+  })
+
+  describe('fileNameCase', () => {
+    const KEBAB_SPEC = `openapi: 3.1.0
+info: { title: Events, version: 1.0.0 }
+paths:
+  /realTimeEvents:
+    get:
+      responses:
+        '200': { description: ok }
+  /user_profiles/{id}:
+    get:
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: ok }
+`
+    const config = { input: 'events.yaml', schema: 'zod' } as const
+    const kebab = { ...config, fileNameCase: 'kebab-case' } as const
+
+    beforeEach(async () => {
+      await fsp.writeFile('events.yaml', KEBAB_SPEC)
+    })
+
+    it('names a fresh handler file in kebab case and keeps camelCase exports', async () => {
+      await runGenerator(hono(kebab))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'real-time-events.ts',
+        'user-profiles.ts',
+      ])
+      expect(read('src/handlers/real-time-events.ts')).toBe(`import { Hono } from 'hono'
+
+export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {})
+`)
+      expect(read('src/handlers/index.ts')).toBe(
+        "export * from './real-time-events'\nexport * from './user-profiles'\n",
+      )
+      expect(read('src/index.ts')).toContain(
+        "import { realTimeEventsHandler, userProfilesHandler } from './handlers'",
+      )
+    })
+
+    it('keeps an implementation when it runs again', async () => {
+      await runGenerator(hono(kebab))
+      await implement('src/handlers/real-time-events.ts')
+      await runGenerator(hono(kebab))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'real-time-events.ts',
+        'user-profiles.ts',
+      ])
+      expect(read('src/handlers/real-time-events.ts')).toContain("(c) => c.text('live'))")
+    })
+
+    it('keeps the files of a project generated in the other case', async () => {
+      await runGenerator(hono(config))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'realtimeevents.ts',
+        'user_profiles.ts',
+      ])
+      await implement('src/handlers/realtimeevents.ts')
+      await runGenerator(hono(kebab))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'realtimeevents.ts',
+        'user_profiles.ts',
+      ])
+      expect(read('src/handlers/realtimeevents.ts')).toContain("(c) => c.text('live'))")
+
+      await runGenerator(hono(config))
+      await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/real-time-events.ts')
+      await fsp.rename('src/handlers/user_profiles.ts', 'src/handlers/user-profiles.ts')
+      await runGenerator(hono(config))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'real-time-events.ts',
+        'user-profiles.ts',
+      ])
+      expect(read('src/handlers/real-time-events.ts')).toContain("(c) => c.text('live'))")
+    })
+
+    it('regenerates a file renamed by hand in place', async () => {
+      await runGenerator(hono(config))
+      await implement('src/handlers/realtimeevents.ts')
+      await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/realTimeEvents.ts')
+      await runGenerator(hono(config))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'realTimeEvents.ts',
+        'user_profiles.ts',
+      ])
+      expect(read('src/handlers/realTimeEvents.ts')).toContain("(c) => c.text('live'))")
+      expect(read('src/handlers/realTimeEvents.ts')).toContain('export const realTimeEventsHandler')
+      expect(read('src/handlers/index.ts')).toContain("export * from './realTimeEvents'")
+    })
+
+    it('exports each group of a split app under its camelCase name', async () => {
+      await runGenerator(
+        hono({
+          ...kebab,
+          split: true,
+          client: { output: 'src/client.ts', baseUrl: '/' },
+          rpc: { output: 'src/rpc.ts' },
+        }),
+      )
+      expect(read('src/client.ts')).toContain('export const realTimeEventsClient')
+      expect(read('src/client.ts')).toContain('export const userProfilesClient')
+      expect(read('src/rpc.ts')).toContain('realTimeEventsClient.realTimeEvents.$get')
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { realTimeEventsHandler, userProfilesHandler } from './handlers'
+
+const app = new Hono()
+
+export const realTimeEvents = app.route('/', realTimeEventsHandler)
+
+export const userProfiles = app.route('/', userProfilesHandler)
+
+export default app
+`)
+    })
   })
 
   it('imports components of another package by its package name', async () => {
