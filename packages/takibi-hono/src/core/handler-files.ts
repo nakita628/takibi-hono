@@ -6,7 +6,7 @@ import type { OpenAPI } from 'oas-truth'
 import { readdir, readFile } from '../file/index.js'
 import type { Route } from '../helper/operations.js'
 import { collectRoutes, collectWebhookRoutes } from '../helper/operations.js'
-import { handlerFileParses, mergeHandlerFile, mergeRouteBodies } from '../merge/index.js'
+import { handlerRouteKeys, isCarriedWhole, mergeRouteBodies } from '../merge/index.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'
 
 /** The groups of the handlers directory and the file each is written to. */
@@ -15,10 +15,8 @@ export type HandlerFiles = {
   readonly groups: ReadonlyMap<string, readonly Route[]>
   /** The file of each group, without `.ts` (see {@link matchHandlerFiles}). */
   readonly fileOf: ReadonlyMap<string, string>
-  /** The handler files already in the directory, without `.ts`, sorted. */
-  readonly existing: readonly string[]
-  /** A definitions file written into the handlers directory, which is not a handler file. */
-  readonly definitionsFile: string | undefined
+  /** The handler files already in the directory, without `.ts`, sorted, with their code. */
+  readonly existing: ReadonlyMap<string, string>
 }
 
 /**
@@ -46,12 +44,23 @@ function matchHandlerFiles(names: readonly string[], existing: readonly string[]
   }, new Map<string, string>())
 }
 
+/** The groups with no handlers directory read: each group is its own file. */
+export function plainHandlerFiles(openapi: OpenAPI, config: TakibiHonoConfig): HandlerFiles {
+  const groups = collectRoutes(openapi, config.fileNameCase)
+  return {
+    groups,
+    fileOf: new Map([...groups.keys()].map((group) => [group, group])),
+    existing: new Map(),
+  }
+}
+
 /** Reads the handlers directory and works out the file of every group. */
 export function resolveHandlerFiles(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout) {
   return Effect.gen(function* () {
     const { handlersDir, definitions } = layout
     const groups = collectRoutes(openapi, config.fileNameCase)
     const webhooks = config.openapi === true && collectWebhookRoutes(openapi).length > 0
+    // A definitions file written into the handlers directory is not a handler file.
     const definitionsFile =
       definitions !== undefined &&
       !definitions.split &&
@@ -59,7 +68,7 @@ export function resolveHandlerFiles(openapi: OpenAPI, config: TakibiHonoConfig, 
         ? path.basename(definitions.output)
         : undefined
     const entries = yield* readdir(handlersDir)
-    const existing = entries
+    const names = entries
       .filter((entry) => entry.endsWith('.ts'))
       .filter(
         (entry) =>
@@ -69,55 +78,61 @@ export function resolveHandlerFiles(openapi: OpenAPI, config: TakibiHonoConfig, 
       )
       .map((entry) => entry.slice(0, -'.ts'.length))
       .toSorted()
+    const codes = yield* Effect.forEach(names, (name) =>
+      Effect.map(readFile(path.join(handlersDir, `${name}.ts`)), (code) => [name, code] as const),
+    )
     const files: HandlerFiles = {
       groups,
-      fileOf: matchHandlerFiles([...groups.keys()], existing),
-      existing,
-      definitionsFile,
+      fileOf: matchHandlerFiles([...groups.keys()], names),
+      existing: new Map(codes.flatMap(([name, code]) => (code === null ? [] : [[name, code]]))),
     }
     return files
   })
 }
 
 /**
- * Carries into `code`, the generated file of `group`, what the other existing files whose name
- * matches the group's once case, `-` and `_` are ignored hold of it. Switching `fileNameCase`
- * can move routes between groups (`/user_profiles` and `/user-profiles` are one group in kebab
- * case, `/userProfiles` and `/userprofiles` two), and their handlers move with them:
+ * Carries into the generated code of each group (`generated`) the handlers its routes have in
+ * other existing files, found by method and path: switching `fileNameCase` can move a route to
+ * another file (`/user_profiles` and `/user-profiles` are one group in kebab case,
+ * `/userProfiles` and `/userprofiles` two, `{org_id}.ts` becomes `org-id.ts`). The imports and
+ * helpers the handlers use come with them (`mergeRouteBodies`).
  *
- * - a file that stays the file of another group gives the bodies of the routes now in this
- *   group, and nothing else;
- * - a file no group takes any more, and that is deleted, is merged in whole (its helpers and
- *   imports too) into the first group it matches, and gives only bodies to the others. One
- *   that does not parse is not merged and answered in `kept`, so that it is not deleted.
+ * Answers the code of each group and the files no group takes that must not be deleted: one
+ * that does not parse, one that still holds a helper that was not carried, and one whose
+ * handlers could not be carried because the file they go to does not parse (its merge keeps it
+ * as it is until it parses again). Every other file no group takes is deleted.
  */
-export function carryMovedRoutes(
-  handlersDir: string,
-  files: HandlerFiles,
-  group: string,
-  code: string,
-) {
-  const own = files.fileOf.get(group) ?? group
+export function carryMovedRoutes(files: HandlerFiles, generated: ReadonlyMap<string, string>) {
   const claimed = new Set(files.fileOf.values())
-  const loose = looseName(group)
-  const first = [...files.groups.keys()].find((name) => looseName(name) === loose) === group
-  const siblings = files.existing.filter((file) => file !== own && looseName(file) === loose)
-  return Effect.map(
-    Effect.forEach(siblings, (sibling) =>
-      Effect.map(readFile(path.join(handlersDir, `${sibling}.ts`)), (text) => ({ sibling, text })),
-    ),
-    (read) => ({
-      code: read.reduce((carried, { sibling, text }) => {
-        if (text === null || !handlerFileParses(text)) return carried
-        return claimed.has(sibling) || !first
-          ? mergeRouteBodies(text, carried)
-          : mergeHandlerFile(text, carried)
-      }, code),
-      kept: read
-        .filter(
-          ({ sibling, text }) => text !== null && !claimed.has(sibling) && !handlerFileParses(text),
-        )
-        .map(({ sibling }) => sibling),
+  const keysOf = new Map(
+    [...files.existing].map(([file, code]) => [file, handlerRouteKeys(code)] as const),
+  )
+  const groupKeys = new Map(
+    [...generated].map(([group, code]) => [group, [...(handlerRouteKeys(code) ?? [])]] as const),
+  )
+  const holds = (file: string, group: string) =>
+    (groupKeys.get(group) ?? []).some((key) => keysOf.get(file)?.has(key) === true)
+  const ownOf = (group: string) => files.fileOf.get(group) ?? group
+  const broken = (file: string) => files.existing.has(file) && keysOf.get(file) === undefined
+  const codes = new Map(
+    [...generated].map(([group, code]) => {
+      const own = ownOf(group)
+      if (broken(own)) return [group, code] as const
+      const ownCode = files.existing.get(own) ?? ''
+      const carried = [...files.existing]
+        .filter(([file]) => file !== own && !broken(file) && holds(file, group))
+        .reduce((result, [, source]) => mergeRouteBodies(source, result, ownCode), code)
+      return [group, carried] as const
     }),
   )
+  const groups = [...generated.keys()]
+  const kept = [...files.existing]
+    .filter(([file]) => !claimed.has(file))
+    .filter(
+      ([file, code]) =>
+        groups.some((group) => broken(ownOf(group)) && holds(file, group)) ||
+        !isCarriedWhole(code, [...codes.values()]),
+    )
+    .map(([file]) => file)
+  return { codes, kept }
 }

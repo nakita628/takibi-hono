@@ -150,15 +150,19 @@ export function writeHandlers(
           defineHandler: { from: makeSpecifier(layout, handlersDir, definitions), names: named },
         }),
     }
-    const grouped = yield* Effect.forEach([...groups], ([group, routes]) => {
-      const name = fileOf.get(group) ?? group
-      const code = makeHandlerCode(toHandlerVarName(name), routes, context)
-      return Effect.map(carryMovedRoutes(handlersDir, handlerFiles, group, code), (carried) => ({
-        name,
-        code: carried.code,
-        kept: carried.kept,
-      }))
-    })
+    const { codes, kept } = carryMovedRoutes(
+      handlerFiles,
+      new Map(
+        [...groups].map(([group, routes]) => [
+          group,
+          makeHandlerCode(toHandlerVarName(fileOf.get(group) ?? group), routes, context),
+        ]),
+      ),
+    )
+    const grouped = [...groups.keys()].map((group) => ({
+      name: fileOf.get(group) ?? group,
+      code: codes.get(group) ?? '',
+    }))
     const files = [
       ...grouped,
       ...(webhooks.length > 0
@@ -166,7 +170,6 @@ export function writeHandlers(
             {
               name: 'webhooks',
               code: makeHandlerCode('webhooksHandler', webhooks, context),
-              kept: [],
             },
           ]
         : []),
@@ -180,12 +183,9 @@ export function writeHandlers(
     if (names.length > 0) {
       yield* emit(makeBarrel(names), handlersDir, path.join(handlersDir, 'index.ts'))
     }
-    const expected = new Set([
-      ...files.map((file) => file.name),
-      ...files.flatMap((file) => file.kept),
-    ])
+    const expected = new Set([...files.map((file) => file.name), ...kept])
     yield* Effect.forEach(
-      existing.filter((file) => !expected.has(file)),
+      [...existing.keys()].filter((file) => !expected.has(file)),
       (file) => unlink(path.join(handlersDir, `${file}.ts`)),
       { discard: true },
     )

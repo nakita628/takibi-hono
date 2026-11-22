@@ -5,7 +5,7 @@ import { FormatOptions } from '../format/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
 import { makeClients } from './client.js'
 import { writeComponents } from './components.js'
-import { resolveHandlerFiles } from './handler-files.js'
+import { plainHandlerFiles, resolveHandlerFiles } from './handler-files.js'
 import { writeApp, writeDefinitions, writeHandlers } from './handlers.js'
 import type { TakibiHonoConfig } from './layout.js'
 import { checkPackages, resolveLayout } from './layout.js'
@@ -24,7 +24,10 @@ export function hono(config: TakibiHonoConfig) {
     const layout = { ...shape, packageRoot: yield* makePackageRoot(shape) }
     yield* checkPackages(openapi, layout)
     yield* writeComponents(openapi, config, layout)
-    const handlerFiles = yield* resolveHandlerFiles(openapi, config, layout)
+    // A run without the handler files reads nothing of their directory.
+    const handlerFiles = layout.scaffold
+      ? yield* resolveHandlerFiles(openapi, config, layout)
+      : plainHandlerFiles(openapi, config)
     const named = yield* writeDefinitions(openapi, config, layout, handlerFiles)
     if (!layout.scaffold) return
     const fileOf = yield* writeHandlers(openapi, config, layout, named, handlerFiles)

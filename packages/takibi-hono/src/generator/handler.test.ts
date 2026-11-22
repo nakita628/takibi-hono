@@ -399,6 +399,8 @@ describe('toHandlerVarName', () => {
     ['APIKeys', 'apiKeysHandler'],
     ['API', 'apiHandler'],
     ['Pets', 'petsHandler'],
+    ['URLs', 'urlsHandler'],
+    ['IDs', 'idsHandler'],
   ])('%s → %s', (fileName, expected) => {
     expect(toHandlerVarName(fileName)).toBe(expected)
   })

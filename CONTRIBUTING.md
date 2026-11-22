@@ -210,7 +210,7 @@ uses the library's plain Hono validator middleware (`sValidator`, or `tbValidato
 The handler files (one per first path segment, plus `webhooks.ts` in hono-openapi mode) and the app
 entry are **merged**, not rewritten: `writeHandlers` / `writeApp` read the existing file and
 `mergeHandlerFile` / `mergeAppFile` carry across handler bodies, user imports, non-handler code and
-route JSDoc. `writeHandlers` itself deletes the handler files no route maps to any more.
+route JSDoc. `writeHandlers` itself deletes the handler files no route maps to any more, once the handlers of their routes are carried to the file each route moved to (`core/handler-files.ts`), and keeps one that still holds something not carried.
 `mergeAppFile` owns the route exports of the app entry: `api`, or with `split` one export per
 handler file (`export const pets = app.route('/', petsHandler)`, its name from `toGroupName`).
 The span from the first to the last is replaced, so turning `split` on or off swaps one form for

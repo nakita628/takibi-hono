@@ -349,7 +349,7 @@ When regenerating, takibi-hono **preserves your hand-written code**:
 
 Route metadata (describeRoute, validators) is updated from the spec. New routes are added with a stub `(c) => {}`. Deleted routes are removed.
 
-A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). A handler file no route maps to any more is deleted, after the handlers of its routes are carried into the file they moved to.
+A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). A route that moves to another handler file (switching `fileNameCase` can regroup paths) takes its handler with it, along with the imports and helpers that handler uses. A handler file no route maps to any more is deleted only when nothing of it would be lost; one that still holds a helper that was not carried is kept for you to remove.
 
 ## Example
 
