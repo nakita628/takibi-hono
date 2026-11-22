@@ -9,7 +9,13 @@ export const defaultsHandler = new Hono().get(
   validator(
     'cookie',
     z.object({
-      int_def: z.coerce.number().int().default(20).exactOptional(),
+      int_def: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .default(20)
+        .exactOptional(),
       int64_def: z.coerce.bigint().pipe(z.int64()).default(5n).exactOptional(),
       bool_def: z.stringbool().default(false).exactOptional(),
       str_def: z.string().default('fallback').exactOptional(),

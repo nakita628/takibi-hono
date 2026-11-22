@@ -8,7 +8,13 @@ export const ienumHandler = new Hono().get(
   describeRoute({ operationId: 'ienumParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    z.object({ value: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])) }),
+    z.object({
+      value: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.union([z.literal(1), z.literal(2)])),
+    }),
   ),
   (c) => {},
 )

@@ -22,7 +22,13 @@ export const ErrorSchema = z.object({ message: z.string() }).meta({ ref: 'Error'
 
 export type Error = z.infer<typeof ErrorSchema>
 
-export const LimitParamsSchema = resolver(z.coerce.number().int().min(1).max(100))
+export const LimitParamsSchema = resolver(
+  z
+    .string()
+    .regex(/^-?(?:0|[1-9]\d*)$/)
+    .transform((val) => Number(val))
+    .pipe(z.number().int().min(1).max(100)),
+)
 export const RequestIdParamsSchema = resolver(z.string())
 
 export const TotalCountHeaderSchema = resolver(z.int())

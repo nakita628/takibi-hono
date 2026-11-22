@@ -6,6 +6,15 @@ import { EchoResponse } from '../components'
 export const schemarefHandler = new Hono().get(
   '/schemaref/:value',
   describeRoute({ operationId: 'schemarefParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.coerce.number().int().min(0) })),
+  validator(
+    'param',
+    z.object({
+      value: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(0)),
+    }),
+  ),
   (c) => {},
 )

@@ -59,7 +59,7 @@ export type Counts = Schema.Schema.Type<typeof CountsSchema>
 
 export const RangeSchema = Schema.Struct({
   from: Schema.Number.check(Schema.isInt()),
-  to: Schema.optional(Schema.Number.check(Schema.isInt())),
+  to: Schema.optionalKey(Schema.Number.check(Schema.isInt())),
 }).annotate({ identifier: 'Range' })
 
 export type Range = Schema.Schema.Type<typeof RangeSchema>

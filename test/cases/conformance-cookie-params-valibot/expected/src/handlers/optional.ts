@@ -17,7 +17,13 @@ export const optionalHandler = new Hono().get(
       ),
       v.partial(
         v.object({
-          int_opt: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          int_opt: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           int64_opt: v.pipe(
             v.string(),
             v.regex(/^-?\d+$/),
@@ -33,7 +39,8 @@ export const optionalHandler = new Hono().get(
           str_opt: v.string(),
           ienum: v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.union([v.literal(1), v.literal(2), v.literal(3)]),
           ),
           benum: v.pipe(
@@ -42,15 +49,27 @@ export const optionalHandler = new Hono().get(
             v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
             v.literal(true),
           ),
-          iconst: v.pipe(v.string(), v.transform(Number), v.literal(7)),
+          iconst: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.literal(7),
+          ),
           senum: v.picklist(['asc', 'desc']),
           ioneof: v.union([
-            v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
             v.literal('all'),
           ]),
           range: v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(1),
@@ -60,7 +79,8 @@ export const optionalHandler = new Hono().get(
           pattern: v.pipe(v.string(), v.regex(/^[a-z]+-\d{1,3}$/)),
           ref_int: v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(0),
@@ -68,26 +88,64 @@ export const optionalHandler = new Hono().get(
           prefs: v.partial(
             v.object({
               theme: v.string(),
-              size: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              size: v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
             }),
           ),
           obj: v.partial(
             v.object({
-              a: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              a: v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
               b: v.string(),
             }),
           ),
           tx_lower: v.pipe(v.string(), v.toLowerCase()),
           tx_email: v.pipe(v.string(), v.toLowerCase(), v.email()),
-          'session-id': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-          'user.id': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          'session-id': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          'user.id': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           Int_Opt: v.string(),
           inull: v.pipe(
             v.unknown(),
             v.transform((input) => (input === 'null' ? null : input)),
-            v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.nullable(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
-          constructor: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          constructor: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
         }),
       ),
     ),

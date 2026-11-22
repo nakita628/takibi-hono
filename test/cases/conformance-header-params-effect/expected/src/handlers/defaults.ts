@@ -10,9 +10,18 @@ export const defaultsHandler = new Hono().get(
     'header',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        'x-int-def': Schema.FiniteFromString.check(Schema.isInt()).pipe(
-          Schema.withDecodingDefaultType(Effect.succeed(20)),
-        ),
+        'x-int-def': Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .check(Schema.isInt())
+          .pipe(Schema.withDecodingDefaultType(Effect.succeed(20))),
         'x-int64-def': Schema.BigIntFromString.check(
           Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
         ).pipe(Schema.withDecodingDefaultType(Effect.succeed(5n))),

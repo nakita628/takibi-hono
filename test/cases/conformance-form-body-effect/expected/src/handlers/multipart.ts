@@ -11,8 +11,20 @@ export const multipartHandler = new Hono().post(
     Schema.toStandardSchemaV1(
       Schema.Struct({
         file: Schema.instanceOf(File),
-        age: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-        active: Schema.optional(
+        age: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        ),
+        active: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
           ).pipe(
@@ -25,7 +37,7 @@ export const multipartHandler = new Hono().post(
             ),
           ),
         ),
-        ids: Schema.optional(
+        ids: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -34,7 +46,21 @@ export const multipartHandler = new Hono().post(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
       }),

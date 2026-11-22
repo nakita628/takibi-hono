@@ -10,24 +10,36 @@ export const petsHandler = new Hono()
       'query',
       Schema.toStandardSchemaV1(
         Schema.Struct({
-          limit: Schema.optional(
-            Schema.FiniteFromString.check(
-              Schema.isInt(),
-              Schema.isGreaterThanOrEqualTo(1),
-              Schema.isLessThanOrEqualTo(100),
-            ),
+          limit: Schema.optionalKey(
+            Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+              .pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              )
+              .check(
+                Schema.isInt(),
+                Schema.isGreaterThanOrEqualTo(1),
+                Schema.isLessThanOrEqualTo(100),
+              ),
           ),
-          tag: Schema.optional(TagSchema),
+          tag: Schema.optionalKey(TagSchema),
         }),
       ),
     ),
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(
+        Schema.Struct({ 'x-request-id': Schema.optionalKey(Schema.String) }),
+      ),
     ),
     sValidator(
       'cookie',
-      Schema.toStandardSchemaV1(Schema.Struct({ session: Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(Schema.Struct({ session: Schema.optionalKey(Schema.String) })),
     ),
     (c) => {},
   )
@@ -35,7 +47,9 @@ export const petsHandler = new Hono()
     '/pets',
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(
+        Schema.Struct({ 'x-request-id': Schema.optionalKey(Schema.String) }),
+      ),
     ),
     sValidator('json', Schema.toStandardSchemaV1(NewPetSchema)),
     (c) => {},
@@ -45,7 +59,9 @@ export const petsHandler = new Hono()
     '/pets',
     sValidator(
       'header',
-      Schema.toStandardSchemaV1(Schema.Struct({ 'x-request-id': Schema.optional(Schema.String) })),
+      Schema.toStandardSchemaV1(
+        Schema.Struct({ 'x-request-id': Schema.optionalKey(Schema.String) }),
+      ),
     ),
     (c) => {},
   )
@@ -55,7 +71,17 @@ export const petsHandler = new Hono()
       'param',
       Schema.toStandardSchemaV1(
         Schema.Struct({
-          petId: Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)),
+          petId: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)),
         }),
       ),
     ),
@@ -66,7 +92,19 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ petId: Schema.FiniteFromString.check(Schema.isInt()) }),
+        Schema.Struct({
+          petId: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        }),
       ),
     ),
     (c) => {},
@@ -76,7 +114,19 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       Schema.toStandardSchemaV1(
-        Schema.Struct({ petId: Schema.FiniteFromString.check(Schema.isInt()) }),
+        Schema.Struct({
+          petId: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        }),
       ),
     ),
     sValidator(
@@ -88,7 +138,7 @@ export const petsHandler = new Hono()
               expected: 'a string of at least 1 character',
             }),
           ),
-          featured: Schema.optional(
+          featured: Schema.optionalKey(
             Schema.String.check(
               Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
             ).pipe(

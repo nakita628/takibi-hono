@@ -10,7 +10,14 @@ export const componentHandler = new Hono().post(
     'form',
     v.object({
       name: v.string(),
-      price: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+      price: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+        v.minValue(0),
+      ),
       stocked: v.optional(
         v.pipe(
           v.string(),

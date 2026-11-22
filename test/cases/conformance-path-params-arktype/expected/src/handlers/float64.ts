@@ -10,7 +10,9 @@ export const float64Handler = new Hono().get(
     'param',
     type({
       value: type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
     }),

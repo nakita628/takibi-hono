@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { describeRoute, validator } from 'hono-openapi'
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 import { EchoResponse } from '../components'
 
 export const ienumHandler = new Hono().get(
@@ -10,7 +10,17 @@ export const ienumHandler = new Hono().get(
     'param',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        value: Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([1, 2]))),
+        value: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .pipe(Schema.decodeTo(Schema.Literals([1, 2]))),
       }),
     ),
   ),

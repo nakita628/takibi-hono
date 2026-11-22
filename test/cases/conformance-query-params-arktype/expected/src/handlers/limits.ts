@@ -11,19 +11,21 @@ export const limitsHandler = new Hono().get(
     type({
       'range?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 1 & number.integer <= 100'),
       'exclusive?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
         .to('number > 0 & number < 1'),
       'multiple?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer % 5'),
@@ -45,7 +47,7 @@ export const limitsHandler = new Hono().get(
         type(
           type(
             type('string').pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             }),
           ).array(),
@@ -55,7 +57,7 @@ export const limitsHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         )
@@ -67,7 +69,7 @@ export const limitsHandler = new Hono().get(
         type(
           type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 1 & number.integer <= 9'),

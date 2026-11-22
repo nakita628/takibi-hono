@@ -24,7 +24,7 @@ describe('makeInlineAdapter', () => {
   it.each([
     ['zod', false, undefined],
     ['zod', true, 'resolver(X)'],
-    ['typebox', true, 'resolver(Compile(X))'],
+    ['typebox', true, 'resolver(toStandardSchemaV1(X))'],
     ['effect', true, 'resolver(Schema.toStandardSchemaV1(X))'],
   ] as const)('%s with resolver %s wraps schema slots as %s', (lib, resolver, expected) => {
     expect(makeInlineAdapter(lib, { resolver }).wrapSchema?.('X')).toBe(expected)

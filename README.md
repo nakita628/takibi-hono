@@ -397,6 +397,11 @@ export const honoHandler = new Hono().get(
 )
 ```
 
+TypeBox has no Standard Schema interface, which hono-openapi's `resolver` and `validator`
+take. With `schema: 'typebox'`, a module that uses them declares `toStandardSchemaV1`: it
+compiles the schema, gives the validator the `~standard` that checks and decodes a value, and
+types it by the schema's encoded and decoded types, so the handler keeps the request types.
+
 ```ts
 // src/index.ts
 import { Hono } from 'hono'

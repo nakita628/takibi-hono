@@ -6,6 +6,15 @@ import { EchoResponse } from '../components'
 export const rangeHandler = new Hono().get(
   '/range/:value',
   describeRoute({ operationId: 'rangeParam', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.coerce.number().int().min(1).max(10) })),
+  validator(
+    'param',
+    z.object({
+      value: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(1).max(10)),
+    }),
+  ),
   (c) => {},
 )

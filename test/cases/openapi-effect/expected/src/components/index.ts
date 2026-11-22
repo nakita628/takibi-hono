@@ -1,5 +1,5 @@
 import { resolver } from 'hono-openapi'
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 
 export const TagSchema = Schema.Literals(['dog', 'cat', 'bird']).annotate({ identifier: 'Tag' })
 
@@ -12,7 +12,7 @@ export const PetSchema = Schema.Struct({
       expected: 'a string of at least 1 character',
     }),
   ),
-  tag: Schema.optional(TagSchema),
+  tag: Schema.optionalKey(TagSchema),
 })
   .annotate({ description: 'A pet in the store' })
   .annotate({ identifier: 'Pet' })
@@ -25,7 +25,7 @@ export const NewPetSchema = Schema.Struct({
       expected: 'a string of at least 1 character',
     }),
   ),
-  tag: Schema.optional(TagSchema),
+  tag: Schema.optionalKey(TagSchema),
 }).annotate({ identifier: 'NewPet' })
 
 export type NewPet = Schema.Schema.Type<typeof NewPetSchema>
@@ -38,11 +38,17 @@ export type Error = Schema.Schema.Type<typeof ErrorSchema>
 
 export const LimitParamsSchema = resolver(
   Schema.toStandardSchemaV1(
-    Schema.FiniteFromString.check(
-      Schema.isInt(),
-      Schema.isGreaterThanOrEqualTo(1),
-      Schema.isLessThanOrEqualTo(100),
-    ),
+    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+      .pipe(
+        Schema.decodeTo(
+          Schema.Finite,
+          SchemaTransformation.transform({
+            decode: (input) => Number(input),
+            encode: (output) => String(output),
+          }),
+        ),
+      )
+      .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(100)),
   ),
 )
 export const RequestIdParamsSchema = resolver(Schema.toStandardSchemaV1(Schema.String))

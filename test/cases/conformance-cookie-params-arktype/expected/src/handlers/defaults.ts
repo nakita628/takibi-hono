@@ -10,7 +10,7 @@ export const defaultsHandler = new Hono().get(
     'cookie',
     type({
       'int_def?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       'int64_def?': type('string')

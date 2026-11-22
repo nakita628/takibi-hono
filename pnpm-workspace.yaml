@@ -8,14 +8,15 @@ packages:
 # Strict mode makes `pnpm add` refuse a version outside the catalog.
 catalogMode: strict
 catalog:
-  '@typespec/compiler': ^1.17.0
-  '@typespec/http': ^1.17.0
-  '@typespec/openapi': ^1.17.0
-  '@typespec/openapi3': ^1.17.0
-  '@typespec/rest': ^0.87.0
-  '@typespec/versioning': ^0.87.0
+  '@typespec/compiler': ^1.18.0
+  '@typespec/http': ^1.18.0
+  '@typespec/openapi': ^1.18.0
+  '@typespec/openapi3': ^1.18.0
+  '@typespec/rest': ^0.88.0
+  '@typespec/versioning': ^0.88.0
 allowBuilds:
   esbuild: false
 minimumReleaseAgeExclude:
-  - oas-truth@0.5.1
-  - schema-truth@0.7.0
+  - hono-takibi@0.32.5
+  - oas-truth@0.7.0
+  - schema-truth@0.8.5

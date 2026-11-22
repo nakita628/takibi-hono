@@ -10,12 +10,12 @@ export const headersHandler = new Hono().get(
     'header',
     type({
       'x-integer?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       'x-int32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= -2147483648 & number.integer <= 2147483647'),
@@ -31,7 +31,7 @@ export const headersHandler = new Hono().get(
       ),
       'x-uint32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 0 & number.integer <= 4294967295'),
@@ -41,31 +41,43 @@ export const headersHandler = new Hono().get(
           (data, ctx) => (data >= 0n && data <= 18446744073709551615n) || ctx.mustBe('a uint64'),
         ),
       'x-number?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'x-float?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
-        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+        .pipe(type('number').atLeast(-3.4028234663852886e38).atMost(3.4028234663852886e38)),
       'x-float32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
-        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+        .pipe(type('number').atLeast(-3.4028234663852886e38).atMost(3.4028234663852886e38)),
       'x-float64?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'x-double?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'x-numpassword?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'x-boolean?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -124,7 +136,7 @@ export const headersHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         ).array(),

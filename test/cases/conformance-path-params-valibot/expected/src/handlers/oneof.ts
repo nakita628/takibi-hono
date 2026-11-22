@@ -10,7 +10,13 @@ export const oneofHandler = new Hono().get(
     'param',
     v.object({
       value: v.union([
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
         v.literal('all'),
       ]),
     }),

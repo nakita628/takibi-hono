@@ -11,7 +11,8 @@ export const exclusiveHandler = new Hono().get(
     v.object({
       value: v.pipe(
         v.string(),
-        v.transform(Number),
+        v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.transform((input) => Number(input)),
         v.number(),
         v.finite(),
         v.gtValue(0),

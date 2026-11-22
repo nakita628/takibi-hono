@@ -59,4 +59,12 @@ describe('withImports', () => {
   ])('%s', (body, expected) => {
     expect(withImports(body, candidates)).toBe(expected)
   })
+
+  it('declares a local helper the body refers to, and imports what the helper refers to', () => {
+    const helper = { name: 'wrap', declaration: 'const wrap=(x:unknown)=>UserSchema' }
+    expect(withImports('const a=wrap(1)', [...candidates, helper])).toBe(
+      "import{UserSchema}from'../components'\n\nconst wrap=(x:unknown)=>UserSchema\n\nconst a=wrap(1)",
+    )
+    expect(withImports('const a=1', [...candidates, helper])).toBe('const a=1')
+  })
 })

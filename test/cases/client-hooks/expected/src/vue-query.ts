@@ -58,7 +58,12 @@ export function use<
   queryClient?: QueryClient,
 ) {
   const { query: queryOptions, options: clientOptions } = options ?? {}
-  return useQuery(
+  return useQuery<
+    Awaited<ReturnType<typeof parseResponse<Awaited<ReturnType<typeof client.$get>>>>>,
+    TError,
+    TData,
+    ReturnType<typeof getQueryKey>
+  >(
     {
       ...queryOptions,
       queryKey: getQueryKey(),
@@ -115,7 +120,12 @@ export function usePets<
   queryClient?: QueryClient,
 ) {
   const { query: queryOptions, options: clientOptions } = options ?? {}
-  return useQuery(
+  return useQuery<
+    Awaited<ReturnType<typeof parseResponse<Awaited<ReturnType<typeof client.pets.$get>>>>>,
+    TError,
+    TData,
+    ReturnType<typeof getPetsQueryKey>
+  >(
     {
       ...queryOptions,
       queryKey: computed(() => getPetsQueryKey(args)),
@@ -289,7 +299,14 @@ export function usePetsPetId<
   queryClient?: QueryClient,
 ) {
   const { query: queryOptions, options: clientOptions } = options ?? {}
-  return useQuery(
+  return useQuery<
+    Awaited<
+      ReturnType<typeof parseResponse<Awaited<ReturnType<(typeof client.pets)[':petId']['$get']>>>>
+    >,
+    TError,
+    TData,
+    ReturnType<typeof getPetsPetIdQueryKey>
+  >(
     {
       ...queryOptions,
       queryKey: computed(() => getPetsPetIdQueryKey(args)),
@@ -486,7 +503,16 @@ export function use202401Reports<
   queryClient?: QueryClient,
 ) {
   const { query: queryOptions, options: clientOptions } = options ?? {}
-  return useQuery(
+  return useQuery<
+    Awaited<
+      ReturnType<
+        typeof parseResponse<Awaited<ReturnType<(typeof client)['2024-01']['reports']['$get']>>>
+      >
+    >,
+    TError,
+    TData,
+    ReturnType<typeof get202401ReportsQueryKey>
+  >(
     {
       ...queryOptions,
       queryKey: get202401ReportsQueryKey(),

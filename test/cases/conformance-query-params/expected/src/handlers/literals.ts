@@ -9,21 +9,38 @@ export const literalsHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      ienum: z.coerce
-        .number()
+      ienum: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
         .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))
         .exactOptional(),
-      nenum: z.coerce
-        .number()
+      nenum: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
         .pipe(z.union([z.literal(1.5), z.literal(2.5)]))
         .exactOptional(),
       benum: z.stringbool().pipe(z.literal(true)).exactOptional(),
-      iconst: z.coerce.number().pipe(z.literal(7)).exactOptional(),
+      iconst: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.literal(7))
+        .exactOptional(),
       senum: z.enum(['asc', 'desc']).exactOptional(),
       sconst: z.literal('fixed').exactOptional(),
       numericsenum: z.enum(['1', '02', 'true']).exactOptional(),
       inull: z
-        .preprocess((val) => (val === 'null' ? null : val), z.coerce.number().int().nullable())
+        .preprocess(
+          (val) => (val === 'null' ? null : val),
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .nullable(),
+        )
         .exactOptional(),
       bnull: z
         .preprocess((val) => (val === 'null' ? null : val), z.stringbool().nullable())
@@ -33,8 +50,12 @@ export const literalsHandler = new Hono().get(
           (val) => (val === 'null' ? null : val),
           z
             .union([
-              z.coerce.number().int(),
-              z.preprocess((val) => (val === 'null' ? null : val), z.null().nullable()),
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+              z.preprocess((val) => (val === 'null' ? null : val), z.null()),
             ])
             .nullable(),
         )
@@ -45,7 +66,12 @@ export const literalsHandler = new Hono().get(
           z.array(
             z.preprocess(
               (val) => (val === 'null' ? null : val),
-              z.coerce.number().int().nullable(),
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int())
+                .nullable(),
             ),
           ),
         )
@@ -56,17 +82,38 @@ export const literalsHandler = new Hono().get(
           z
             .preprocess(
               (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-              z.array(z.coerce.number().int()),
+              z.array(
+                z
+                  .string()
+                  .regex(/^-?(?:0|[1-9]\d*)$/)
+                  .transform((val) => Number(val))
+                  .pipe(z.number().int()),
+              ),
             )
             .nullable(),
         )
         .exactOptional(),
       snull: z.string().nullable().exactOptional(),
-      ioneof: z.union([z.coerce.number().int(), z.literal('all')]).exactOptional(),
+      ioneof: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+          z.literal('all'),
+        ])
+        .exactOptional(),
       ienum_arr: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
+          ),
         )
         .exactOptional(),
       senum_arr: z

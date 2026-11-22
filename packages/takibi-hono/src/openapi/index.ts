@@ -13,6 +13,11 @@ export class OpenAPIError extends Data.TaggedError('OpenAPIError')<{
  */
 export function parseOpenAPI(input: string) {
   return Effect.gen(function* () {
+    if (!truth.isOpenAPIInput(input)) {
+      return yield* new OpenAPIError({
+        message: `Not an OpenAPI (.yaml / .yml / .json), TypeSpec (.tsp) or http(s) input: ${input}`,
+      })
+    }
     const result = yield* Effect.promise(() => truth.parseOpenAPI(input))
     if (!result.ok) return yield* new OpenAPIError({ message: result.error })
     return result.value

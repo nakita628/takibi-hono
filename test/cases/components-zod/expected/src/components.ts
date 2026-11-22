@@ -39,7 +39,14 @@ export const UserSchema = z
 export type User = z.infer<typeof UserSchema>
 
 export const UserIdParamsSchema = resolver(z.uuid())
-export const PageParamsSchema = resolver(z.coerce.number().int().min(1).default(1))
+export const PageParamsSchema = resolver(
+  z
+    .string()
+    .regex(/^-?(?:0|[1-9]\d*)$/)
+    .transform((val) => Number(val))
+    .pipe(z.number().int().min(1))
+    .default(1),
+)
 
 export const RateLimitHeaderSchema = resolver(z.int())
 

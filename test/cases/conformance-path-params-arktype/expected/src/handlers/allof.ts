@@ -9,19 +9,12 @@ export const allofHandler = new Hono().get(
   validator(
     'param',
     type({
-      value: type(
-        type('string').pipe((data, ctx) => {
-          const value = Number(data)
+      value: type('string')
+        .pipe((data, ctx) => {
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
-        }),
-      ).and(
-        type('string')
-          .pipe((data, ctx) => {
-            const value = Number(data)
-            return Number.isFinite(value) ? value : ctx.error('a number')
-          })
-          .to('number >= 5'),
-      ),
+        })
+        .to('number.integer >= 5'),
     }),
   ),
   (c) => {},

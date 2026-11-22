@@ -395,7 +395,7 @@ Effect-specific shapes are in [Effect](#effect).
 
 ## Effect
 
-The package is written on Effect v4 (`4.0.5`, pinned exactly to the release `hono-takibi` uses:
+The package is written on Effect v4 (`4.1.4`, pinned exactly to the release `hono-takibi` uses:
 its client generators return Effects that `src/core/client.ts` composes, so the two must share
 one `effect`. `oas-truth` hands over a result, not an Effect, so its schema-truth may pin
 another release).
@@ -524,8 +524,8 @@ the workspace root for every case and writes two trees per case:
 
 A case is `cases/<name>/takibi-hono.config.ts` with `input` under `specs/` and every output under
 `__generated__/<name>/`; a `seed/` is copied in before the CLI runs (the merge case). A case
-without a `tsconfig.json` is golden only, and its config says why (the typebox + hono-openapi
-bridge). The Vite plugin case is self-contained in `vite-plugin/`
+without a `tsconfig.json` is golden only, and its config says why (components-effect: an
+upstream oas-truth type error). The Vite plugin case is self-contained in `vite-plugin/`
 because the plugin reads its config from the working directory.
 
 - A change in generated output fails `golden.test.ts` with a diff of the generated source. Read

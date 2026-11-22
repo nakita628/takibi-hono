@@ -22,12 +22,34 @@ export const urlencodedHandler = new Hono().post(
         ),
         Schema.decodeTo(
           Schema.Struct({
-            name: Schema.optional(Schema.String),
-            age: Schema.optional(
-              Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+            name: Schema.optionalKey(Schema.String),
+            age: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
             ),
-            ratio: Schema.optional(Schema.FiniteFromString),
-            big: Schema.optional(
+            ratio: Schema.optionalKey(
+              Schema.String.check(
+                Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              ).pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              ),
+            ),
+            big: Schema.optionalKey(
               Schema.BigIntFromString.check(
                 Schema.isBetweenBigInt({
                   minimum: -9223372036854775808n,
@@ -35,7 +57,7 @@ export const urlencodedHandler = new Hono().post(
                 }),
               ),
             ),
-            active: Schema.optional(
+            active: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
               ).pipe(
@@ -48,10 +70,20 @@ export const urlencodedHandler = new Hono().post(
                 ),
               ),
             ),
-            level: Schema.optional(
-              Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([1, 2]))),
+            level: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .pipe(Schema.decodeTo(Schema.Literals([1, 2]))),
             ),
-            agreed: Schema.optional(
+            agreed: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
               )
@@ -66,13 +98,32 @@ export const urlencodedHandler = new Hono().post(
                 )
                 .pipe(Schema.decodeTo(Schema.Literal(true))),
             ),
-            limit: Schema.FiniteFromString.check(Schema.isInt()).pipe(
-              Schema.withDecodingDefaultType(Effect.succeed(20)),
+            limit: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+              .pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              )
+              .check(Schema.isInt())
+              .pipe(Schema.withDecodingDefaultType(Effect.succeed(20))),
+            count: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
             ),
-            count: Schema.optional(
-              Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
-            ),
-            flag: Schema.optional(
+            flag: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
               ).pipe(
@@ -85,7 +136,7 @@ export const urlencodedHandler = new Hono().post(
                 ),
               ),
             ),
-            tags: Schema.optional(
+            tags: Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -98,7 +149,7 @@ export const urlencodedHandler = new Hono().post(
                 Schema.decodeTo(Schema.Array(Schema.String)),
               ),
             ),
-            ids: Schema.optional(
+            ids: Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -108,24 +159,38 @@ export const urlencodedHandler = new Hono().post(
                     encode: (output) => output,
                   }),
                 ),
-                Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+                Schema.decodeTo(
+                  Schema.Array(
+                    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                      .pipe(
+                        Schema.decodeTo(
+                          Schema.Finite,
+                          SchemaTransformation.transform({
+                            decode: (input) => Number(input),
+                            encode: (output) => String(output),
+                          }),
+                        ),
+                      )
+                      .check(Schema.isInt()),
+                  ),
+                ),
               ),
             ),
-            moment: Schema.optional(
+            moment: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(
                   /^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$/,
                 ),
               ),
             ),
-            clock: Schema.optional(
+            clock: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(
                   /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/,
                 ),
               ),
             ),
-            maybe: Schema.optional(
+            maybe: Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -134,11 +199,37 @@ export const urlencodedHandler = new Hono().post(
                     encode: (output) => output,
                   }),
                 ),
-                Schema.decodeTo(Schema.NullOr(Schema.FiniteFromString.check(Schema.isInt()))),
+                Schema.decodeTo(
+                  Schema.NullOr(
+                    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                      .pipe(
+                        Schema.decodeTo(
+                          Schema.Finite,
+                          SchemaTransformation.transform({
+                            decode: (input) => Number(input),
+                            encode: (output) => String(output),
+                          }),
+                        ),
+                      )
+                      .check(Schema.isInt()),
+                  ),
+                ),
               ),
             ),
-            label: Schema.optional(Schema.NullOr(Schema.String)),
-            constructor: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            label: Schema.optionalKey(Schema.NullOr(Schema.String)),
+            constructor: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
           }),
         ),
       ),

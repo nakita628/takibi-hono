@@ -12,7 +12,8 @@ export const petsHandler = new Hono()
         v.object({
           limit: v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(1),
@@ -43,7 +44,14 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       v.object({
-        petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+          v.minValue(1),
+        ),
       }),
     ),
     (c) => {},
@@ -52,7 +60,15 @@ export const petsHandler = new Hono()
     '/pets/:petId',
     sValidator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+      v.object({
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      }),
     ),
     (c) => {},
   )
@@ -60,7 +76,15 @@ export const petsHandler = new Hono()
     '/pets/:petId/photos',
     sValidator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+      v.object({
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      }),
     ),
     sValidator(
       'form',

@@ -9,15 +9,30 @@ export const requiredHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      id: z.coerce.number().int(),
+      id: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int()),
       big: z.coerce.bigint().pipe(z.int64()),
       flag: z.stringbool(),
       name: z.string(),
       tags: z.preprocess(
         (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-        z.array(z.coerce.number().int()),
+        z.array(
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+        ),
       ),
-      note: z.coerce.number().int().exactOptional(),
+      note: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
     }),
   ),
   (c) => {},

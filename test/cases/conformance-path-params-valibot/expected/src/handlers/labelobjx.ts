@@ -11,7 +11,13 @@ export const labelobjxHandler = new Hono().get(
     v.object({
       value: v.partial(
         v.object({
-          a: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          a: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           b: v.string(),
         }),
       ),

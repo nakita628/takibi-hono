@@ -80,8 +80,8 @@ describe('makeSchemaDeclarations', () => {
     ],
     [
       'effect',
-      'export const PetSchema=Schema.Struct({name:Schema.String,tag:Schema.optional(TagSchema)}).annotate({description:"A pet"}).annotate({identifier:"Pet"})\n\nexport type Pet=Schema.Schema.Type<typeof PetSchema>',
-      'type NodeType={"children"?:readonly (NodeType)[]|undefined}\n\nexport const NodeSchema:Schema.Codec<NodeType>=Schema.Struct({children:Schema.optional(Schema.Array(Schema.suspend(() => NodeSchema)))}).annotate({identifier:"Node"})\n\nexport type Node=Schema.Schema.Type<typeof NodeSchema>',
+      'export const PetSchema=Schema.Struct({name:Schema.String,tag:Schema.optionalKey(TagSchema)}).annotate({description:"A pet"}).annotate({identifier:"Pet"})\n\nexport type Pet=Schema.Schema.Type<typeof PetSchema>',
+      'type NodeType={"children"?:readonly (NodeType)[]}\n\nexport const NodeSchema:Schema.Schema<NodeType>=Schema.Struct({children:Schema.optionalKey(Schema.Array(Schema.suspend(() => NodeSchema)))}).annotate({identifier:"Node"})\n\nexport type Node=Schema.Schema.Type<typeof NodeSchema>',
     ],
   ] as const)('%s: registers refs and declares the recursive schema', (lib, pet, node) => {
     const code = makeSchemaDeclarations(schemas as never, {

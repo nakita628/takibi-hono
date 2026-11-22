@@ -18,7 +18,14 @@ export const nodesHandler = new Hono().get(
     'query',
     v.object({
       page: v.optional(
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+          v.minValue(1),
+        ),
         '1',
       ),
     }),

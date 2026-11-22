@@ -9,10 +9,14 @@ export const allofHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.intersect([
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-        v.pipe(v.string(), v.transform(Number), v.number(), v.finite(), v.minValue(5)),
-      ]),
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+        v.minValue(5),
+      ),
     }),
   ),
   (c) => {},

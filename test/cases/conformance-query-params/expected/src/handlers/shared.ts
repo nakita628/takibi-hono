@@ -10,7 +10,15 @@ export const sharedHandler = new Hono().get(
     'query',
     z.object({
       filter: z
-        .object({ name: z.string().exactOptional(), age: z.coerce.number().int().exactOptional() })
+        .object({
+          name: z.string().exactOptional(),
+          age: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .exactOptional(),
+        })
         .exactOptional(),
       sort: z
         .object({ name: z.string().exactOptional(), dir: z.enum(['asc', 'desc']).exactOptional() })

@@ -31,7 +31,16 @@ export const typesHandler = new Hono().post(
         inherited: v.partial(
           v.object({ constructor: v.pipe(v.number(), v.integer()), name: v.string() }),
         ),
-        labelled: v.record(v.string(), v.pipe(v.number(), v.integer())),
+        labelled: v.pipe(
+          v.partial(v.looseObject({ name: v.string() })),
+          v.check((input) =>
+            Object.entries(input).every(
+              ([key, value]) =>
+                ['name'].includes(key) ||
+                v.safeParse(v.pipe(v.number(), v.integer()), value).success,
+            ),
+          ),
+        ),
       }),
     ),
   ),

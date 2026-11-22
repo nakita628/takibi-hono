@@ -8,7 +8,15 @@ export const integerHandler = new Hono().get(
   describeRoute({ operationId: 'integerParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+      ),
+    }),
   ),
   (c) => {},
 )

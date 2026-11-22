@@ -15,7 +15,7 @@ export type Flag = Schema.Schema.Type<typeof FlagSchema>
 export const ItemSchema = Schema.Struct({
   name: Schema.String,
   price: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
-  stocked: Schema.optional(Schema.Boolean),
+  stocked: Schema.optionalKey(Schema.Boolean),
 }).annotate({ identifier: 'Item' })
 
 export type Item = Schema.Schema.Type<typeof ItemSchema>

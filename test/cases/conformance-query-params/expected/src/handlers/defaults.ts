@@ -9,9 +9,21 @@ export const defaultsHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      int_def: z.coerce.number().int().default(20).exactOptional(),
+      int_def: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .default(20)
+        .exactOptional(),
       int64_def: z.coerce.bigint().pipe(z.int64()).default(5n).exactOptional(),
-      num_def: z.coerce.number().default(0.5).exactOptional(),
+      num_def: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .default(0.5)
+        .exactOptional(),
       bool_def: z.stringbool().default(false).exactOptional(),
       bool_def_true: z.stringbool().default(true).exactOptional(),
       str_def: z.string().default('fallback').exactOptional(),
@@ -26,7 +38,13 @@ export const defaultsHandler = new Hono().get(
       arr_int_def: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+          ),
         )
         .default([1, 2])
         .exactOptional(),

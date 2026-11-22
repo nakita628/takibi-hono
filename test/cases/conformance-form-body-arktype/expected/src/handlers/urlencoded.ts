@@ -18,12 +18,14 @@ export const urlencodedHandler = new Hono().post(
           'name?': 'string',
           'age?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 0'),
           'ratio?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+              ? Number(data)
+              : Number.NaN
             return Number.isFinite(value) ? value : ctx.error('a number')
           }),
           'big?': type('string')
@@ -38,20 +40,20 @@ export const urlencodedHandler = new Hono().post(
           ),
           'level?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
-              return Number.isFinite(value) ? value : ctx.error('a number')
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('1 | 2'),
           'agreed?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i)
             .pipe((data) => /^(?:true|1|yes|on|y|enabled)$/i.test(data))
             .to('true'),
           'limit?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'count?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 0'),
@@ -65,7 +67,7 @@ export const urlencodedHandler = new Hono().post(
             (data) => (data === undefined || Array.isArray(data) ? data : [data]),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).array(),
@@ -80,14 +82,14 @@ export const urlencodedHandler = new Hono().post(
             (data) => (data === 'null' ? null : data),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).or('null'),
           ),
           'label?': 'string | null',
           'constructor?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         }),

@@ -9,10 +9,27 @@ export const absentHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      empty_ok: z.coerce.number().int().exactOptional(),
-      empty_def: z.coerce.number().int().default(7).exactOptional(),
+      empty_ok: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
+      empty_def: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .default(7)
+        .exactOptional(),
       empty_str: z.string().exactOptional(),
-      ref_def: z.coerce.number().int().min(0).default(3).exactOptional(),
+      ref_def: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(0))
+        .default(3)
+        .exactOptional(),
     }),
   ),
   (c) => {},

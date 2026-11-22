@@ -1,6 +1,38 @@
-import { resolver } from 'hono-openapi'
-import { Type, Codec, type Static } from 'typebox'
+import { resolver, validator } from 'hono-openapi'
+import {
+  Type,
+  Codec,
+  type Static,
+  type StaticDecode,
+  type StaticEncode,
+  type TSchema,
+} from 'typebox'
 import { Compile } from 'typebox/compile'
+
+const toStandardSchemaV1 = <T extends TSchema>(schema: T) => {
+  const validator = Compile(schema)
+  return Object.assign(validator, {
+    '~standard': {
+      version: 1 as const,
+      vendor: 'typebox',
+      validate: (value: unknown) =>
+        validator.Check(value)
+          ? { value: validator.Decode(value) }
+          : {
+              issues: validator.Errors(value).map((error) => ({
+                message: error.message,
+                path: error.instancePath
+                  .split('/')
+                  .slice(1)
+                  .map((key) => key.replaceAll('~1', '/').replaceAll('~0', '~')),
+              })),
+            },
+      types: undefined as
+        | { readonly input: StaticEncode<T>; readonly output: StaticDecode<T> }
+        | undefined,
+    },
+  })
+}
 
 export const NodeSchema = Type.Cyclic(
   {
@@ -62,24 +94,24 @@ export const UserSchema = Type.Object(
 
 export type User = Static<typeof UserSchema>
 
-export const UserIdParamsSchema = resolver(Compile(Type.String({ format: 'uuid' })))
+export const UserIdParamsSchema = resolver(toStandardSchemaV1(Type.String({ format: 'uuid' })))
 export const PageParamsSchema = resolver(
-  Compile(
+  toStandardSchemaV1(
     Type.Optional(
-      Codec(Type.String({ default: '1' }))
-        .Decode((value) => Number.parseInt(value, 10))
+      Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/, default: '1' }))
+        .Decode((value) => Number(value))
         .Encode((value) => String(value)),
     ),
   ),
 )
 
-export const RateLimitHeaderSchema = resolver(Compile(Type.Integer()))
+export const RateLimitHeaderSchema = resolver(toStandardSchemaV1(Type.Integer()))
 
 export const BearerSecurityScheme = { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }
 
 export const UserBodyRequestBody = {
   required: true,
-  content: { 'application/json': { schema: resolver(Compile(UserSchema)) } },
+  content: { 'application/json': { schema: resolver(toStandardSchemaV1(UserSchema)) } },
 }
 
 export const UserFoundResponse = {
@@ -87,7 +119,7 @@ export const UserFoundResponse = {
   headers: { 'X-Rate-Limit': { $ref: '#/components/headers/RateLimit' } },
   content: {
     'application/json': {
-      schema: resolver(Compile(UserSchema)),
+      schema: resolver(toStandardSchemaV1(UserSchema)),
       examples: { admin: { $ref: '#/components/examples/Admin' } },
     },
   },
@@ -104,7 +136,9 @@ export const GetUserLink = { operationId: 'getUser', parameters: { userId: '$res
 export const UserChangedCallback = {
   '{$request.body#/callbackUrl}': {
     post: {
-      requestBody: { content: { 'application/json': { schema: resolver(Compile(UserSchema)) } } },
+      requestBody: {
+        content: { 'application/json': { schema: resolver(toStandardSchemaV1(UserSchema)) } },
+      },
       responses: { '200': { description: 'Received' } },
     },
   },
@@ -117,7 +151,9 @@ export const NodesPathItem = {
     responses: {
       '200': {
         description: 'The nodes',
-        content: { 'application/json': { schema: resolver(Compile(Type.Array(NodeSchema))) } },
+        content: {
+          'application/json': { schema: resolver(toStandardSchemaV1(Type.Array(NodeSchema))) },
+        },
       },
     },
   },

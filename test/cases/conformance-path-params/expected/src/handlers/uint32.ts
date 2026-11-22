@@ -6,6 +6,15 @@ import { EchoResponse } from '../components'
 export const uint32Handler = new Hono().get(
   '/uint32/:value',
   describeRoute({ operationId: 'uint32Param', responses: { '200': EchoResponse } }),
-  validator('param', z.object({ value: z.coerce.number().pipe(z.uint32()) })),
+  validator(
+    'param',
+    z.object({
+      value: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.uint32()),
+    }),
+  ),
   (c) => {},
 )

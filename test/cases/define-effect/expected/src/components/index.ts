@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 
 export const TagSchema = Schema.Literals(['dog', 'cat', 'bird'])
 
@@ -11,7 +11,7 @@ export const PetSchema = Schema.Struct({
       expected: 'a string of at least 1 character',
     }),
   ),
-  tag: Schema.optional(TagSchema),
+  tag: Schema.optionalKey(TagSchema),
 }).annotate({ description: 'A pet in the store' })
 
 export type Pet = Schema.Schema.Type<typeof PetSchema>
@@ -22,7 +22,7 @@ export const NewPetSchema = Schema.Struct({
       expected: 'a string of at least 1 character',
     }),
   ),
-  tag: Schema.optional(TagSchema),
+  tag: Schema.optionalKey(TagSchema),
 })
 
 export type NewPet = Schema.Schema.Type<typeof NewPetSchema>
@@ -31,11 +31,17 @@ export const ErrorSchema = Schema.Struct({ message: Schema.String })
 
 export type Error = Schema.Schema.Type<typeof ErrorSchema>
 
-export const LimitParamsSchema = Schema.FiniteFromString.check(
-  Schema.isInt(),
-  Schema.isGreaterThanOrEqualTo(1),
-  Schema.isLessThanOrEqualTo(100),
-)
+export const LimitParamsSchema = Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+  .pipe(
+    Schema.decodeTo(
+      Schema.Finite,
+      SchemaTransformation.transform({
+        decode: (input) => Number(input),
+        encode: (output) => String(output),
+      }),
+    ),
+  )
+  .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(100))
 export const RequestIdParamsSchema = Schema.String
 
 export const TotalCountHeaderSchema = Schema.Number.check(Schema.isInt())

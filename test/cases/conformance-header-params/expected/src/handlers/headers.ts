@@ -9,18 +9,63 @@ export const headersHandler = new Hono().get(
   validator(
     'header',
     z.object({
-      'x-integer': z.coerce.number().int().exactOptional(),
-      'x-int32': z.coerce.number().pipe(z.int32()).exactOptional(),
+      'x-integer': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
+      'x-int32': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.int32())
+        .exactOptional(),
       'x-int64': z.coerce.bigint().pipe(z.int64()).exactOptional(),
       'x-bigint': z.coerce.bigint().exactOptional(),
-      'x-uint32': z.coerce.number().pipe(z.uint32()).exactOptional(),
+      'x-uint32': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.uint32())
+        .exactOptional(),
       'x-uint64': z.coerce.bigint().pipe(z.uint64()).exactOptional(),
-      'x-number': z.coerce.number().exactOptional(),
-      'x-float': z.coerce.number().pipe(z.float32()).exactOptional(),
-      'x-float32': z.coerce.number().pipe(z.float32()).exactOptional(),
-      'x-float64': z.coerce.number().pipe(z.float64()).exactOptional(),
-      'x-double': z.coerce.number().exactOptional(),
-      'x-numpassword': z.coerce.number().exactOptional(),
+      'x-number': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
+      'x-float': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float32())
+        .exactOptional(),
+      'x-float32': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float32())
+        .exactOptional(),
+      'x-float64': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float64())
+        .exactOptional(),
+      'x-double': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
+      'x-numpassword': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
       'x-boolean': z.stringbool().exactOptional(),
       'x-string': z.string().exactOptional(),
       'x-email': z.email().exactOptional(),
@@ -94,7 +139,13 @@ export const headersHandler = new Hono().get(
       'x-ids': z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+          ),
         )
         .exactOptional(),
     }),

@@ -26,8 +26,8 @@ export const ErrorSchema = Type.Object({ message: Type.String() })
 
 export type Error = Static<typeof ErrorSchema>
 
-export const LimitParamsSchema = Codec(Type.String())
-  .Decode((value) => Number.parseInt(value, 10))
+export const LimitParamsSchema = Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+  .Decode((value) => Number(value))
   .Encode((value) => String(value))
 export const RequestIdParamsSchema = Type.String()
 

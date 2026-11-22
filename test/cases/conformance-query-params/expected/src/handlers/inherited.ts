@@ -15,15 +15,32 @@ export const inheritedHandler = new Hono().get(
           : val,
       z.object({
         toString: z.string(),
-        valueOf: z.coerce.number().int().default(3).exactOptional(),
+        valueOf: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .default(3)
+          .exactOptional(),
         hasOwnProperty: z.stringbool().exactOptional(),
         isPrototypeOf: z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-            z.array(z.coerce.number().int()),
+            z.array(
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+            ),
           )
           .exactOptional(),
-        toLocaleString: z.coerce.number().int().exactOptional(),
+        toLocaleString: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
       }),
     ),
   ),

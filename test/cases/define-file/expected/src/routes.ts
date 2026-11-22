@@ -19,7 +19,11 @@ export const ErrorSchema = z.object({ message: z.string() })
 
 export type Error = z.infer<typeof ErrorSchema>
 
-export const LimitParamsSchema = z.coerce.number().int().min(1).max(100)
+export const LimitParamsSchema = z
+  .string()
+  .regex(/^-?(?:0|[1-9]\d*)$/)
+  .transform((val) => Number(val))
+  .pipe(z.number().int().min(1).max(100))
 export const RequestIdParamsSchema = z.string()
 
 export const TotalCountHeaderSchema = z.int()
@@ -41,7 +45,12 @@ export const getHandler = defineHandler({ response: z.object({ status: z.literal
 
 export const getPetsHandler = defineHandler({
   query: z.object({
-    limit: z.coerce.number().int().min(1).max(100).exactOptional(),
+    limit: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int().min(1).max(100))
+      .exactOptional(),
     tag: TagSchema.exactOptional(),
   }),
   header: z.object({ 'x-request-id': z.string().exactOptional() }),
@@ -60,16 +69,34 @@ export const headPetsHandler = defineHandler({
 })
 
 export const getPetsPetIdHandler = defineHandler({
-  param: z.object({ petId: z.coerce.number().int().min(1) }),
+  param: z.object({
+    petId: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int().min(1)),
+  }),
   response: PetSchema,
 })
 
 export const deletePetsPetIdHandler = defineHandler({
-  param: z.object({ petId: z.coerce.number().int() }),
+  param: z.object({
+    petId: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int()),
+  }),
 })
 
 export const postPetsPetIdPhotosHandler = defineHandler({
-  param: z.object({ petId: z.coerce.number().int() }),
+  param: z.object({
+    petId: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int()),
+  }),
   form: z.object({ caption: z.string().min(1), featured: z.stringbool().exactOptional() }),
 })
 

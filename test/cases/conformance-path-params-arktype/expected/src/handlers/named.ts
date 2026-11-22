@@ -10,7 +10,7 @@ export const namedHandler = new Hono().get(
     'param',
     type({
       'user-id': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       post_id: type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>

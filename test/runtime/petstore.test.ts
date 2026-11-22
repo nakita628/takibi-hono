@@ -146,3 +146,35 @@ describe('plain-typebox', () => {
     expect(await status('plain-typebox', path, init)).toBe(expected)
   })
 })
+
+// typebox with hono-openapi goes through the generated `toStandardSchemaV1`, which checks the
+// value and then runs the `Codec`: an integer parameter reaches the handler as a number and a
+// non-integer is rejected. schema-truth's typebox Codec carries no bound on the decoded
+// number, so `minimum` / `maximum` of a parameter are not asserted. Upstream:
+// https://github.com/nakita628/truth/issues/30
+describe('openapi-typebox', () => {
+  it('coerces an integer path and query parameter and reads a cookie', async () => {
+    const body = await validated('openapi-typebox', '/api/pets?limit=5&tag=dog', {
+      headers: { Cookie: 'session=s1' },
+    })
+    expect(body['query']).toStrictEqual({ limit: 5, tag: 'dog' })
+    expect(body['cookie']).toStrictEqual({ session: 's1' })
+    expect(
+      await validated('openapi-typebox', '/api/pets/7/photos', form('caption=hi')),
+    ).toStrictEqual({ param: { petId: 7 }, form: { caption: 'hi' } })
+  })
+
+  it.each([
+    ['a non-integer query parameter', '/api/pets?limit=five', undefined, 400],
+    ['a non-integer path parameter', '/api/pets/seven', undefined, 400],
+    ['a value outside the enum', '/api/pets?tag=fish', undefined, 400],
+    ['a JSON body', '/api/pets', json({ name: 'Rex' }), 200],
+    ['a JSON body below minLength', '/api/pets', json({ name: '' }), 400],
+    ['a form body below minLength', '/api/pets/7/photos', form('caption='), 400],
+    ['the root path', '/api', undefined, 200],
+    ['a HEAD operation', '/api/pets', { method: 'HEAD' }, 200],
+    ['a path outside the base path', '/pets', undefined, 404],
+  ])('%s answers %i', async (_, path, init, expected) => {
+    expect(await status('openapi-typebox', path, init)).toBe(expected)
+  })
+})

@@ -10,7 +10,17 @@ export const requiredHandler = new Hono().get(
     'cookie',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        id: Schema.FiniteFromString.check(Schema.isInt()),
+        id: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .check(Schema.isInt()),
         big: Schema.BigIntFromString.check(
           Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
         ),
@@ -26,7 +36,19 @@ export const requiredHandler = new Hono().get(
           ),
         ),
         name: Schema.String,
-        note: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        note: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        ),
       }),
     ),
   ),
