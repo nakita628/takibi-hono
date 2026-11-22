@@ -330,6 +330,10 @@ const ConfigSchema = Schema.Struct({
     description:
       "Divide the app into groups, one per handler file (the first segment of the path): the app entry exports each under its name instead of `api`, and the client is one client per group (`petsClient`), so that a client of one group resolves the routes of that group and not of the whole app. Every group is registered on the one app. As hono-takibi's `template.split`.",
   }),
+  fileNameCase: Schema.optionalKey(Schema.Literal('kebab-case')).annotate({
+    description:
+      'Name each handler file in kebab case, by the first segment of the path: `/realTimeEvents` as `real-time-events.ts`, `/user_profiles` as `user-profiles.ts`. Unset, the segment is lowercased (`realtimeevents.ts`). The export (`realTimeEventsHandler`), the group of `split` and the client are named after the handler file, its hyphens read as word breaks. Either way an existing handler file whose name matches once case, `-` and `_` are ignored stays the file of its group and keeps its name (and so its export), and the handlers of routes that move between files when the option is switched move with them. As hono-takibi names its handler files.',
+  }),
   ...CLIENT_FIELDS,
   pathAlias: Schema.optionalKey(Schema.String),
   components: Schema.optionalKey(ComponentsSchema),

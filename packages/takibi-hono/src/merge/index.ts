@@ -59,6 +59,30 @@ type VariableStatement = {
   readonly text: string
 }
 
+const HANDLER_IMPORT_SOURCES = new Set<string>([
+  'hono',
+  'hono/factory',
+  'hono-openapi',
+  'hono-openapi/zod',
+  'hono-openapi/valibot',
+  'hono-openapi/typebox',
+  'hono-openapi/arktype',
+  'hono-openapi/effect',
+  '@hono/standard-validator',
+  '@hono/zod-validator',
+  '@hono/valibot-validator',
+  '@hono/typebox-validator',
+  '@hono/effect-validator',
+  'zod',
+  'valibot',
+  'typebox',
+  '@sinclair/typebox',
+  'typebox/compile',
+  'arktype',
+  'effect',
+  'effect/Schema',
+])
+
 /** Hono's chain methods; `head` / `trace` go through `.on('METHOD', path, ...)`. */
 const CHAIN_METHODS: ReadonlySet<string> = new Set([
   'get',
@@ -298,6 +322,139 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   return restoreRouteComments(assembled, existingRoutes)
 }
 
+/** A route as the merge knows it: `method:path`. */
+function routeKeyOf(call: { readonly method: string; readonly routePath: string }) {
+  return `${call.method}:${call.routePath}`
+}
+
+/** The routes a handler file holds, as `method:path`; `undefined` for a file that does not parse. */
+export function handlerRouteKeys(code: string): ReadonlySet<string> | undefined {
+  const source = parseSnippet(code)
+  if (source.errors.length > 0) return undefined
+  return new Set(routeCalls(source).map(routeKeyOf))
+}
+
+/** The names a top-level statement declares, and its text without `export`. */
+function declarationOf(source: Source, statement: Statement) {
+  const node = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement
+  if (node === null || node === undefined) return undefined
+  const names =
+    node.type === 'VariableDeclaration'
+      ? node.declarations.flatMap((d) => (d.id.type === 'Identifier' ? [d.id.name] : []))
+      : (node.type === 'FunctionDeclaration' ||
+            node.type === 'ClassDeclaration' ||
+            node.type === 'TSTypeAliasDeclaration' ||
+            node.type === 'TSInterfaceDeclaration') &&
+          node.id !== null
+        ? [node.id.name]
+        : []
+  return names.length > 0 ? { names, text: textOf(source.code, node) } : undefined
+}
+
+/** Every name the top-level statements of a file declare, functions and classes included. */
+function topLevelNames(source: Source) {
+  return source.program.body.flatMap((statement) => declarationOf(source, statement)?.names ?? [])
+}
+
+/** Every identifier name in `code`. */
+function identifierNames(code: string) {
+  return new Set(
+    descendantsWhere(
+      parseSource(code).program,
+      (node): node is Node & { readonly name: string } =>
+        (node.type === 'Identifier' || node.type === 'JSXIdentifier') && 'name' in node,
+    ).map((node) => node.name),
+  )
+}
+
+/**
+ * The top-level declarations of a handler file that are not its handler (the user's helpers),
+ * or `undefined` when it holds a statement that declares nothing (`app.use(...)`), which
+ * cannot be carried anywhere.
+ */
+function helperDeclarations(source: Source) {
+  const statements = source.program.body.filter(
+    (statement) =>
+      statement.type !== 'ImportDeclaration' && !textOf(source.code, statement).includes('Handler'),
+  )
+  const declarations = statements.map((statement) => declarationOf(source, statement))
+  return declarations.every((declaration) => declaration !== undefined) ? declarations : undefined
+}
+
+/** The helpers `code` refers to, and the helpers those refer to, in the order of the file. */
+function referencedHelpers(
+  helpers: readonly { readonly names: readonly string[]; readonly text: string }[],
+  code: string,
+  chosen: ReadonlySet<number> = new Set(),
+): ReadonlySet<number> {
+  const names = identifierNames(code)
+  const more = helpers.flatMap((helper, index) =>
+    !chosen.has(index) && helper.names.some((name) => names.has(name)) ? [index] : [],
+  )
+  if (more.length === 0) return chosen
+  return referencedHelpers(
+    helpers,
+    more.map((index) => helpers[index]?.text ?? '').join(';\n'),
+    new Set([...chosen, ...more]),
+  )
+}
+
+/**
+ * Carries into `generatedCode` the handlers `existingCode` holds of the routes it generates,
+ * with the imports and the top-level helpers they refer to — a helper without its `export`, so
+ * that two files never export one name, and only when neither `generatedCode` nor `ownCode`
+ * (the file it is merged into next) declares its name already. For routes that moved from
+ * another handler file when `fileNameCase` was switched.
+ */
+export function mergeRouteBodies(existingCode: string, generatedCode: string, ownCode: string) {
+  const existingFile = parseSnippet(existingCode)
+  if (existingFile.errors.length > 0) return generatedCode
+  const existingRoutes = extractRouteInfo(existingFile)
+  const generatedFile = parseSnippet(generatedCode)
+  const keys = new Set(routeCalls(generatedFile).map(routeKeyOf))
+  const moved = [...existingRoutes]
+    .filter(([key, info]) => keys.has(key) && !info.stub)
+    .map(([, info]) => info.body)
+  if (moved.length === 0) return generatedCode
+  const merged = replaceRouteParts(generatedFile, existingRoutes)
+  const ownFile = parseSnippet(ownCode)
+  const declared = new Set([...topLevelNames(generatedFile), ...topLevelNames(ownFile)])
+  const helpers = (helperDeclarations(existingFile) ?? []).filter((helper) =>
+    helper.names.every((name) => !declared.has(name)),
+  )
+  const chosen = referencedHelpers(helpers, moved.map((body) => `void (${body})`).join(';\n'))
+  const carried = helpers.filter((_helper, index) => chosen.has(index)).map((h) => h.text)
+  const importText = extractImportSection(parseSnippet(merged))
+  const taken = new Set(importDeclarations(parseSnippet(importText)).map((d) => d.source.value))
+  const uses = [...carried, ...moved.map((body) => `void (${body})`)].join(';\n')
+  const imports = importDeclarations(existingFile)
+    .filter(
+      (decl) =>
+        !HANDLER_IMPORT_SOURCES.has(decl.source.value) &&
+        !taken.has(decl.source.value) &&
+        isReferenced(decl, uses),
+    )
+    .map((decl) => textOf(existingFile.code, decl))
+  const body = merged.slice(importText.length).trimStart()
+  const assembled = [[importText, ...imports].join('\n'), ...carried, body]
+    .join('\n\n')
+    .replaceAll(/\n{3,}/gu, '\n\n')
+  return restoreRouteComments(assembled, existingRoutes)
+}
+
+/**
+ * Whether nothing of `existingCode` is lost once it is deleted: it parses, and each of its
+ * helpers is declared in one of `codes` (carried there with the handlers that use it).
+ */
+export function isCarriedWhole(existingCode: string, codes: readonly string[]) {
+  const existingFile = parseSnippet(existingCode)
+  if (existingFile.errors.length > 0) return false
+  const helpers = helperDeclarations(existingFile)
+  if (helpers === undefined) return false
+  const declared = new Set(codes.flatMap((code) => topLevelNames(parseSnippet(code))))
+  return helpers.every((helper) => helper.names.every((name) => declared.has(name)))
+}
+
 export function mergeAppFile(existingCode: string, generatedCode: string) {
   const existingFile = parseSnippet(existingCode)
   if (existingFile.errors.length > 0) return existingCode
@@ -378,30 +535,6 @@ function mergeAppImports(existingFile: Source, generatedImports: string, body: s
     ? `${generatedImports}${userImports.join('\n')}\n`
     : generatedImports
 }
-
-const HANDLER_IMPORT_SOURCES = new Set<string>([
-  'hono',
-  'hono/factory',
-  'hono-openapi',
-  'hono-openapi/zod',
-  'hono-openapi/valibot',
-  'hono-openapi/typebox',
-  'hono-openapi/arktype',
-  'hono-openapi/effect',
-  '@hono/standard-validator',
-  '@hono/zod-validator',
-  '@hono/valibot-validator',
-  '@hono/typebox-validator',
-  '@hono/effect-validator',
-  'zod',
-  'valibot',
-  'typebox',
-  '@sinclair/typebox',
-  'typebox/compile',
-  'arktype',
-  'effect',
-  'effect/Schema',
-])
 
 /**
  * The named specifiers of a generator-managed import that are the user's own — `Context`

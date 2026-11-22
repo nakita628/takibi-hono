@@ -395,6 +395,12 @@ describe('toHandlerVarName', () => {
     ['__root', 'rootHandler'],
     ['user-profiles', 'userProfilesHandler'],
     ['2010-04-01', '_20100401Handler'],
+    ['realTimeEvents', 'realTimeEventsHandler'],
+    ['APIKeys', 'apiKeysHandler'],
+    ['API', 'apiHandler'],
+    ['Pets', 'petsHandler'],
+    ['URLs', 'urlsHandler'],
+    ['IDs', 'idsHandler'],
   ])('%s → %s', (fileName, expected) => {
     expect(toHandlerVarName(fileName)).toBe(expected)
   })

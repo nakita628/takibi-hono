@@ -398,13 +398,21 @@ export function makeDefinitionsCode(
   return withImports(body.join('\n\n'), [...makeLibraryImports(context.lib), ...context.imports])
 }
 
-/** `/users` → `usersHandler`, `__root` → `rootHandler`. */
+/**
+ * `users` → `usersHandler`, `real-time-events` → `realTimeEventsHandler`, `__root` →
+ * `rootHandler`: what is no letter or digit is a word break, and a word keeps its case (a file
+ * renamed by hand to `realTimeEvents.ts` exports `realTimeEventsHandler`), but for a leading
+ * capital or acronym, which is lowercased (`APIKeys` → `apiKeysHandler`, `URLs` → `urlsHandler`).
+ */
 export function toHandlerVarName(fileName: string) {
   const [first = '', ...rest] = (fileName === '__root' ? 'root' : fileName)
     .replaceAll(/[^A-Za-z0-9]+/gu, ' ')
     .trim()
     .split(' ')
-  const base = `${first.toLowerCase()}${rest.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}`
+  const head = first.replace(/^[A-Z]+(?=s?(?:[^A-Za-z]|$))|^[A-Z]+(?=[A-Z][a-z])|^[A-Z]/u, (caps) =>
+    caps.toLowerCase(),
+  )
+  const base = `${head}${rest.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}`
   // A path segment can start with a digit (`/2010-04-01`).
   return `${/^[0-9]/u.test(base) ? '_' : ''}${base}Handler`
 }

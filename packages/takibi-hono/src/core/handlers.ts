@@ -5,7 +5,7 @@ import type { OpenAPI } from 'oas-truth'
 import { makeSchemaIdentifiers, toIdentifierPascalCase } from 'oas-truth'
 
 import { emit, emitFiles } from '../emit/index.js'
-import { readdir, readFile, unlink } from '../file/index.js'
+import { readFile, unlink } from '../file/index.js'
 import {
   makeAppCode,
   makeDefinitionEntries,
@@ -15,9 +15,11 @@ import {
 } from '../generator/handler.js'
 import { makeBarrel, withImports } from '../helper/imports.js'
 import { makeLibraryImports } from '../helper/library.js'
-import { collectRoutes, collectWebhookRoutes } from '../helper/operations.js'
+import { collectWebhookRoutes } from '../helper/operations.js'
 import { mergeAppFile, mergeHandlerFile } from '../merge/index.js'
 import { makeAggregateCode } from './components.js'
+import type { HandlerFiles } from './handler-files.js'
+import { carryMovedRoutes } from './handler-files.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'
 import { makeSpecifier, targetDirectory } from './layout.js'
 
@@ -62,14 +64,19 @@ function componentImports(openapi: OpenAPI, layout: Layout, fromDir: string) {
  * barrel (`split`). Nothing in them is the user's, so they are written over. Answers the name
  * of each route's definition, for the handler files.
  */
-export function writeDefinitions(openapi: OpenAPI, config: TakibiHonoConfig, layout: Layout) {
+export function writeDefinitions(
+  openapi: OpenAPI,
+  config: TakibiHonoConfig,
+  layout: Layout,
+  handlerFiles: HandlerFiles,
+) {
   return Effect.gen(function* () {
     const definitions = layout.definitions
     if (definitions === undefined) return undefined
-    const groups = collectRoutes(openapi)
+    const { groups } = handlerFiles
     const named = nameOperations(
       [...groups.values()].flat(),
-      [...groups.keys()].map(toHandlerVarName),
+      [...handlerFiles.fileOf.values()].map(toHandlerVarName),
     )
     const dir = targetDirectory(definitions)
     const entries = makeDefinitionEntries([...groups.values()].flat(), named, {
@@ -114,20 +121,24 @@ export function writeDefinitions(openapi: OpenAPI, config: TakibiHonoConfig, lay
  * One handler file per first path segment, a barrel, and (hono-openapi mode) the
  * OAS 3.1 webhooks in `webhooks.ts`. Existing handler bodies survive through
  * `mergeHandlerFile`; `.ts` files no route maps to any more are deleted. `named` is what
- * `writeDefinitions` answered: the definition each route's call takes.
+ * `writeDefinitions` answered: the definition each route's call takes. Each group is written to
+ * the file `handlerFiles` names, with the handlers of routes that moved from another file
+ * carried in (`carryMovedRoutes`).
  */
 export function writeHandlers(
   openapi: OpenAPI,
   config: TakibiHonoConfig,
   layout: Layout,
   named: ReadonlyMap<string, string> | undefined,
+  handlerFiles: HandlerFiles,
 ) {
   return Effect.gen(function* () {
     const { handlersDir } = layout
     const useOpenAPI = config.openapi === true
     const components = openapi.components
     const definitions = layout.definitions
-    const groups = collectRoutes(openapi)
+    const { groups, fileOf, existing } = handlerFiles
+    const webhooks = useOpenAPI ? collectWebhookRoutes(openapi) : []
     const context = {
       lib: config.schema,
       openapi: useOpenAPI,
@@ -139,14 +150,28 @@ export function writeHandlers(
           defineHandler: { from: makeSpecifier(layout, handlersDir, definitions), names: named },
         }),
     }
-    const webhooks = useOpenAPI ? collectWebhookRoutes(openapi) : []
+    const { codes, kept } = carryMovedRoutes(
+      handlerFiles,
+      new Map(
+        [...groups].map(([group, routes]) => [
+          group,
+          makeHandlerCode(toHandlerVarName(fileOf.get(group) ?? group), routes, context),
+        ]),
+      ),
+    )
+    const grouped = [...groups.keys()].map((group) => ({
+      name: fileOf.get(group) ?? group,
+      code: codes.get(group) ?? '',
+    }))
     const files = [
-      ...[...groups].map(([name, routes]) => ({
-        name,
-        code: makeHandlerCode(toHandlerVarName(name), routes, context),
-      })),
+      ...grouped,
       ...(webhooks.length > 0
-        ? [{ name: 'webhooks', code: makeHandlerCode('webhooksHandler', webhooks, context) }]
+        ? [
+            {
+              name: 'webhooks',
+              code: makeHandlerCode('webhooksHandler', webhooks, context),
+            },
+          ]
         : []),
     ]
     yield* Effect.forEach(
@@ -154,37 +179,27 @@ export function writeHandlers(
       (file) => writeMerged(path.join(handlersDir, `${file.name}.ts`), file.code, mergeHandlerFile),
       { discard: true },
     )
-    const names = [...groups.keys()]
+    const names = [...fileOf.values()]
     if (names.length > 0) {
       yield* emit(makeBarrel(names), handlersDir, path.join(handlersDir, 'index.ts'))
     }
-    const expected = new Set([
-      ...files.map((file) => `${file.name}.ts`),
-      'index.ts',
-      // A definitions file written into the handlers directory is not a stale handler file.
-      ...(definitions !== undefined &&
-      !definitions.split &&
-      path.dirname(definitions.output) === handlersDir
-        ? [path.basename(definitions.output)]
-        : []),
-    ])
-    const entries = yield* readdir(handlersDir)
+    const expected = new Set([...files.map((file) => file.name), ...kept])
     yield* Effect.forEach(
-      entries.filter((entry) => entry.endsWith('.ts') && !expected.has(entry)),
-      (entry) => unlink(path.join(handlersDir, entry)),
+      [...existing.keys()].filter((file) => !expected.has(file)),
+      (file) => unlink(path.join(handlersDir, `${file}.ts`)),
       { discard: true },
     )
-    return names
+    return fileOf
   })
 }
 
 /** The app entry; user imports and middleware survive through `mergeAppFile`. */
 export function writeApp(
-  handlerFileNames: readonly string[],
+  handlerFiles: ReadonlyMap<string, string>,
   config: TakibiHonoConfig,
   layout: Layout,
 ) {
-  const code = makeAppCode(handlerFileNames, {
+  const code = makeAppCode([...handlerFiles.values()], {
     basePath: config.basePath,
     split: config.split,
     handlersImport: `./${path.relative(layout.appDir, layout.handlersDir).replaceAll('\\', '/')}`,

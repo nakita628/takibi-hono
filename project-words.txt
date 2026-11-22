@@ -19,6 +19,8 @@ openssf
 petstore
 picklist
 pipefail
+postcomments
+realtimeevents
 rhysd
 sapegin
 stringbool
@@ -30,6 +32,7 @@ textlint
 textlintrc
 typebox
 unvalidated
+userprofiles
 voidzero
 zizmor
 zizmorcore
