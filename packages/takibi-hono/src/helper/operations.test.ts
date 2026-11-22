@@ -81,6 +81,8 @@ describe('makeHandlerFileName', () => {
     ['/Users', 'users'],
     ['/{org_id}/items', 'org-id'],
     ['/2010-04-01/calls', '2010-04-01'],
+    ['/ユーザー/{id}', 'ユーザー'],
+    ['/{}/x', '{}'],
   ])('kebab-case: %s → %s', (path, expected) => {
     expect(makeHandlerFileName(path, 'kebab-case')).toBe(expected)
   })

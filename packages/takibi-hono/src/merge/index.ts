@@ -298,6 +298,23 @@ export function mergeHandlerFile(existingCode: string, generatedCode: string) {
   return restoreRouteComments(assembled, existingRoutes)
 }
 
+/** Whether an existing handler file parses: one that does not is kept as it is. */
+export function handlerFileParses(code: string) {
+  return parseSnippet(code).errors.length === 0
+}
+
+/**
+ * Carries the handler bodies and route JSDoc of `existingCode` into `generatedCode`, and nothing
+ * else: for routes that moved into the generated file from a file that stays.
+ */
+export function mergeRouteBodies(existingCode: string, generatedCode: string) {
+  const existingFile = parseSnippet(existingCode)
+  if (existingFile.errors.length > 0) return generatedCode
+  const existingRoutes = extractRouteInfo(existingFile)
+  const merged = replaceRouteParts(parseSnippet(generatedCode), existingRoutes)
+  return restoreRouteComments(merged, existingRoutes)
+}
+
 export function mergeAppFile(existingCode: string, generatedCode: string) {
   const existingFile = parseSnippet(existingCode)
   if (existingFile.errors.length > 0) return existingCode

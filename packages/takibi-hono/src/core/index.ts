@@ -5,6 +5,7 @@ import { FormatOptions } from '../format/index.js'
 import { parseOpenAPI } from '../openapi/index.js'
 import { makeClients } from './client.js'
 import { writeComponents } from './components.js'
+import { resolveHandlerFiles } from './handler-files.js'
 import { writeApp, writeDefinitions, writeHandlers } from './handlers.js'
 import type { TakibiHonoConfig } from './layout.js'
 import { checkPackages, resolveLayout } from './layout.js'
@@ -23,11 +24,12 @@ export function hono(config: TakibiHonoConfig) {
     const layout = { ...shape, packageRoot: yield* makePackageRoot(shape) }
     yield* checkPackages(openapi, layout)
     yield* writeComponents(openapi, config, layout)
-    const named = yield* writeDefinitions(openapi, config, layout)
+    const handlerFiles = yield* resolveHandlerFiles(openapi, config, layout)
+    const named = yield* writeDefinitions(openapi, config, layout, handlerFiles)
     if (!layout.scaffold) return
-    const handlerFiles = yield* writeHandlers(openapi, config, layout, named)
-    yield* writeApp(handlerFiles, config, layout)
-    yield* makeClients(openapi, config, layout, process.cwd(), handlerFiles)
+    const fileOf = yield* writeHandlers(openapi, config, layout, named, handlerFiles)
+    yield* writeApp(fileOf, config, layout)
+    yield* makeClients(openapi, config, layout, process.cwd(), fileOf)
   }).pipe(Effect.provideService(FormatOptions, config.format ?? {}))
 }
 

@@ -394,6 +394,112 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
       expect(read('src/handlers/index.ts')).toContain("export * from './realTimeEvents'")
     })
 
+    it('carries the handlers of routes that move between files when the option is switched', async () => {
+      await fsp.writeFile(
+        'moved.yaml',
+        `openapi: 3.1.0
+info: { title: Moved, version: 1.0.0 }
+paths:
+  /user_profiles:
+    get:
+      responses:
+        '200': { description: ok }
+  /user-profiles:
+    get:
+      responses:
+        '200': { description: ok }
+  /userProfiles:
+    post:
+      responses:
+        '200': { description: ok }
+  /userprofiles:
+    post:
+      responses:
+        '200': { description: ok }
+`,
+      )
+      const moved = { input: 'moved.yaml', schema: 'zod' } as const
+      await runGenerator(hono(moved))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'user-profiles.ts',
+        'user_profiles.ts',
+        'userprofiles.ts',
+      ])
+      const fill = async (file: string, route: string, body: string) => {
+        const code = read(file)
+        const at = code.indexOf(route)
+        await fsp.writeFile(
+          file,
+          `${code.slice(0, at)}${code.slice(at).replace('(c) => {}', body)}`.replace(
+            "import { Hono } from 'hono'",
+            "import { Hono } from 'hono'\n\nconst KEPT = 1",
+          ),
+        )
+      }
+      await fill('src/handlers/user_profiles.ts', "'/user_profiles'", "(c) => c.text('a')")
+      await fill('src/handlers/user-profiles.ts', "'/user-profiles'", "(c) => c.text('b')")
+      await fill('src/handlers/userprofiles.ts', "'/userProfiles'", "(c) => c.text('c')")
+
+      await runGenerator(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'user-profiles.ts',
+        'userprofiles.ts',
+      ])
+      const kebabFile = read('src/handlers/user-profiles.ts')
+      expect(kebabFile).toContain("(c) => c.text('a')")
+      expect(kebabFile).toContain("(c) => c.text('b')")
+      expect(kebabFile).toContain("(c) => c.text('c')")
+      expect(read('src/handlers/userprofiles.ts')).not.toContain("c.text('c')")
+    })
+
+    it('reserves the export of a renamed file against the definitions', async () => {
+      await fsp.writeFile(
+        'comments.yaml',
+        `openapi: 3.1.0
+info: { title: Comments, version: 1.0.0 }
+paths:
+  /postcomments:
+    get:
+      responses:
+        '200': { description: ok }
+  /comments:
+    post:
+      responses:
+        '200': { description: ok }
+`,
+      )
+      const withDefinitions = {
+        input: 'comments.yaml',
+        schema: 'zod',
+        defineHandler: { output: 'src/routes.ts', template: true },
+      } as const
+      await runGenerator(hono(withDefinitions))
+      await fsp.rename('src/handlers/postcomments.ts', 'src/handlers/postComments.ts')
+      await runGenerator(hono(withDefinitions))
+      expect(read('src/handlers/postComments.ts')).toContain('export const postCommentsHandler')
+      expect(read('src/routes.ts')).not.toMatch(/export const postCommentsHandler\b/u)
+    })
+
+    it('does not give the root a file named root', async () => {
+      await fsp.writeFile(
+        'root.yaml',
+        `openapi: 3.1.0
+info: { title: Root, version: 1.0.0 }
+paths:
+  /:
+    get:
+      responses:
+        '200': { description: ok }
+`,
+      )
+      await fsp.mkdir('src/handlers', { recursive: true })
+      await fsp.writeFile('src/handlers/root.ts', 'export const rootHandler = 1\n')
+      await runGenerator(hono({ input: 'root.yaml', schema: 'zod' }))
+      expect(list('src/handlers')).toStrictEqual(['__root.ts', 'index.ts'])
+    })
+
     it('exports each group of a split app under its camelCase name', async () => {
       await runGenerator(
         hono({

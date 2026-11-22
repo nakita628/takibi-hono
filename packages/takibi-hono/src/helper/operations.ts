@@ -54,17 +54,14 @@ function toKebabCase(segment: string) {
 /**
  * `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. The first segment
  * is lowercased, or with `fileNameCase: 'kebab-case'` written in kebab case
- * (`/realTimeEvents` → `real-time-events`).
+ * (`/realTimeEvents` → `real-time-events`); a segment with no ASCII letter or digit, which kebab
+ * case would leave empty, is lowercased all the same rather than taken for the root.
  */
 export function makeHandlerFileName(path: string, fileNameCase?: 'kebab-case') {
   const segment = path.split('/').find(Boolean)
-  const name =
-    segment === undefined
-      ? ''
-      : fileNameCase === 'kebab-case'
-        ? toKebabCase(segment)
-        : segment.toLowerCase()
-  return name === '' ? '__root' : name
+  if (segment === undefined) return '__root'
+  const kebab = fileNameCase === 'kebab-case' ? toKebabCase(segment) : ''
+  return kebab === '' ? segment.toLowerCase() : kebab
 }
 
 export function collectRoutes(openapi: OpenAPI, fileNameCase?: 'kebab-case') {

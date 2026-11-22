@@ -332,7 +332,7 @@ const ConfigSchema = Schema.Struct({
   }),
   fileNameCase: Schema.optionalKey(Schema.Literal('kebab-case')).annotate({
     description:
-      'Name each handler file in kebab case, by the first segment of the path: `/realTimeEvents` as `real-time-events.ts`, `/user_profiles` as `user-profiles.ts`. Only the file name changes: its export (`realTimeEventsHandler`), the group of `split` and the client keep camelCase names. Unset, the segment is lowercased (`realtimeevents.ts`). Either way an existing handler file whose name matches once case, `-` and `_` are ignored stays the file of its group, so switching the option renames nothing. As hono-takibi names its handler files.',
+      'Name each handler file in kebab case, by the first segment of the path: `/realTimeEvents` as `real-time-events.ts`, `/user_profiles` as `user-profiles.ts`. Unset, the segment is lowercased (`realtimeevents.ts`). The export (`realTimeEventsHandler`), the group of `split` and the client are named after the handler file, its hyphens read as word breaks. Either way an existing handler file whose name matches once case, `-` and `_` are ignored stays the file of its group and keeps its name (and so its export), and the handlers of routes that move between files when the option is switched move with them. As hono-takibi names its handler files.',
   }),
   ...CLIENT_FIELDS,
   pathAlias: Schema.optionalKey(Schema.String),
