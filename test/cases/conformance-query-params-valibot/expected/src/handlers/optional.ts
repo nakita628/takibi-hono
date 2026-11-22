@@ -17,7 +17,13 @@ export const optionalHandler = new Hono().get(
       ),
       v.partial(
         v.object({
-          int_opt: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          int_opt: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           int64_opt: v.pipe(
             v.string(),
             v.regex(/^-?\d+$/),
@@ -25,7 +31,13 @@ export const optionalHandler = new Hono().get(
             v.minValue(-9223372036854775808n),
             v.maxValue(9223372036854775807n),
           ),
-          num_opt: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+          num_opt: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.finite(),
+          ),
           bool_opt: v.pipe(
             v.string(),
             v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
@@ -41,19 +53,59 @@ export const optionalHandler = new Hono().get(
           arr_opt: v.pipe(
             v.unknown(),
             v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-            v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.array(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
-          'page-size': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          'page-size': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           'filter[name]': v.string(),
-          $top: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-          'user.id': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          $top: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          'user.id': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           'ids[]': v.pipe(
             v.unknown(),
             v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-            v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.array(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
           Int_Opt: v.string(),
-          constructor: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          constructor: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
         }),
       ),
     ),

@@ -1,7 +1,7 @@
 import type { ComponentAdapter, SchemaLib, SchemaSlot } from 'oas-truth'
 import { makeAdapter } from 'oas-truth'
 
-import type { ImportEntry } from './imports.js'
+import type { ImportEntry, LocalEntry } from './imports.js'
 
 /**
  * What takibi-hono needs per validator library beyond oas-truth's adapter: the
@@ -21,8 +21,18 @@ type Library = {
   readonly validator: { readonly entry: ImportEntry; readonly wrap: (expr: string) => string }
   /** Identifiers a type alias must not claim (they would shadow an import). */
   readonly reserved: readonly string[]
-  readonly imports: readonly ImportEntry[]
+  readonly imports: readonly (ImportEntry | LocalEntry)[]
 }
+
+/**
+ * TypeBox as a Standard Schema: the compiled `Validator` with a `~standard` that checks, then
+ * decodes (a query or header Codec turns its text into the value), and reports each error at
+ * its JSON Pointer as a path. Its `types` carry the encoded input and the decoded output, so
+ * hono-openapi infers the request types. The vendor stays `typebox`, so hono-openapi's JSON
+ * Schema conversion reads the schema from the validator's `Type()`.
+ */
+const TYPEBOX_STANDARD_SCHEMA =
+  "const toStandardSchemaV1=<T extends TSchema>(schema:T)=>{const validator=Compile(schema);return Object.assign(validator,{'~standard':{version:1 as const,vendor:'typebox',validate:(value:unknown)=>validator.Check(value)?{value:validator.Decode(value)}:{issues:validator.Errors(value).map((error)=>({message:error.message,path:error.instancePath.split('/').slice(1).map((key)=>key.replaceAll('~1','/').replaceAll('~0','~'))}))},types:undefined as {readonly input:StaticEncode<T>;readonly output:StaticDecode<T>}|undefined}})}"
 
 const STANDARD_VALIDATOR: ImportEntry = { name: 'sValidator', from: '@hono/standard-validator' }
 
@@ -42,20 +52,33 @@ const LIBRARIES: { readonly [K in SchemaLib]: Library } = {
     imports: [{ name: 'v', from: 'valibot', style: 'namespace' }],
   },
   typebox: {
-    toStandardSchema: (expr) => `Compile(${expr})`,
-    // TypeBox 1.x has no `~standard`: `Compile()` is a `Validator`, which hono-openapi's
-    // `validator` takes by its own bridge and `defineHandler` cannot.
+    // TypeBox 1.x has no `~standard`, and hono-openapi's `validator` and `resolver` take a
+    // Standard Schema only: the module declares the bridge (`TYPEBOX_STANDARD_SCHEMA`).
+    toStandardSchema: (expr) => `toStandardSchemaV1(${expr})`,
     toDefineHandlerSchema: undefined,
     validator: {
       entry: { name: 'tbValidator', from: '@hono/typebox-validator' },
       wrap: (expr) => expr,
     },
-    reserved: ['Type', 'Codec', 'Static', 'Compile'],
+    reserved: [
+      'Type',
+      'Codec',
+      'Static',
+      'StaticDecode',
+      'StaticEncode',
+      'TSchema',
+      'Compile',
+      'toStandardSchemaV1',
+    ],
     imports: [
       { name: 'Type', from: 'typebox' },
       { name: 'Codec', from: 'typebox' },
       { name: 'Static', from: 'typebox', style: 'type' },
+      { name: 'StaticDecode', from: 'typebox', style: 'type' },
+      { name: 'StaticEncode', from: 'typebox', style: 'type' },
+      { name: 'TSchema', from: 'typebox', style: 'type' },
       { name: 'Compile', from: 'typebox/compile' },
+      { name: 'toStandardSchemaV1', declaration: TYPEBOX_STANDARD_SCHEMA },
     ],
   },
   arktype: {
@@ -125,7 +148,7 @@ export function makeInlineAdapter(lib: SchemaLib, options: InlineAdapterOptions)
 }
 
 /** Imports any generated module may need; `makeImports` keeps only the referenced ones. */
-export function makeLibraryImports(lib: SchemaLib): readonly ImportEntry[] {
+export function makeLibraryImports(lib: SchemaLib): readonly (ImportEntry | LocalEntry)[] {
   return [
     { name: 'Hono', from: 'hono' },
     { name: 'defineHandler', from: 'hono/factory' },

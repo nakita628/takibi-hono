@@ -12,7 +12,8 @@ export const limitsHandler = new Hono().get(
       v.object({
         range: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
           v.minValue(1),
@@ -20,7 +21,8 @@ export const limitsHandler = new Hono().get(
         ),
         exclusive: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
           v.gtValue(0),
@@ -28,7 +30,8 @@ export const limitsHandler = new Hono().get(
         ),
         multiple: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
           v.multipleOf(5),
@@ -47,14 +50,30 @@ export const limitsHandler = new Hono().get(
         items: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
           v.minLength(2),
           v.maxLength(3),
         ),
         unique: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
           v.check((input) => new Set(input).size === input.length),
         ),
         ranged_items: v.pipe(
@@ -63,7 +82,8 @@ export const limitsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
               v.minValue(1),

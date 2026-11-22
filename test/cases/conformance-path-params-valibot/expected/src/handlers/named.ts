@@ -9,7 +9,13 @@ export const namedHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      'user-id': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+      'user-id': v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+      ),
       post_id: v.pipe(
         v.string(),
         v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),

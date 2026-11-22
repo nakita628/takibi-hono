@@ -9,7 +9,8 @@ export const getPetsHandler = defineHandler({
     v.object({
       limit: v.pipe(
         v.string(),
-        v.transform(Number),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
         v.number(),
         v.safeInteger(),
         v.minValue(1),
@@ -35,17 +36,40 @@ export const headPetsHandler = defineHandler({
 
 export const getPetsPetIdHandler = defineHandler({
   param: v.object({
-    petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+    petId: v.pipe(
+      v.string(),
+      v.regex(/^-?(?:0|[1-9]\d*)$/),
+      v.transform((input) => Number(input)),
+      v.number(),
+      v.safeInteger(),
+      v.minValue(1),
+    ),
   }),
   response: PetSchema,
 })
 
 export const deletePetsPetIdHandler = defineHandler({
-  param: v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+  param: v.object({
+    petId: v.pipe(
+      v.string(),
+      v.regex(/^-?(?:0|[1-9]\d*)$/),
+      v.transform((input) => Number(input)),
+      v.number(),
+      v.safeInteger(),
+    ),
+  }),
 })
 
 export const postPetsPetIdPhotosHandler = defineHandler({
-  param: v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+  param: v.object({
+    petId: v.pipe(
+      v.string(),
+      v.regex(/^-?(?:0|[1-9]\d*)$/),
+      v.transform((input) => Number(input)),
+      v.number(),
+      v.safeInteger(),
+    ),
+  }),
   form: v.object({
     caption: v.pipe(v.string(), v.minCodePoints(1)),
     featured: v.optional(

@@ -11,8 +11,18 @@ export const componentHandler = new Hono().post(
     Schema.toStandardSchemaV1(
       Schema.Struct({
         name: Schema.String,
-        price: Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
-        stocked: Schema.optional(
+        price: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+        stocked: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
           ).pipe(

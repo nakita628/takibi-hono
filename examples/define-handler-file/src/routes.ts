@@ -24,19 +24,40 @@ export type Error = z.infer<typeof ErrorSchema>
 export const getHealthHandler = defineHandler({ response: z.object({ status: z.literal('ok') }) })
 
 export const getUsersHandler = defineHandler({
-  query: z.object({ limit: z.coerce.number().int().min(1).max(100).default(20).exactOptional() }),
+  query: z.object({
+    limit: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int().min(1).max(100))
+      .default(20)
+      .exactOptional(),
+  }),
   response: z.array(UserSchema),
 })
 
 export const postUsersHandler = defineHandler({ json: NewUserSchema, response: UserSchema })
 
 export const getUsersUserIdHandler = defineHandler({
-  param: z.object({ userId: z.coerce.number().int().min(1) }),
+  param: z.object({
+    userId: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int().min(1)),
+  }),
   response: UserSchema,
 })
 
 export const getPostsHandler = defineHandler({
-  query: z.object({ authorId: z.coerce.number().int().min(1).exactOptional() }),
+  query: z.object({
+    authorId: z
+      .string()
+      .regex(/^-?(?:0|[1-9]\d*)$/)
+      .transform((val) => Number(val))
+      .pipe(z.number().int().min(1))
+      .exactOptional(),
+  }),
   response: z.array(PostSchema),
 })
 

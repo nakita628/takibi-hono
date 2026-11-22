@@ -10,12 +10,23 @@ export const multipartHandler = new Hono().post(
     'form',
     z.object({
       file: z.file(),
-      age: z.coerce.number().int().exactOptional(),
+      age: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
       active: z.stringbool().exactOptional(),
       ids: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+          ),
         )
         .exactOptional(),
     }),

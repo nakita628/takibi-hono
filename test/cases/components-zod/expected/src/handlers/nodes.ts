@@ -14,6 +14,17 @@ export const nodesHandler = new Hono().get(
       },
     },
   }),
-  validator('query', z.object({ page: z.coerce.number().int().min(1).default(1).exactOptional() })),
+  validator(
+    'query',
+    z.object({
+      page: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(1))
+        .default(1)
+        .exactOptional(),
+    }),
+  ),
   (c) => {},
 )

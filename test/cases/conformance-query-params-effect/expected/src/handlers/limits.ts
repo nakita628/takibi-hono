@@ -10,20 +10,50 @@ export const limitsHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        range: Schema.optional(
-          Schema.FiniteFromString.check(
-            Schema.isInt(),
-            Schema.isGreaterThanOrEqualTo(1),
-            Schema.isLessThanOrEqualTo(100),
-          ),
+        range: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(
+              Schema.isInt(),
+              Schema.isGreaterThanOrEqualTo(1),
+              Schema.isLessThanOrEqualTo(100),
+            ),
         ),
-        exclusive: Schema.optional(
-          Schema.FiniteFromString.check(Schema.isGreaterThan(0), Schema.isLessThan(1)),
+        exclusive: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isGreaterThan(0), Schema.isLessThan(1)),
         ),
-        multiple: Schema.optional(
-          Schema.FiniteFromString.check(Schema.isInt(), Schema.isMultipleOf(5)),
+        multiple: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt(), Schema.isMultipleOf(5)),
         ),
-        int64range: Schema.optional(
+        int64range: Schema.optionalKey(
           Schema.BigIntFromString.check(
             Schema.isBetweenBigInt({
               minimum: -9223372036854775808n,
@@ -33,7 +63,7 @@ export const limitsHandler = new Hono().get(
             Schema.isLessThanOrEqualToBigInt(100n),
           ),
         ),
-        length: Schema.optional(
+        length: Schema.optionalKey(
           Schema.String.check(
             Schema.makeFilter((input) => [...input].length >= 2, {
               expected: 'a string of at least 2 characters',
@@ -43,39 +73,8 @@ export const limitsHandler = new Hono().get(
             }),
           ),
         ),
-        pattern: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-z]+-\d{1,3}$/))),
-        items: Schema.optional(
-          Schema.Unknown.pipe(
-            Schema.decodeTo(
-              Schema.Unknown,
-              SchemaTransformation.transform<unknown, unknown>({
-                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
-                encode: (output) => output,
-              }),
-            ),
-            Schema.decodeTo(
-              Schema.Array(Schema.FiniteFromString.check(Schema.isInt())).check(
-                Schema.isMinLength(2),
-                Schema.isMaxLength(3),
-              ),
-            ),
-          ),
-        ),
-        unique: Schema.optional(
-          Schema.Unknown.pipe(
-            Schema.decodeTo(
-              Schema.Unknown,
-              SchemaTransformation.transform<unknown, unknown>({
-                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
-                encode: (output) => output,
-              }),
-            ),
-            Schema.decodeTo(
-              Schema.Array(Schema.FiniteFromString.check(Schema.isInt())).check(Schema.isUnique()),
-            ),
-          ),
-        ),
-        ranged_items: Schema.optional(
+        pattern: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-z]+-\d{1,3}$/))),
+        items: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -86,11 +85,73 @@ export const limitsHandler = new Hono().get(
             ),
             Schema.decodeTo(
               Schema.Array(
-                Schema.FiniteFromString.check(
-                  Schema.isInt(),
-                  Schema.isGreaterThanOrEqualTo(1),
-                  Schema.isLessThanOrEqualTo(9),
-                ),
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ).check(Schema.isMinLength(2), Schema.isMaxLength(3)),
+            ),
+          ),
+        ),
+        unique: Schema.optionalKey(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ).check(Schema.isUnique()),
+            ),
+          ),
+        ),
+        ranged_items: Schema.optionalKey(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(
+                    Schema.isInt(),
+                    Schema.isGreaterThanOrEqualTo(1),
+                    Schema.isLessThanOrEqualTo(9),
+                  ),
               ),
             ),
           ),

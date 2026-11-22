@@ -10,15 +10,30 @@ export const paramsHandler = new Hono().get(
     'query',
     v.partial(
       v.object({
-        integer: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        integer: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
         integer_arr: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
         ),
         int32: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
           v.minValue(-2147483648),
@@ -30,7 +45,8 @@ export const paramsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
               v.minValue(-2147483648),
@@ -78,7 +94,8 @@ export const paramsHandler = new Hono().get(
         ),
         uint32: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
           v.minValue(0),
@@ -90,7 +107,8 @@ export const paramsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
               v.minValue(0),
@@ -118,15 +136,30 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        number: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+        number: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.finite(),
+        ),
         number_arr: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.finite())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.finite(),
+            ),
+          ),
         ),
         float: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
           v.minValue(-3.4028234663852886e38),
@@ -138,7 +171,8 @@ export const paramsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
               v.minValue(-3.4028234663852886e38),
@@ -148,7 +182,8 @@ export const paramsHandler = new Hono().get(
         ),
         float32: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
           v.minValue(-3.4028234663852886e38),
@@ -160,7 +195,8 @@ export const paramsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
               v.minValue(-3.4028234663852886e38),
@@ -168,23 +204,65 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        float64: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+        float64: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.finite(),
+        ),
         float64_arr: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.finite())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.finite(),
+            ),
+          ),
         ),
-        double: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+        double: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.finite(),
+        ),
         double_arr: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.finite())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.finite(),
+            ),
+          ),
         ),
-        numpassword: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()),
+        numpassword: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.finite(),
+        ),
         numpassword_arr: v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.finite())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.finite(),
+            ),
+          ),
         ),
         boolean: v.pipe(
           v.string(),

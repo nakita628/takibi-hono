@@ -12,12 +12,23 @@ export const objectsHandler = new Hono().get(
       deep: z
         .object({
           name: z.string().exactOptional(),
-          age: z.coerce.number().int().min(0).exactOptional(),
+          age: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int().min(0))
+            .exactOptional(),
           active: z.stringbool().exactOptional(),
           ids: z
             .preprocess(
               (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-              z.array(z.coerce.number().int()),
+              z.array(
+                z
+                  .string()
+                  .regex(/^-?(?:0|[1-9]\d*)$/)
+                  .transform((val) => Number(val))
+                  .pipe(z.number().int()),
+              ),
             )
             .exactOptional(),
           points: z
@@ -25,8 +36,18 @@ export const objectsHandler = new Hono().get(
               (val) => (val === undefined || Array.isArray(val) ? val : [val]),
               z.array(
                 z.object({
-                  x: z.coerce.number().int().exactOptional(),
-                  y: z.coerce.number().int().exactOptional(),
+                  x: z
+                    .string()
+                    .regex(/^-?(?:0|[1-9]\d*)$/)
+                    .transform((val) => Number(val))
+                    .pipe(z.number().int())
+                    .exactOptional(),
+                  y: z
+                    .string()
+                    .regex(/^-?(?:0|[1-9]\d*)$/)
+                    .transform((val) => Number(val))
+                    .pipe(z.number().int())
+                    .exactOptional(),
                 }),
               ),
             )
@@ -39,27 +60,72 @@ export const objectsHandler = new Hono().get(
             .exactOptional(),
           range: z
             .object({
-              min: z.coerce.number().int().exactOptional(),
-              max: z.coerce.number().int().exactOptional(),
+              min: z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int())
+                .exactOptional(),
+              max: z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int())
+                .exactOptional(),
             })
             .exactOptional(),
         })
         .exactOptional(),
       deep_ref: z
-        .object({ from: z.coerce.number().int(), to: z.coerce.number().int().exactOptional() })
+        .object({
+          from: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+          to: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .exactOptional(),
+        })
         .exactOptional(),
       spread: z
         .object({
           sort: z.enum(['asc', 'desc']).exactOptional(),
-          size: z.coerce.number().int().exactOptional(),
-          page: z.coerce.number().int().exactOptional(),
+          size: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .exactOptional(),
+          page: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .exactOptional(),
         })
         .exactOptional(),
       pairs: z
-        .object({ name: z.string().exactOptional(), age: z.coerce.number().int().exactOptional() })
+        .object({
+          name: z.string().exactOptional(),
+          age: z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int())
+            .exactOptional(),
+        })
         .exactOptional(),
       page: z.string().exactOptional(),
-      limit: z.coerce.number().int().exactOptional(),
+      limit: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
     }),
   ),
   (c) => {},

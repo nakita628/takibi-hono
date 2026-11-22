@@ -10,8 +10,20 @@ export const paramsHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        integer: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-        integer_arr: Schema.optional(
+        integer: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        ),
+        integer_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -20,11 +32,37 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
-        int32: Schema.optional(Schema.FiniteFromString.check(Schema.isInt32())),
-        int32_arr: Schema.optional(
+        int32: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt32()),
+        ),
+        int32_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -33,10 +71,24 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt32()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt32()),
+              ),
+            ),
           ),
         ),
-        int64: Schema.optional(
+        int64: Schema.optionalKey(
           Schema.BigIntFromString.check(
             Schema.isBetweenBigInt({
               minimum: -9223372036854775808n,
@@ -44,7 +96,7 @@ export const paramsHandler = new Hono().get(
             }),
           ),
         ),
-        int64_arr: Schema.optional(
+        int64_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -65,8 +117,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        bigint: Schema.optional(Schema.BigIntFromString),
-        bigint_arr: Schema.optional(
+        bigint: Schema.optionalKey(Schema.BigIntFromString),
+        bigint_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -78,8 +130,20 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.BigIntFromString)),
           ),
         ),
-        uint32: Schema.optional(Schema.FiniteFromString.check(Schema.isUint32())),
-        uint32_arr: Schema.optional(
+        uint32: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isUint32()),
+        ),
+        uint32_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -88,15 +152,29 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isUint32()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isUint32()),
+              ),
+            ),
           ),
         ),
-        uint64: Schema.optional(
+        uint64: Schema.optionalKey(
           Schema.BigIntFromString.check(
             Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n }),
           ),
         ),
-        uint64_arr: Schema.optional(
+        uint64_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -114,51 +192,20 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        number: Schema.optional(Schema.FiniteFromString),
-        number_arr: Schema.optional(
-          Schema.Unknown.pipe(
+        number: Schema.optionalKey(
+          Schema.String.check(
+            Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          ).pipe(
             Schema.decodeTo(
-              Schema.Unknown,
-              SchemaTransformation.transform<unknown, unknown>({
-                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
-                encode: (output) => output,
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString)),
           ),
         ),
-        float: Schema.optional(
-          Schema.FiniteFromString.check(
-            Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
-          ),
-        ),
-        float_arr: Schema.optional(
-          Schema.Unknown.pipe(
-            Schema.decodeTo(
-              Schema.Unknown,
-              SchemaTransformation.transform<unknown, unknown>({
-                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
-                encode: (output) => output,
-              }),
-            ),
-            Schema.decodeTo(
-              Schema.Array(
-                Schema.FiniteFromString.check(
-                  Schema.isBetween({
-                    minimum: -3.4028234663852886e38,
-                    maximum: 3.4028234663852886e38,
-                  }),
-                ),
-              ),
-            ),
-          ),
-        ),
-        float32: Schema.optional(
-          Schema.FiniteFromString.check(
-            Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
-          ),
-        ),
-        float32_arr: Schema.optional(
+        number_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -169,18 +216,37 @@ export const paramsHandler = new Hono().get(
             ),
             Schema.decodeTo(
               Schema.Array(
-                Schema.FiniteFromString.check(
-                  Schema.isBetween({
-                    minimum: -3.4028234663852886e38,
-                    maximum: 3.4028234663852886e38,
-                  }),
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                ).pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        float64: Schema.optional(Schema.FiniteFromString),
-        float64_arr: Schema.optional(
+        float: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(
+              Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
+            ),
+        ),
+        float_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -189,11 +255,46 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString)),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                )
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(
+                    Schema.isBetween({
+                      minimum: -3.4028234663852886e38,
+                      maximum: 3.4028234663852886e38,
+                    }),
+                  ),
+              ),
+            ),
           ),
         ),
-        double: Schema.optional(Schema.FiniteFromString),
-        double_arr: Schema.optional(
+        float32: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(
+              Schema.isBetween({ minimum: -3.4028234663852886e38, maximum: 3.4028234663852886e38 }),
+            ),
+        ),
+        float32_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -202,11 +303,44 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString)),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                )
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(
+                    Schema.isBetween({
+                      minimum: -3.4028234663852886e38,
+                      maximum: 3.4028234663852886e38,
+                    }),
+                  ),
+              ),
+            ),
           ),
         ),
-        numpassword: Schema.optional(Schema.FiniteFromString),
-        numpassword_arr: Schema.optional(
+        float64: Schema.optionalKey(
+          Schema.String.check(
+            Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          ).pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          ),
+        ),
+        float64_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -215,10 +349,102 @@ export const paramsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString)),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                ).pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        boolean: Schema.optional(
+        double: Schema.optionalKey(
+          Schema.String.check(
+            Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          ).pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          ),
+        ),
+        double_arr: Schema.optionalKey(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                ).pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        numpassword: Schema.optionalKey(
+          Schema.String.check(
+            Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          ).pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          ),
+        ),
+        numpassword_arr: Schema.optionalKey(
+          Schema.Unknown.pipe(
+            Schema.decodeTo(
+              Schema.Unknown,
+              SchemaTransformation.transform<unknown, unknown>({
+                decode: (input) => (input === undefined || Array.isArray(input) ? input : [input]),
+                encode: (output) => output,
+              }),
+            ),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(
+                  Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+                ).pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        boolean: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
           ).pipe(
@@ -231,7 +457,7 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        boolean_arr: Schema.optional(
+        boolean_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -257,8 +483,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        string: Schema.optional(Schema.String),
-        string_arr: Schema.optional(
+        string: Schema.optionalKey(Schema.String),
+        string_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -270,10 +496,10 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        email: Schema.optional(
+        email: Schema.optionalKey(
           Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),
         ),
-        email_arr: Schema.optional(
+        email_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -291,8 +517,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        uuid: Schema.optional(Schema.String.check(Schema.isUUID())),
-        uuid_arr: Schema.optional(
+        uuid: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+        uuid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -304,8 +530,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isUUID()))),
           ),
         ),
-        uuidv4: Schema.optional(Schema.String.check(Schema.isUUID(4))),
-        uuidv4_arr: Schema.optional(
+        uuidv4: Schema.optionalKey(Schema.String.check(Schema.isUUID(4))),
+        uuidv4_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -317,8 +543,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isUUID(4)))),
           ),
         ),
-        uuidv7: Schema.optional(Schema.String.check(Schema.isUUID(7))),
-        uuidv7_arr: Schema.optional(
+        uuidv7: Schema.optionalKey(Schema.String.check(Schema.isUUID(7))),
+        uuidv7_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -330,10 +556,10 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isUUID(7)))),
           ),
         ),
-        url: Schema.optional(
+        url: Schema.optionalKey(
           Schema.String.check(Schema.makeFilter((input) => URL.canParse(input))),
         ),
-        url_arr: Schema.optional(
+        url_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -347,10 +573,10 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        uri: Schema.optional(
+        uri: Schema.optionalKey(
           Schema.String.check(Schema.makeFilter((input) => URL.canParse(input))),
         ),
-        uri_arr: Schema.optional(
+        uri_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -364,12 +590,12 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        httpurl: Schema.optional(
+        httpurl: Schema.optionalKey(
           Schema.String.check(
             Schema.makeFilter((input) => URL.canParse(input) && /^https?:\/\//.test(input)),
           ),
         ),
-        httpurl_arr: Schema.optional(
+        httpurl_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -387,14 +613,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        hostname: Schema.optional(
+        hostname: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(?=.{1,253}\.?$)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[-0-9a-zA-Z]{0,61}[0-9a-zA-Z])?)*\.?$/,
             ),
           ),
         ),
-        hostname_arr: Schema.optional(
+        hostname_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -414,8 +640,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        hex: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]*$/))),
-        hex_arr: Schema.optional(
+        hex: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]*$/))),
+        hex_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -427,12 +653,12 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]*$/)))),
           ),
         ),
-        emoji: Schema.optional(
+        emoji: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^[\p{Extended_Pictographic}\p{Emoji_Component}]+$/u),
           ),
         ),
-        emoji_arr: Schema.optional(
+        emoji_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -450,8 +676,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        base64: Schema.optional(Schema.String.check(Schema.isBase64())),
-        base64_arr: Schema.optional(
+        base64: Schema.optionalKey(Schema.String.check(Schema.isBase64())),
+        base64_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -463,8 +689,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isBase64()))),
           ),
         ),
-        base64url: Schema.optional(Schema.String.check(Schema.isBase64Url())),
-        base64url_arr: Schema.optional(
+        base64url: Schema.optionalKey(Schema.String.check(Schema.isBase64Url())),
+        base64url_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -476,8 +702,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isBase64Url()))),
           ),
         ),
-        nanoid: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{21}$/))),
-        nanoid_arr: Schema.optional(
+        nanoid: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_-]{21}$/))),
+        nanoid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -491,8 +717,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        cuid2: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9a-z]+$/))),
-        cuid2_arr: Schema.optional(
+        cuid2: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[0-9a-z]+$/))),
+        cuid2_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -504,8 +730,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isPattern(/^[0-9a-z]+$/)))),
           ),
         ),
-        ulid: Schema.optional(Schema.String.check(Schema.isULID())),
-        ulid_arr: Schema.optional(
+        ulid: Schema.optionalKey(Schema.String.check(Schema.isULID())),
+        ulid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -517,14 +743,14 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String.check(Schema.isULID()))),
           ),
         ),
-        ipv4: Schema.optional(
+        ipv4: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/,
             ),
           ),
         ),
-        ipv4_arr: Schema.optional(
+        ipv4_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -544,14 +770,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        ipv6: Schema.optional(
+        ipv6: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$/,
             ),
           ),
         ),
-        ipv6_arr: Schema.optional(
+        ipv6_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -571,14 +797,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        cidrv4: Schema.optional(
+        cidrv4: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/([0-9]|[1-2][0-9]|3[0-2])$/,
             ),
           ),
         ),
-        cidrv4_arr: Schema.optional(
+        cidrv4_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -598,14 +824,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        cidrv6: Schema.optional(
+        cidrv6: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/,
             ),
           ),
         ),
-        cidrv6_arr: Schema.optional(
+        cidrv6_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -625,14 +851,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        date: Schema.optional(
+        date: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$/,
             ),
           ),
         ),
-        date_arr: Schema.optional(
+        date_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -652,14 +878,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        time: Schema.optional(
+        time: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/,
             ),
           ),
         ),
-        time_arr: Schema.optional(
+        time_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -679,14 +905,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        datetime: Schema.optional(
+        datetime: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$/,
             ),
           ),
         ),
-        datetime_arr: Schema.optional(
+        datetime_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -706,14 +932,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        duration: Schema.optional(
+        duration: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/,
             ),
           ),
         ),
-        duration_arr: Schema.optional(
+        duration_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -733,8 +959,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        byte: Schema.optional(Schema.String),
-        byte_arr: Schema.optional(
+        byte: Schema.optionalKey(Schema.String),
+        byte_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -746,8 +972,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        strpassword: Schema.optional(Schema.String),
-        strpassword_arr: Schema.optional(
+        strpassword: Schema.optionalKey(Schema.String),
+        strpassword_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -759,12 +985,12 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        mac: Schema.optional(
+        mac: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$|^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/),
           ),
         ),
-        mac_arr: Schema.optional(
+        mac_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -784,8 +1010,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        e164: Schema.optional(Schema.String.check(Schema.isPattern(/^\+[1-9]\d{6,14}$/))),
-        e164_arr: Schema.optional(
+        e164: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^\+[1-9]\d{6,14}$/))),
+        e164_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -799,8 +1025,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        creditcard: Schema.optional(Schema.String),
-        creditcard_arr: Schema.optional(
+        creditcard: Schema.optionalKey(Schema.String),
+        creditcard_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -812,8 +1038,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        iban: Schema.optional(Schema.String),
-        iban_arr: Schema.optional(
+        iban: Schema.optionalKey(Schema.String),
+        iban_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -825,8 +1051,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        currencycode: Schema.optional(Schema.String),
-        currencycode_arr: Schema.optional(
+        currencycode: Schema.optionalKey(Schema.String),
+        currencycode_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -838,8 +1064,8 @@ export const paramsHandler = new Hono().get(
             Schema.decodeTo(Schema.Array(Schema.String)),
           ),
         ),
-        ksuid: Schema.optional(Schema.String.check(Schema.isPattern(/^[A-Za-z0-9]{27}$/))),
-        ksuid_arr: Schema.optional(
+        ksuid: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[A-Za-z0-9]{27}$/))),
+        ksuid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -853,8 +1079,8 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        xid: Schema.optional(Schema.String.check(Schema.isPattern(/^[0-9a-vA-V]{20}$/))),
-        xid_arr: Schema.optional(
+        xid: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[0-9a-vA-V]{20}$/))),
+        xid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -868,14 +1094,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        guid: Schema.optional(
+        guid: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(
               /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/,
             ),
           ),
         ),
-        guid_arr: Schema.optional(
+        guid_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -895,14 +1121,14 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        tx_trim: Schema.optional(Schema.Trim),
-        tx_lower: Schema.optional(
+        tx_trim: Schema.optionalKey(Schema.Trim),
+        tx_lower: Schema.optionalKey(
           Schema.String.pipe(Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase())),
         ),
-        tx_upper: Schema.optional(
+        tx_upper: Schema.optionalKey(
           Schema.String.pipe(Schema.decodeTo(Schema.String, SchemaTransformation.toUpperCase())),
         ),
-        tx_normalize: Schema.optional(
+        tx_normalize: Schema.optionalKey(
           Schema.String.pipe(
             Schema.decodeTo(
               Schema.String,
@@ -913,11 +1139,11 @@ export const paramsHandler = new Hono().get(
             ),
           ),
         ),
-        tx_email_trim: Schema.optional(
+        tx_email_trim: Schema.optionalKey(
           Schema.Trim.check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),
         ),
-        tx_uuid_trim: Schema.optional(Schema.Trim.check(Schema.isUUID())),
-        tx_email_lower: Schema.optional(
+        tx_uuid_trim: Schema.optionalKey(Schema.Trim.check(Schema.isUUID())),
+        tx_email_lower: Schema.optionalKey(
           Schema.String.pipe(
             Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase()),
           ).check(Schema.isPattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)),

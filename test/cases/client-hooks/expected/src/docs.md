@@ -70,17 +70,6 @@ Status Code **200**
 |Name|Type|Required|Restrictions|Description|
 |---|---|---|---|---|
 |*anonymous*|[[Pet](#schemapet)]|false|none|none|
-|» id|integer|true|none|none|
-|» name|string|true|none|none|
-|» tag|[Tag](#schematag)|false|none|none|
-
-#### Enumerated Values
-
-|Property|Value|
-|---|---|
-|» tag|dog|
-|» tag|cat|
-|» tag|bird|
 
 ### Response Headers
 

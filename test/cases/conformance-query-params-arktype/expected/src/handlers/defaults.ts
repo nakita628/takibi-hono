@@ -10,7 +10,7 @@ export const defaultsHandler = new Hono().get(
     'query',
     type({
       'int_def?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       'int64_def?': type('string')
@@ -21,7 +21,9 @@ export const defaultsHandler = new Hono().get(
             ctx.mustBe('an int64'),
         ),
       'num_def?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'bool_def?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -39,7 +41,7 @@ export const defaultsHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         ).array(),

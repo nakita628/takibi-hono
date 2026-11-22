@@ -9,7 +9,13 @@ export const requiredHandler = new Hono().get(
   validator(
     'query',
     v.object({
-      id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+      id: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+      ),
       big: v.pipe(
         v.string(),
         v.regex(/^-?\d+$/),
@@ -26,9 +32,25 @@ export const requiredHandler = new Hono().get(
       tags: v.pipe(
         v.unknown(),
         v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-        v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+        v.array(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+        ),
       ),
-      note: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      note: v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      ),
     }),
   ),
   (c) => {},

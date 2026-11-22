@@ -11,7 +11,13 @@ export const matrixexplodeHandler = new Hono().get(
     z.object({
       value: z.preprocess(
         (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-        z.array(z.coerce.number().int()),
+        z.array(
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+        ),
       ),
     }),
   ),

@@ -9,7 +9,13 @@ export const requiredHandler = new Hono().get(
   validator(
     'cookie',
     v.object({
-      id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+      id: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+      ),
       big: v.pipe(
         v.string(),
         v.regex(/^-?\d+$/),
@@ -23,7 +29,15 @@ export const requiredHandler = new Hono().get(
         v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
       ),
       name: v.string(),
-      note: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      note: v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      ),
     }),
   ),
   (c) => {},

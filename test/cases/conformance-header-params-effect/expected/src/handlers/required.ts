@@ -10,7 +10,17 @@ export const requiredHandler = new Hono().get(
     'header',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        'x-id': Schema.FiniteFromString.check(Schema.isInt()),
+        'x-id': Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .check(Schema.isInt()),
         'x-big': Schema.BigIntFromString.check(
           Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
         ),
@@ -26,7 +36,19 @@ export const requiredHandler = new Hono().get(
           ),
         ),
         'x-name': Schema.String,
-        'x-note': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+        'x-note': Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .check(Schema.isInt()),
+        ),
       }),
     ),
   ),

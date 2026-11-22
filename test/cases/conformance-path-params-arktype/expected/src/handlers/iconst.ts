@@ -11,8 +11,8 @@ export const iconstHandler = new Hono().get(
     type({
       value: type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
-          return Number.isFinite(value) ? value : ctx.error('a number')
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('7'),
     }),

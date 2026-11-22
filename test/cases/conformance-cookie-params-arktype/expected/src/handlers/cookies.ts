@@ -10,12 +10,12 @@ export const cookiesHandler = new Hono().get(
     'cookie',
     type({
       'integer?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       'int32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= -2147483648 & number.integer <= 2147483647'),
@@ -31,7 +31,7 @@ export const cookiesHandler = new Hono().get(
       ),
       'uint32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 0 & number.integer <= 4294967295'),
@@ -41,31 +41,43 @@ export const cookiesHandler = new Hono().get(
           (data, ctx) => (data >= 0n && data <= 18446744073709551615n) || ctx.mustBe('a uint64'),
         ),
       'number?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'float?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
-        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+        .pipe(type('number').atLeast(-3.4028234663852886e38).atMost(3.4028234663852886e38)),
       'float32?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
-        .to('number >= -3.4028234663852886e38 & number <= 3.4028234663852886e38'),
+        .pipe(type('number').atLeast(-3.4028234663852886e38).atMost(3.4028234663852886e38)),
       'float64?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'double?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'numpassword?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'boolean?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -125,7 +137,7 @@ export const cookiesHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         ).array(),

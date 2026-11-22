@@ -9,14 +9,35 @@ export const absentHandler = new Hono().get(
   validator(
     'query',
     v.object({
-      empty_ok: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+      empty_ok: v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      ),
       empty_def: v.optional(
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
         '7',
       ),
       empty_str: v.optional(v.string()),
       ref_def: v.optional(
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+          v.minValue(0),
+        ),
         '3',
       ),
     }),

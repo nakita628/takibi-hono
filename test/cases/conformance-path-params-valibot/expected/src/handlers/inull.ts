@@ -12,7 +12,15 @@ export const inullHandler = new Hono().get(
       value: v.pipe(
         v.unknown(),
         v.transform((input) => (input === 'null' ? null : input)),
-        v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+        v.nullable(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+        ),
       ),
     }),
   ),

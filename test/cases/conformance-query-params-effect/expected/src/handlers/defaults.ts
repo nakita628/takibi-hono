@@ -10,13 +10,34 @@ export const defaultsHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        int_def: Schema.FiniteFromString.check(Schema.isInt()).pipe(
-          Schema.withDecodingDefaultType(Effect.succeed(20)),
-        ),
+        int_def: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .check(Schema.isInt())
+          .pipe(Schema.withDecodingDefaultType(Effect.succeed(20))),
         int64_def: Schema.BigIntFromString.check(
           Schema.isBetweenBigInt({ minimum: -9223372036854775808n, maximum: 9223372036854775807n }),
         ).pipe(Schema.withDecodingDefaultType(Effect.succeed(5n))),
-        num_def: Schema.FiniteFromString.pipe(Schema.withDecodingDefaultType(Effect.succeed(0.5))),
+        num_def: Schema.String.check(
+          Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        )
+          .pipe(
+            Schema.decodeTo(
+              Schema.Finite,
+              SchemaTransformation.transform({
+                decode: (input) => Number(input),
+                encode: (output) => String(output),
+              }),
+            ),
+          )
+          .pipe(Schema.withDecodingDefaultType(Effect.succeed(0.5))),
         bool_def: Schema.String.check(
           Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
         )
@@ -65,7 +86,21 @@ export const defaultsHandler = new Hono().get(
               encode: (output) => output,
             }),
           ),
-          Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+          Schema.decodeTo(
+            Schema.Array(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
+          ),
         ).pipe(Schema.withDecodingDefaultType(Effect.succeed([1, 2]))),
       }),
     ),

@@ -12,24 +12,43 @@ export const literalsHandler = new Hono().get(
       v.object({
         ienum: v.pipe(
           v.string(),
-          v.transform(Number),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
           v.union([v.literal(1), v.literal(2), v.literal(3)]),
         ),
-        nenum: v.pipe(v.string(), v.transform(Number), v.union([v.literal(1.5), v.literal(2.5)])),
+        nenum: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.union([v.literal(1.5), v.literal(2.5)]),
+        ),
         benum: v.pipe(
           v.string(),
           v.regex(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
           v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
           v.literal(true),
         ),
-        iconst: v.pipe(v.string(), v.transform(Number), v.literal(7)),
+        iconst: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.literal(7),
+        ),
         senum: v.picklist(['asc', 'desc']),
         sconst: v.literal('fixed'),
         numericsenum: v.picklist(['1', '02', 'true']),
         inull: v.pipe(
           v.unknown(),
           v.transform((input) => (input === 'null' ? null : input)),
-          v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          v.nullable(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
         ),
         bnull: v.pipe(
           v.unknown(),
@@ -47,11 +66,17 @@ export const literalsHandler = new Hono().get(
           v.transform((input) => (input === 'null' ? null : input)),
           v.nullable(
             v.union([
-              v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
               v.pipe(
                 v.unknown(),
                 v.transform((input) => (input === 'null' ? null : input)),
-                v.nullable(v.null()),
+                v.null(),
               ),
             ]),
           ),
@@ -63,7 +88,15 @@ export const literalsHandler = new Hono().get(
             v.pipe(
               v.unknown(),
               v.transform((input) => (input === 'null' ? null : input)),
-              v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+              v.nullable(
+                v.pipe(
+                  v.string(),
+                  v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.transform((input) => Number(input)),
+                  v.number(),
+                  v.safeInteger(),
+                ),
+              ),
             ),
           ),
         ),
@@ -76,13 +109,27 @@ export const literalsHandler = new Hono().get(
               v.transform((input) =>
                 input === undefined || Array.isArray(input) ? input : [input],
               ),
-              v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+              v.array(
+                v.pipe(
+                  v.string(),
+                  v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.transform((input) => Number(input)),
+                  v.number(),
+                  v.safeInteger(),
+                ),
+              ),
             ),
           ),
         ),
         snull: v.nullable(v.string()),
         ioneof: v.union([
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           v.literal('all'),
         ]),
         ienum_arr: v.pipe(
@@ -91,7 +138,8 @@ export const literalsHandler = new Hono().get(
           v.array(
             v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
               v.union([v.literal(1), v.literal(2), v.literal(3)]),
             ),
           ),

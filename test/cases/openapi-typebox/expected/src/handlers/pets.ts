@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { Type, Codec } from 'typebox'
+import { Type, Codec, type StaticDecode, type StaticEncode, type TSchema } from 'typebox'
 import { Compile } from 'typebox/compile'
 import {
   TagSchema,
@@ -9,6 +9,31 @@ import {
   NotFoundResponse,
   BadRequestResponse,
 } from '../components'
+
+const toStandardSchemaV1 = <T extends TSchema>(schema: T) => {
+  const validator = Compile(schema)
+  return Object.assign(validator, {
+    '~standard': {
+      version: 1 as const,
+      vendor: 'typebox',
+      validate: (value: unknown) =>
+        validator.Check(value)
+          ? { value: validator.Decode(value) }
+          : {
+              issues: validator.Errors(value).map((error) => ({
+                message: error.message,
+                path: error.instancePath
+                  .split('/')
+                  .slice(1)
+                  .map((key) => key.replaceAll('~1', '/').replaceAll('~0', '~')),
+              })),
+            },
+      types: undefined as
+        | { readonly input: StaticEncode<T>; readonly output: StaticDecode<T> }
+        | undefined,
+    },
+  })
+}
 
 export const petsHandler = new Hono()
   .get(
@@ -22,25 +47,30 @@ export const petsHandler = new Hono()
         '200': {
           description: 'The pets',
           headers: { 'X-Total-Count': { $ref: '#/components/headers/TotalCount' } },
-          content: { 'application/json': { schema: resolver(Compile(Type.Array(PetSchema))) } },
+          content: {
+            'application/json': { schema: resolver(toStandardSchemaV1(Type.Array(PetSchema))) },
+          },
         },
       },
     }),
     validator(
       'query',
-      Compile(
+      toStandardSchemaV1(
         Type.Object({
           limit: Type.Optional(
-            Codec(Type.String())
-              .Decode((value) => Number.parseInt(value, 10))
+            Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+              .Decode((value) => Number(value))
               .Encode((value) => String(value)),
           ),
           tag: Type.Optional(TagSchema),
         }),
       ),
     ),
-    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
-    validator('cookie', Compile(Type.Object({ session: Type.Optional(Type.String()) }))),
+    validator(
+      'header',
+      toStandardSchemaV1(Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
+    ),
+    validator('cookie', toStandardSchemaV1(Type.Object({ session: Type.Optional(Type.String()) }))),
     (c) => {},
   )
   .post(
@@ -53,20 +83,26 @@ export const petsHandler = new Hono()
       responses: {
         '201': {
           description: 'Created',
-          content: { 'application/json': { schema: resolver(Compile(PetSchema)) } },
+          content: { 'application/json': { schema: resolver(toStandardSchemaV1(PetSchema)) } },
         },
         '400': BadRequestResponse,
       },
     }),
-    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
-    validator('json', Compile(NewPetSchema)),
+    validator(
+      'header',
+      toStandardSchemaV1(Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
+    ),
+    validator('json', toStandardSchemaV1(NewPetSchema)),
     (c) => {},
   )
   .on(
     'HEAD',
     '/pets',
     describeRoute({ operationId: 'pingPets', responses: { '200': { description: 'OK' } } }),
-    validator('header', Compile(Type.Object({ 'x-request-id': Type.Optional(Type.String()) }))),
+    validator(
+      'header',
+      toStandardSchemaV1(Type.Object({ 'x-request-id': Type.Optional(Type.String()) })),
+    ),
     (c) => {},
   )
   .get(
@@ -77,17 +113,17 @@ export const petsHandler = new Hono()
       responses: {
         '200': {
           description: 'The pet',
-          content: { 'application/json': { schema: resolver(Compile(PetSchema)) } },
+          content: { 'application/json': { schema: resolver(toStandardSchemaV1(PetSchema)) } },
         },
         '404': NotFoundResponse,
       },
     }),
     validator(
       'param',
-      Compile(
+      toStandardSchemaV1(
         Type.Object({
-          petId: Codec(Type.String())
-            .Decode((value) => Number.parseInt(value, 10))
+          petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+            .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         }),
       ),
@@ -99,10 +135,10 @@ export const petsHandler = new Hono()
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
     validator(
       'param',
-      Compile(
+      toStandardSchemaV1(
         Type.Object({
-          petId: Codec(Type.String())
-            .Decode((value) => Number.parseInt(value, 10))
+          petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+            .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         }),
       ),
@@ -117,22 +153,24 @@ export const petsHandler = new Hono()
     }),
     validator(
       'param',
-      Compile(
+      toStandardSchemaV1(
         Type.Object({
-          petId: Codec(Type.String())
-            .Decode((value) => Number.parseInt(value, 10))
+          petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+            .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         }),
       ),
     ),
     validator(
       'form',
-      Compile(
+      toStandardSchemaV1(
         Type.Object({
           caption: Type.String({ minLength: 1 }),
           featured: Type.Optional(
-            Codec(Type.Union([Type.Literal('true'), Type.Literal('false')]))
-              .Decode((value) => value === 'true')
+            Codec(
+              Type.String({ pattern: /^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i }),
+            )
+              .Decode((value) => /^(?:true|1|yes|on|y|enabled)$/i.test(value))
               .Encode((value) => (value ? 'true' : 'false')),
           ),
         }),

@@ -9,7 +9,14 @@ export const schemarefHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+        v.minValue(0),
+      ),
     }),
   ),
   (c) => {},

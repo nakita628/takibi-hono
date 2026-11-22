@@ -9,18 +9,63 @@ export const cookiesHandler = new Hono().get(
   validator(
     'cookie',
     z.object({
-      integer: z.coerce.number().int().exactOptional(),
-      int32: z.coerce.number().pipe(z.int32()).exactOptional(),
+      integer: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
+      int32: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.int32())
+        .exactOptional(),
       int64: z.coerce.bigint().pipe(z.int64()).exactOptional(),
       bigint: z.coerce.bigint().exactOptional(),
-      uint32: z.coerce.number().pipe(z.uint32()).exactOptional(),
+      uint32: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.uint32())
+        .exactOptional(),
       uint64: z.coerce.bigint().pipe(z.uint64()).exactOptional(),
-      number: z.coerce.number().exactOptional(),
-      float: z.coerce.number().pipe(z.float32()).exactOptional(),
-      float32: z.coerce.number().pipe(z.float32()).exactOptional(),
-      float64: z.coerce.number().pipe(z.float64()).exactOptional(),
-      double: z.coerce.number().exactOptional(),
-      numpassword: z.coerce.number().exactOptional(),
+      number: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
+      float: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float32())
+        .exactOptional(),
+      float32: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float32())
+        .exactOptional(),
+      float64: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.float64())
+        .exactOptional(),
+      double: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
+      numpassword: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number())
+        .exactOptional(),
       boolean: z.stringbool().exactOptional(),
       string: z.string().exactOptional(),
       email: z.email().exactOptional(),
@@ -95,7 +140,13 @@ export const cookiesHandler = new Hono().get(
       ids: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+          ),
         )
         .exactOptional(),
     }),

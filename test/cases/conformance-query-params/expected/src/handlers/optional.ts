@@ -14,30 +14,72 @@ export const optionalHandler = new Hono().get(
           ? Object.assign(Object.create(null), val)
           : val,
       z.object({
-        int_opt: z.coerce.number().int().exactOptional(),
+        int_opt: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
         int64_opt: z.coerce.bigint().pipe(z.int64()).exactOptional(),
-        num_opt: z.coerce.number().exactOptional(),
+        num_opt: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+          .transform((val) => Number(val))
+          .pipe(z.number())
+          .exactOptional(),
         bool_opt: z.stringbool().exactOptional(),
         str_opt: z.string().exactOptional(),
         uuid_opt: z.uuid().exactOptional(),
         arr_opt: z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-            z.array(z.coerce.number().int()),
+            z.array(
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+            ),
           )
           .exactOptional(),
-        'page-size': z.coerce.number().int().exactOptional(),
+        'page-size': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
         'filter[name]': z.string().exactOptional(),
-        $top: z.coerce.number().int().exactOptional(),
-        'user.id': z.coerce.number().int().exactOptional(),
+        $top: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
+        'user.id': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
         'ids[]': z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-            z.array(z.coerce.number().int()),
+            z.array(
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+            ),
           )
           .exactOptional(),
         Int_Opt: z.string().exactOptional(),
-        constructor: z.coerce.number().int().exactOptional(),
+        constructor: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
       }),
     ),
   ),

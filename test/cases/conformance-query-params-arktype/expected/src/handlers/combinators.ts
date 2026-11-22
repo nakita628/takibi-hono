@@ -9,29 +9,22 @@ export const combinatorsHandler = new Hono().get(
   validator(
     'query',
     type({
-      'allof?': type(
-        type('string').pipe((data, ctx) => {
-          const value = Number(data)
+      'allof?': type('string')
+        .pipe((data, ctx) => {
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
-        }),
-      ).and(
-        type('string')
-          .pipe((data, ctx) => {
-            const value = Number(data)
-            return Number.isFinite(value) ? value : ctx.error('a number')
-          })
-          .to('number >= 5'),
-      ),
+        })
+        .to('number.integer >= 5'),
       'allof_range?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 1 & number.integer <= 10'),
       'oneof_is?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           type('string'),
@@ -44,7 +37,7 @@ export const combinatorsHandler = new Hono().get(
       'oneof_ib?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -59,7 +52,9 @@ export const combinatorsHandler = new Hono().get(
       'anyof_ns?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+              ? Number(data)
+              : Number.NaN
             return Number.isFinite(value) ? value : ctx.error('a number')
           }),
           type('string'),
@@ -72,7 +67,7 @@ export const combinatorsHandler = new Hono().get(
       'mixed?': "1 | 'a' | '2'",
       'not_zero?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .narrow((data: unknown) => data !== 0),
@@ -80,7 +75,9 @@ export const combinatorsHandler = new Hono().get(
       'not_string?': type('unknown').narrow((data: unknown) => typeof data !== 'string'),
       'typeless_min?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
         .to('number >= 1'),
@@ -89,14 +86,16 @@ export const combinatorsHandler = new Hono().get(
       ),
       'nconst?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
         .to('2'),
       'multi?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           type('string'),
@@ -109,7 +108,9 @@ export const combinatorsHandler = new Hono().get(
       'multi_nb?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+              ? Number(data)
+              : Number.NaN
             return Number.isFinite(value) ? value : ctx.error('a number')
           }),
           type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -125,7 +126,7 @@ export const combinatorsHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type([
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'string',

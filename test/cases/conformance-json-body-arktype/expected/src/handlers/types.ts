@@ -23,7 +23,11 @@ export const typesHandler = new Hono().post(
         /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/,
       ),
       'inherited?': type({ 'constructor?': 'number.integer', 'name?': 'string' }),
-      'labelled?': type({ '[string]': 'number.integer' }),
+      'labelled?': type({ 'name?': 'string' }).narrow((data) =>
+        Object.entries(data).every(
+          ([key, value]) => ['name'].includes(key) || type('number.integer').allows(value),
+        ),
+      ),
     }),
   ),
   (c) => {},

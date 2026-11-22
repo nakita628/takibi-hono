@@ -9,9 +9,24 @@ export const limitsHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      range: z.coerce.number().int().min(1).max(100).exactOptional(),
-      exclusive: z.coerce.number().gt(0).lt(1).exactOptional(),
-      multiple: z.coerce.number().int().multipleOf(5).exactOptional(),
+      range: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(1).max(100))
+        .exactOptional(),
+      exclusive: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().gt(0).lt(1))
+        .exactOptional(),
+      multiple: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().multipleOf(5))
+        .exactOptional(),
       int64range: z.coerce.bigint().pipe(z.int64().min(1n).max(100n)).exactOptional(),
       length: z.string().min(2).max(4).exactOptional(),
       pattern: z
@@ -21,19 +36,42 @@ export const limitsHandler = new Hono().get(
       items: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()).min(2).max(3),
+          z
+            .array(
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+            )
+            .min(2)
+            .max(3),
         )
         .exactOptional(),
       unique: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int()).refine((val) => new Set(val).size === val.length),
+          z
+            .array(
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int()),
+            )
+            .refine((val) => new Set(val).size === val.length),
         )
         .exactOptional(),
       ranged_items: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.array(z.coerce.number().int().min(1).max(9)),
+          z.array(
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int().min(1).max(9)),
+          ),
         )
         .exactOptional(),
     }),

@@ -10,7 +10,7 @@ export const stylesHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        csv: Schema.optional(
+        csv: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -19,10 +19,24 @@ export const stylesHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
-        pipes: Schema.optional(
+        pipes: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -31,10 +45,24 @@ export const stylesHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
-        spaces: Schema.optional(
+        spaces: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -43,16 +71,42 @@ export const stylesHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.Array(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
-        filter: Schema.optional(
+        filter: Schema.optionalKey(
           Schema.Struct({
-            name: Schema.optional(Schema.String),
-            age: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            name: Schema.optionalKey(Schema.String),
+            age: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
           }),
         ),
-        csv_str: Schema.optional(
+        csv_str: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,

@@ -28,7 +28,12 @@ export const petsHandler = new Hono()
     validator(
       'query',
       z.object({
-        limit: z.coerce.number().int().min(1).max(100).exactOptional(),
+        limit: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1).max(100))
+          .exactOptional(),
         tag: TagSchema.exactOptional(),
       }),
     ),
@@ -75,13 +80,31 @@ export const petsHandler = new Hono()
         '404': NotFoundResponse,
       },
     }),
-    validator('param', z.object({ petId: z.coerce.number().int().min(1) })),
+    validator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1)),
+      }),
+    ),
     (c) => {},
   )
   .delete(
     '/pets/:petId',
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
-    validator('param', z.object({ petId: z.coerce.number().int() })),
+    validator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     (c) => {},
   )
   .post(
@@ -90,7 +113,16 @@ export const petsHandler = new Hono()
       operationId: 'uploadPhoto',
       responses: { '201': { description: 'Uploaded' } },
     }),
-    validator('param', z.object({ petId: z.coerce.number().int() })),
+    validator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     validator(
       'form',
       z.object({ caption: z.string().min(1), featured: z.stringbool().exactOptional() }),

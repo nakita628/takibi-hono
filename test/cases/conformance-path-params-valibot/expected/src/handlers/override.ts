@@ -8,7 +8,15 @@ export const overrideHandler = new Hono().get(
   describeRoute({ operationId: 'overrideParam', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ id: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+    v.object({
+      id: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+      ),
+    }),
   ),
   (c) => {},
 )

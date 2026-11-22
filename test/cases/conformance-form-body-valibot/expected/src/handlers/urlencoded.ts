@@ -18,9 +18,24 @@ export const urlencodedHandler = new Hono().post(
       v.object({
         name: v.optional(v.string()),
         age: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+            v.minValue(0),
+          ),
         ),
-        ratio: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.finite())),
+        ratio: v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.finite(),
+          ),
+        ),
         big: v.optional(
           v.pipe(
             v.string(),
@@ -38,7 +53,12 @@ export const urlencodedHandler = new Hono().post(
           ),
         ),
         level: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.union([v.literal(1), v.literal(2)])),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.union([v.literal(1), v.literal(2)]),
+          ),
         ),
         agreed: v.optional(
           v.pipe(
@@ -49,11 +69,24 @@ export const urlencodedHandler = new Hono().post(
           ),
         ),
         limit: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           '20',
         ),
         count: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(0)),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+            v.minValue(0),
+          ),
         ),
         flag: v.optional(
           v.pipe(
@@ -73,7 +106,15 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.unknown(),
             v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-            v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.array(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
         ),
         moment: v.optional(
@@ -96,12 +137,26 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.unknown(),
             v.transform((input) => (input === 'null' ? null : input)),
-            v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.nullable(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
         ),
         label: v.optional(v.nullable(v.string())),
         constructor: v.optional(
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
         ),
       }),
     ),

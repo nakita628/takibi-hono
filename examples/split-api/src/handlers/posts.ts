@@ -18,7 +18,17 @@ export const postsHandler = new Hono()
         },
       },
     }),
-    validator('query', z.object({ authorId: z.coerce.number().int().min(1).exactOptional() })),
+    validator(
+      'query',
+      z.object({
+        authorId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1))
+          .exactOptional(),
+      }),
+    ),
     (c) => c.json(store.posts(c.req.valid('query').authorId), 200),
   )
   .post(

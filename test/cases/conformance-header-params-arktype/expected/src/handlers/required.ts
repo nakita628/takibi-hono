@@ -10,7 +10,7 @@ export const requiredHandler = new Hono().get(
     'header',
     type({
       'x-id': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
       'x-big': type('string')
@@ -25,7 +25,7 @@ export const requiredHandler = new Hono().get(
       ),
       'x-name': 'string',
       'x-note?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
         return Number.isSafeInteger(value) ? value : ctx.error('an integer')
       }),
     }),

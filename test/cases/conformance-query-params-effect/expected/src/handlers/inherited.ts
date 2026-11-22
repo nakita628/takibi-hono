@@ -23,10 +23,19 @@ export const inheritedHandler = new Hono().get(
         Schema.decodeTo(
           Schema.Struct({
             toString: Schema.String,
-            valueOf: Schema.FiniteFromString.check(Schema.isInt()).pipe(
-              Schema.withDecodingDefaultType(Effect.succeed(3)),
-            ),
-            hasOwnProperty: Schema.optional(
+            valueOf: Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+              .pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              )
+              .check(Schema.isInt())
+              .pipe(Schema.withDecodingDefaultType(Effect.succeed(3))),
+            hasOwnProperty: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
               ).pipe(
@@ -39,7 +48,7 @@ export const inheritedHandler = new Hono().get(
                 ),
               ),
             ),
-            isPrototypeOf: Schema.optional(
+            isPrototypeOf: Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -49,10 +58,36 @@ export const inheritedHandler = new Hono().get(
                     encode: (output) => output,
                   }),
                 ),
-                Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+                Schema.decodeTo(
+                  Schema.Array(
+                    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                      .pipe(
+                        Schema.decodeTo(
+                          Schema.Finite,
+                          SchemaTransformation.transform({
+                            decode: (input) => Number(input),
+                            encode: (output) => String(output),
+                          }),
+                        ),
+                      )
+                      .check(Schema.isInt()),
+                  ),
+                ),
               ),
             ),
-            toLocaleString: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            toLocaleString: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
           }),
         ),
       ),

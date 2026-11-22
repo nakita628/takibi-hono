@@ -10,7 +10,11 @@ export const componentHandler = new Hono().post(
     'form',
     z.object({
       name: z.string(),
-      price: z.coerce.number().int().min(0),
+      price: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(0)),
       stocked: z.stringbool().exactOptional(),
     }),
   ),

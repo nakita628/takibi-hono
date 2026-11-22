@@ -9,7 +9,12 @@ export const ienumHandler = new Hono().get(
   validator(
     'param',
     v.object({
-      value: v.pipe(v.string(), v.transform(Number), v.union([v.literal(1), v.literal(2)])),
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.transform((input) => Number(input)),
+        v.union([v.literal(1), v.literal(2)]),
+      ),
     }),
   ),
   (c) => {},
