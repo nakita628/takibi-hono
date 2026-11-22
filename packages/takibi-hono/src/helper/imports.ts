@@ -6,6 +6,19 @@ export type ImportEntry = {
   readonly style?: 'namespace' | 'type'
 }
 
+/**
+ * A helper the generated module declares for itself rather than imports: `declaration` is
+ * written below the imports when the body refers to `name`, and what it refers to is imported
+ * like the body's own references.
+ */
+export type LocalEntry = {
+  readonly name: string
+  readonly declaration: string
+}
+
+const isLocal = (entry: ImportEntry | LocalEntry): entry is LocalEntry => 'declaration' in entry
+const isImport = (entry: ImportEntry | LocalEntry): entry is ImportEntry => !isLocal(entry)
+
 function renderImport(from: string, entries: readonly ImportEntry[]) {
   const namespace = entries.find((entry) => entry.style === 'namespace')
   if (namespace) return `import*as ${namespace.name} from'${from}'`
@@ -40,8 +53,17 @@ export function makeBarrel(fileNames: readonly string[]) {
     .join('\n')
 }
 
-/** Prepends the import block (if any) to a generated module body. */
-export function withImports(body: string, candidates: readonly ImportEntry[]) {
-  const imports = makeImports(body, candidates)
-  return imports.length > 0 ? `${imports.join('\n')}\n\n${body}` : body
+/**
+ * Prepends the import block (if any) to a generated module body, and between them the
+ * declarations of the local helpers the body refers to.
+ */
+export function withImports(body: string, candidates: readonly (ImportEntry | LocalEntry)[]) {
+  const used = collectFreeIdentifiers(body)
+  const locals = candidates
+    .filter(isLocal)
+    .filter((entry) => used.has(entry.name))
+    .map((entry) => entry.declaration)
+  const code = [...locals, body].join('\n\n')
+  const imports = makeImports(code, candidates.filter(isImport))
+  return imports.length > 0 ? `${imports.join('\n')}\n\n${code}` : code
 }

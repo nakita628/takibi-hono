@@ -287,7 +287,11 @@ export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object
   })
 
   it.each([
-    ['typebox', `validator('json',Compile(ItemSchema))`, 'resolver(Compile(ItemSchema))'],
+    [
+      'typebox',
+      `validator('json',toStandardSchemaV1(ItemSchema))`,
+      'resolver(toStandardSchemaV1(ItemSchema))',
+    ],
     [
       'effect',
       `validator('json',Schema.toStandardSchemaV1(ItemSchema))`,
@@ -317,11 +321,44 @@ export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object
         responseRefs: false,
         imports: [],
       })
-      expect(code.split('\n\n')[1]).toBe(
+      expect(code.split('\n\n').at(-1)).toBe(
         `export const itemsHandler=new Hono().put('/items/:id',describeRoute({responses:{"200":{description:"ok",content:{"application/json":{schema:${resolver}}}}}}),${validator},(c)=>{})`,
       )
     },
   )
+})
+
+describe('makeHandlerCode: the TypeBox Standard Schema bridge', () => {
+  it('declares toStandardSchemaV1 below the imports, typed by the encoded and decoded types', () => {
+    expect(
+      makeHandlerCode('itemsHandler', [itemRoute] as never, {
+        lib: 'typebox',
+        openapi: true,
+        components: undefined,
+        responseRefs: false,
+        imports: [{ name: 'ItemSchema', from: '../components' }],
+      }).split('\n\n', 2),
+    ).toStrictEqual([
+      `import{Hono}from'hono'
+import{describeRoute,validator}from'hono-openapi'
+import{Type,Codec,type StaticDecode,type StaticEncode,type TSchema}from'typebox'
+import{Compile}from'typebox/compile'
+import{ItemSchema}from'../components'`,
+      "const toStandardSchemaV1=<T extends TSchema>(schema:T)=>{const validator=Compile(schema);return Object.assign(validator,{'~standard':{version:1 as const,vendor:'typebox',validate:(value:unknown)=>validator.Check(value)?{value:validator.Decode(value)}:{issues:validator.Errors(value).map((error)=>({message:error.message,path:error.instancePath.split('/').slice(1).map((key)=>key.replaceAll('~1','/').replaceAll('~0','~'))}))},types:undefined as {readonly input:StaticEncode<T>;readonly output:StaticDecode<T>}|undefined}})}",
+    ])
+  })
+
+  it('declares nothing without hono-openapi, where tbValidator takes the schema', () => {
+    expect(
+      makeHandlerCode('itemsHandler', [itemRoute] as never, {
+        lib: 'typebox',
+        openapi: false,
+        components: undefined,
+        responseRefs: false,
+        imports: [{ name: 'ItemSchema', from: '../components' }],
+      }),
+    ).not.toContain('toStandardSchemaV1')
+  })
 })
 
 describe('makeHandlerCode: describeRoute fields', () => {
