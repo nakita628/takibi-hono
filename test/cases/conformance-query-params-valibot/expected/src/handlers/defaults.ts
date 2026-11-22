@@ -10,7 +10,13 @@ export const defaultsHandler = new Hono().get(
     'query',
     v.object({
       int_def: v.optional(
-        v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
         '20',
       ),
       int64_def: v.optional(
@@ -23,7 +29,16 @@ export const defaultsHandler = new Hono().get(
         ),
         '5',
       ),
-      num_def: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.finite()), '0.5'),
+      num_def: v.optional(
+        v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.finite(),
+        ),
+        '0.5',
+      ),
       bool_def: v.optional(
         v.pipe(
           v.string(),
@@ -54,7 +69,15 @@ export const defaultsHandler = new Hono().get(
         v.pipe(
           v.unknown(),
           v.transform((input) => (input === undefined || Array.isArray(input) ? input : [input])),
-          v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          v.array(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
         ),
         ['1', '2'],
       ),

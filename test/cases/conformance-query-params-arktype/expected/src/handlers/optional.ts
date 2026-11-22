@@ -16,7 +16,7 @@ export const optionalHandler = new Hono().get(
             : data,
         type({
           'int_opt?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'int64_opt?': type('string')
@@ -27,7 +27,9 @@ export const optionalHandler = new Hono().get(
                 ctx.mustBe('an int64'),
             ),
           'num_opt?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+              ? Number(data)
+              : Number.NaN
             return Number.isFinite(value) ? value : ctx.error('a number')
           }),
           'bool_opt?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe(
@@ -39,36 +41,36 @@ export const optionalHandler = new Hono().get(
             (data) => (data === undefined || Array.isArray(data) ? data : [data]),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).array(),
           ),
           'page-size?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'filter[name]?': 'string',
           '$top?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'user.id?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'ids[]?': type('unknown').pipe(
             (data) => (data === undefined || Array.isArray(data) ? data : [data]),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).array(),
           ),
           'Int_Opt?': 'string',
           'constructor?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         }),

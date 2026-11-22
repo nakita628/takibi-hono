@@ -10,7 +10,7 @@ export const numbersHandler = new Hono().post(
     'json',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        id: Schema.optional(
+        id: Schema.optionalKey(
           Schema.Union([
             Schema.BigInt,
             Schema.Number.check(Schema.isInt()),
@@ -32,7 +32,7 @@ export const numbersHandler = new Hono().post(
               }),
             ),
         ),
-        unsigned: Schema.optional(
+        unsigned: Schema.optionalKey(
           Schema.Union([
             Schema.BigInt,
             Schema.Number.check(Schema.isInt()),
@@ -49,7 +49,7 @@ export const numbersHandler = new Hono().post(
             )
             .check(Schema.isBetweenBigInt({ minimum: 0n, maximum: 18446744073709551615n })),
         ),
-        ranged: Schema.optional(
+        ranged: Schema.optionalKey(
           Schema.Union([
             Schema.BigInt,
             Schema.Number.check(Schema.isInt()),
@@ -73,7 +73,7 @@ export const numbersHandler = new Hono().post(
               Schema.isLessThanOrEqualToBigInt(100n),
             ),
         ),
-        level: Schema.optional(
+        level: Schema.optionalKey(
           Schema.Union([
             Schema.BigInt,
             Schema.Number.check(Schema.isInt()),
@@ -90,7 +90,7 @@ export const numbersHandler = new Hono().post(
             )
             .pipe(Schema.decodeTo(Schema.Literals([1n, 2n]))),
         ),
-        version: Schema.optional(
+        version: Schema.optionalKey(
           Schema.Union([
             Schema.BigInt,
             Schema.Number.check(Schema.isInt()),
@@ -128,7 +128,7 @@ export const numbersHandler = new Hono().post(
             }),
           )
           .pipe(Schema.withDecodingDefault(Effect.succeed(0n))),
-        maybe: Schema.optional(
+        maybe: Schema.optionalKey(
           Schema.NullOr(
             Schema.Union([
               Schema.BigInt,
@@ -152,7 +152,7 @@ export const numbersHandler = new Hono().post(
               ),
           ),
         ),
-        ids: Schema.optional(
+        ids: Schema.optionalKey(
           Schema.Array(
             Schema.Union([
               Schema.BigInt,
@@ -176,8 +176,8 @@ export const numbersHandler = new Hono().post(
               ),
           ),
         ),
-        small: Schema.optional(Schema.Number.check(Schema.isInt32())),
-        ref: Schema.optional(IdSchema),
+        small: Schema.optionalKey(Schema.Number.check(Schema.isInt32())),
+        ref: Schema.optionalKey(IdSchema),
       }),
     ),
   ),

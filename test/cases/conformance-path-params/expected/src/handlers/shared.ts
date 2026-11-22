@@ -7,12 +7,30 @@ export const sharedHandler = new Hono()
   .get(
     '/shared/:id',
     describeRoute({ operationId: 'sharedGetParam', responses: { '200': EchoResponse } }),
-    validator('param', z.object({ id: z.coerce.number().int() })),
+    validator(
+      'param',
+      z.object({
+        id: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     (c) => {},
   )
   .delete(
     '/shared/:id',
     describeRoute({ operationId: 'sharedDeleteParam', responses: { '200': EchoResponse } }),
-    validator('param', z.object({ id: z.coerce.number().int() })),
+    validator(
+      'param',
+      z.object({
+        id: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     (c) => {},
   )

@@ -123,7 +123,17 @@ export const petsHandler = new Hono()
         '404': NotFoundResponse,
       },
     }),
-    validator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    validator(
+      'query',
+      z.object({
+        limit: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
+      }),
+    ),
     (c) => {},
   )
   .post(
@@ -200,7 +210,15 @@ export const petsHandler = new Hono()
     sValidator(
       'query',
       v.partial(
-        v.object({ limit: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+        v.object({
+          limit: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+        }),
       ),
     ),
     (c) => {},
@@ -246,7 +264,17 @@ const LIMIT = 10
 export const petsHandler = new Hono()
   .get(
     '/pets',
-    sValidator('query', z.object({ limit: z.coerce.number().int().exactOptional() })),
+    sValidator(
+      'query',
+      z.object({
+        limit: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
+      }),
+    ),
     (c) => c.json([], 200),
   )
   .post('/pets', sValidator('json', PetSchema), (c) => {})

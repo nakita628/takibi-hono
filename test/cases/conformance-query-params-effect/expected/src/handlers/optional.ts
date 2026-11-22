@@ -22,8 +22,20 @@ export const optionalHandler = new Hono().get(
         ),
         Schema.decodeTo(
           Schema.Struct({
-            int_opt: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-            int64_opt: Schema.optional(
+            int_opt: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
+            int64_opt: Schema.optionalKey(
               Schema.BigIntFromString.check(
                 Schema.isBetweenBigInt({
                   minimum: -9223372036854775808n,
@@ -31,8 +43,20 @@ export const optionalHandler = new Hono().get(
                 }),
               ),
             ),
-            num_opt: Schema.optional(Schema.FiniteFromString),
-            bool_opt: Schema.optional(
+            num_opt: Schema.optionalKey(
+              Schema.String.check(
+                Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              ).pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              ),
+            ),
+            bool_opt: Schema.optionalKey(
               Schema.String.check(
                 Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
               ).pipe(
@@ -45,9 +69,9 @@ export const optionalHandler = new Hono().get(
                 ),
               ),
             ),
-            str_opt: Schema.optional(Schema.String),
-            uuid_opt: Schema.optional(Schema.String.check(Schema.isUUID())),
-            arr_opt: Schema.optional(
+            str_opt: Schema.optionalKey(Schema.String),
+            uuid_opt: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+            arr_opt: Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -57,14 +81,64 @@ export const optionalHandler = new Hono().get(
                     encode: (output) => output,
                   }),
                 ),
-                Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+                Schema.decodeTo(
+                  Schema.Array(
+                    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                      .pipe(
+                        Schema.decodeTo(
+                          Schema.Finite,
+                          SchemaTransformation.transform({
+                            decode: (input) => Number(input),
+                            encode: (output) => String(output),
+                          }),
+                        ),
+                      )
+                      .check(Schema.isInt()),
+                  ),
+                ),
               ),
             ),
-            'page-size': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-            'filter[name]': Schema.optional(Schema.String),
-            $top: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-            'user.id': Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
-            'ids[]': Schema.optional(
+            'page-size': Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
+            'filter[name]': Schema.optionalKey(Schema.String),
+            $top: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
+            'user.id': Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
+            'ids[]': Schema.optionalKey(
               Schema.Unknown.pipe(
                 Schema.decodeTo(
                   Schema.Unknown,
@@ -74,11 +148,37 @@ export const optionalHandler = new Hono().get(
                     encode: (output) => output,
                   }),
                 ),
-                Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+                Schema.decodeTo(
+                  Schema.Array(
+                    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                      .pipe(
+                        Schema.decodeTo(
+                          Schema.Finite,
+                          SchemaTransformation.transform({
+                            decode: (input) => Number(input),
+                            encode: (output) => String(output),
+                          }),
+                        ),
+                      )
+                      .check(Schema.isInt()),
+                  ),
+                ),
               ),
             ),
-            Int_Opt: Schema.optional(Schema.String),
-            constructor: Schema.optional(Schema.FiniteFromString.check(Schema.isInt())),
+            Int_Opt: Schema.optionalKey(Schema.String),
+            constructor: Schema.optionalKey(
+              Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                .pipe(
+                  Schema.decodeTo(
+                    Schema.Finite,
+                    SchemaTransformation.transform({
+                      decode: (input) => Number(input),
+                      encode: (output) => String(output),
+                    }),
+                  ),
+                )
+                .check(Schema.isInt()),
+            ),
           }),
         ),
       ),

@@ -9,7 +9,13 @@ export const defaultsHandler = new Hono().get(
   validator(
     'header',
     z.object({
-      'x-int-def': z.coerce.number().int().default(20).exactOptional(),
+      'x-int-def': z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .default(20)
+        .exactOptional(),
       'x-int64-def': z.coerce.bigint().pipe(z.int64()).default(5n).exactOptional(),
       'x-bool-def': z.stringbool().default(false).exactOptional(),
       'x-str-def': z.string().default('fallback').exactOptional(),

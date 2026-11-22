@@ -29,8 +29,8 @@ export type Error = Static<typeof ErrorSchema>
 
 export const LimitParamsSchema = resolver(
   Compile(
-    Codec(Type.String())
-      .Decode((value) => Number.parseInt(value, 10))
+    Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+      .Decode((value) => Number(value))
       .Encode((value) => String(value)),
   ),
 )

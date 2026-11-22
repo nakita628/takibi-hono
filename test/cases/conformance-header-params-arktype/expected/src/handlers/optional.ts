@@ -16,7 +16,7 @@ export const optionalHandler = new Hono().get(
             : data,
         type({
           'x-int-opt?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'x-int64-opt?': type('string')
@@ -32,8 +32,8 @@ export const optionalHandler = new Hono().get(
           'x-str-opt?': 'string',
           'x-ienum?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
-              return Number.isFinite(value) ? value : ctx.error('a number')
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('1 | 2 | 3'),
           'x-benum?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i)
@@ -41,15 +41,15 @@ export const optionalHandler = new Hono().get(
             .to('true'),
           'x-iconst?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
-              return Number.isFinite(value) ? value : ctx.error('a number')
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('7'),
           'x-senum?': "'asc' | 'desc'",
           'x-ioneof?': type('unknown').pipe((data, ctx) => {
             for (const branch of [
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
               type("'all'"),
@@ -61,7 +61,7 @@ export const optionalHandler = new Hono().get(
           }),
           'x-range?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 1 & number.integer <= 100'),
@@ -73,7 +73,7 @@ export const optionalHandler = new Hono().get(
           'x-tx-email?': type('string.lower').to('string.email'),
           'x-ref-int?': type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 0'),
@@ -82,42 +82,42 @@ export const optionalHandler = new Hono().get(
             .to('string[]'),
           'x-obj?': type({
             'a?': type('string').pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             }),
             'b?': 'string',
           }),
           'x-objx?': type({
             'a?': type('string').pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             }),
             'b?': 'string',
           }),
           'x-request-id?': 'string.uuid',
           'x-rate-limit?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'accept-version?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'x_underscore?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           'x-inull?': type('unknown').pipe(
             (data) => (data === 'null' ? null : data),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).or('null'),
           ),
           'constructor?': type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         }),

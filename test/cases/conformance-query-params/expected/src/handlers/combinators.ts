@@ -9,17 +9,62 @@ export const combinatorsHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      allof: z.intersection(z.coerce.number().int(), z.coerce.number().min(5)).exactOptional(),
-      allof_range: z
-        .intersection(z.coerce.number().int().min(1), z.coerce.number().int().max(10))
+      allof: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int().min(5))
         .exactOptional(),
-      oneof_is: z.union([z.coerce.number().int(), z.string()]).exactOptional(),
-      oneof_ib: z.union([z.coerce.number().int(), z.stringbool()]).exactOptional(),
-      anyof_ns: z.union([z.coerce.number(), z.string()]).exactOptional(),
+      allof_range: z
+        .intersection(
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int().min(1)),
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int().max(10)),
+        )
+        .exactOptional(),
+      oneof_is: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+          z.string(),
+        ])
+        .exactOptional(),
+      oneof_ib: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+          z.stringbool(),
+        ])
+        .exactOptional(),
+      anyof_ns: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+            .transform((val) => Number(val))
+            .pipe(z.number()),
+          z.string(),
+        ])
+        .exactOptional(),
       mixed: z.union([z.literal(1), z.literal('a'), z.literal('2')]).exactOptional(),
-      not_zero: z.coerce
-        .number()
-        .int()
+      not_zero: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
         .refine((val) => val !== 0)
         .exactOptional(),
       not_enum: z
@@ -30,15 +75,50 @@ export const combinatorsHandler = new Hono().get(
         .any()
         .refine((val) => typeof val !== 'string')
         .exactOptional(),
-      typeless_min: z.coerce.number().min(1).exactOptional(),
+      typeless_min: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().min(1))
+        .exactOptional(),
       typeless_len: z.string().min(3).exactOptional(),
-      nconst: z.coerce.number().pipe(z.literal(2)).exactOptional(),
-      multi: z.union([z.coerce.number().int(), z.string()]).exactOptional(),
-      multi_nb: z.union([z.coerce.number(), z.stringbool()]).exactOptional(),
+      nconst: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+        .transform((val) => Number(val))
+        .pipe(z.literal(2))
+        .exactOptional(),
+      multi: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)$/)
+            .transform((val) => Number(val))
+            .pipe(z.number().int()),
+          z.string(),
+        ])
+        .exactOptional(),
+      multi_nb: z
+        .union([
+          z
+            .string()
+            .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
+            .transform((val) => Number(val))
+            .pipe(z.number()),
+          z.stringbool(),
+        ])
+        .exactOptional(),
       tuple: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
-          z.tuple([z.coerce.number().int(), z.string()]),
+          z.tuple([
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+            z.string(),
+          ]),
         )
         .exactOptional(),
     }),

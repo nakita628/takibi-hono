@@ -11,7 +11,7 @@ export const refsHandler = new Hono().get(
     type({
       'ref_int?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 0'),
@@ -23,7 +23,9 @@ export const refsHandler = new Hono().get(
             ctx.mustBe('an int64'),
         ),
       'ref_num?': type('string').pipe((data, ctx) => {
-        const value = Number(data)
+        const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+          ? Number(data)
+          : Number.NaN
         return Number.isFinite(value) ? value : ctx.error('a number')
       }),
       'ref_bool?': type(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i).pipe((data) =>
@@ -31,8 +33,8 @@ export const refsHandler = new Hono().get(
       ),
       'ref_enum?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
-          return Number.isFinite(value) ? value : ctx.error('a number')
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('1 | 2 | 3'),
       'ref_str?': NameSchema,
@@ -40,7 +42,7 @@ export const refsHandler = new Hono().get(
         (data) => (data === undefined || Array.isArray(data) ? data : [data]),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         ).array(),
@@ -50,7 +52,7 @@ export const refsHandler = new Hono().get(
         type(
           type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
               return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('number.integer >= 0'),
@@ -58,14 +60,14 @@ export const refsHandler = new Hono().get(
       ),
       'allof_ref?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 0')
         .describe('A count.'),
       'ref_ref?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
           return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('number.integer >= 0'),

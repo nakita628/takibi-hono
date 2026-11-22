@@ -10,7 +10,12 @@ export const simpleobjHandler = new Hono().get(
     'param',
     z.object({
       value: z.object({
-        a: z.coerce.number().int().exactOptional(),
+        a: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
         b: z.string().exactOptional(),
       }),
     }),

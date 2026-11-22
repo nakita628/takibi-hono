@@ -31,7 +31,8 @@ export const petsHandler = new Hono()
         v.object({
           limit: v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(1),
@@ -87,7 +88,14 @@ export const petsHandler = new Hono()
     validator(
       'param',
       v.object({
-        petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger(), v.minValue(1)),
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+          v.minValue(1),
+        ),
       }),
     ),
     (c) => {},
@@ -97,7 +105,15 @@ export const petsHandler = new Hono()
     describeRoute({ operationId: 'deletePet', responses: { '204': { description: 'Deleted' } } }),
     validator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+      v.object({
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      }),
     ),
     (c) => {},
   )
@@ -109,7 +125,15 @@ export const petsHandler = new Hono()
     }),
     validator(
       'param',
-      v.object({ petId: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()) }),
+      v.object({
+        petId: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+      }),
     ),
     validator(
       'form',

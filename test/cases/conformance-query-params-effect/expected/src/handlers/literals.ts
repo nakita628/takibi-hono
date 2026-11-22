@@ -10,13 +10,33 @@ export const literalsHandler = new Hono().get(
     'query',
     Schema.toStandardSchemaV1(
       Schema.Struct({
-        ienum: Schema.optional(
-          Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([1, 2, 3]))),
+        ienum: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .pipe(Schema.decodeTo(Schema.Literals([1, 2, 3]))),
         ),
-        nenum: Schema.optional(
-          Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([1.5, 2.5]))),
+        nenum: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .pipe(Schema.decodeTo(Schema.Literals([1.5, 2.5]))),
         ),
-        benum: Schema.optional(
+        benum: Schema.optionalKey(
           Schema.String.check(
             Schema.isPattern(/^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i),
           )
@@ -31,11 +51,23 @@ export const literalsHandler = new Hono().get(
             )
             .pipe(Schema.decodeTo(Schema.Literal(true))),
         ),
-        iconst: Schema.optional(Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literal(7)))),
-        senum: Schema.optional(Schema.Literals(['asc', 'desc'])),
-        sconst: Schema.optional(Schema.Literal('fixed')),
-        numericsenum: Schema.optional(Schema.Literals(['1', '02', 'true'])),
-        inull: Schema.optional(
+        iconst: Schema.optionalKey(
+          Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+            .pipe(
+              Schema.decodeTo(
+                Schema.Finite,
+                SchemaTransformation.transform({
+                  decode: (input) => Number(input),
+                  encode: (output) => String(output),
+                }),
+              ),
+            )
+            .pipe(Schema.decodeTo(Schema.Literal(7))),
+        ),
+        senum: Schema.optionalKey(Schema.Literals(['asc', 'desc'])),
+        sconst: Schema.optionalKey(Schema.Literal('fixed')),
+        numericsenum: Schema.optionalKey(Schema.Literals(['1', '02', 'true'])),
+        inull: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -44,10 +76,24 @@ export const literalsHandler = new Hono().get(
                 encode: (output) => output,
               }),
             ),
-            Schema.decodeTo(Schema.NullOr(Schema.FiniteFromString.check(Schema.isInt()))),
+            Schema.decodeTo(
+              Schema.NullOr(
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .check(Schema.isInt()),
+              ),
+            ),
           ),
         ),
-        bnull: Schema.optional(
+        bnull: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -73,7 +119,7 @@ export const literalsHandler = new Hono().get(
             ),
           ),
         ),
-        nullof: Schema.optional(
+        nullof: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -85,7 +131,17 @@ export const literalsHandler = new Hono().get(
             Schema.decodeTo(
               Schema.NullOr(
                 Schema.Union([
-                  Schema.FiniteFromString.check(Schema.isInt()),
+                  Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                    .pipe(
+                      Schema.decodeTo(
+                        Schema.Finite,
+                        SchemaTransformation.transform({
+                          decode: (input) => Number(input),
+                          encode: (output) => String(output),
+                        }),
+                      ),
+                    )
+                    .check(Schema.isInt()),
                   Schema.Unknown.pipe(
                     Schema.decodeTo(
                       Schema.Unknown,
@@ -94,14 +150,14 @@ export const literalsHandler = new Hono().get(
                         encode: (output) => output,
                       }),
                     ),
-                    Schema.decodeTo(Schema.NullOr(Schema.Null)),
+                    Schema.decodeTo(Schema.Null),
                   ),
                 ]),
               ),
             ),
           ),
         ),
-        inull_arr: Schema.optional(
+        inull_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -120,13 +176,27 @@ export const literalsHandler = new Hono().get(
                       encode: (output) => output,
                     }),
                   ),
-                  Schema.decodeTo(Schema.NullOr(Schema.FiniteFromString.check(Schema.isInt()))),
+                  Schema.decodeTo(
+                    Schema.NullOr(
+                      Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                        .pipe(
+                          Schema.decodeTo(
+                            Schema.Finite,
+                            SchemaTransformation.transform({
+                              decode: (input) => Number(input),
+                              encode: (output) => String(output),
+                            }),
+                          ),
+                        )
+                        .check(Schema.isInt()),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        inull_list: Schema.optional(
+        inull_list: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -146,17 +216,44 @@ export const literalsHandler = new Hono().get(
                       encode: (output) => output,
                     }),
                   ),
-                  Schema.decodeTo(Schema.Array(Schema.FiniteFromString.check(Schema.isInt()))),
+                  Schema.decodeTo(
+                    Schema.Array(
+                      Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                        .pipe(
+                          Schema.decodeTo(
+                            Schema.Finite,
+                            SchemaTransformation.transform({
+                              decode: (input) => Number(input),
+                              encode: (output) => String(output),
+                            }),
+                          ),
+                        )
+                        .check(Schema.isInt()),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        snull: Schema.optional(Schema.NullOr(Schema.String)),
-        ioneof: Schema.optional(
-          Schema.Union([Schema.FiniteFromString.check(Schema.isInt()), Schema.Literal('all')]),
+        snull: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        ioneof: Schema.optionalKey(
+          Schema.Union([
+            Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+              .pipe(
+                Schema.decodeTo(
+                  Schema.Finite,
+                  SchemaTransformation.transform({
+                    decode: (input) => Number(input),
+                    encode: (output) => String(output),
+                  }),
+                ),
+              )
+              .check(Schema.isInt()),
+            Schema.Literal('all'),
+          ]),
         ),
-        ienum_arr: Schema.optional(
+        ienum_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,
@@ -167,12 +264,22 @@ export const literalsHandler = new Hono().get(
             ),
             Schema.decodeTo(
               Schema.Array(
-                Schema.FiniteFromString.pipe(Schema.decodeTo(Schema.Literals([1, 2, 3]))),
+                Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+                  .pipe(
+                    Schema.decodeTo(
+                      Schema.Finite,
+                      SchemaTransformation.transform({
+                        decode: (input) => Number(input),
+                        encode: (output) => String(output),
+                      }),
+                    ),
+                  )
+                  .pipe(Schema.decodeTo(Schema.Literals([1, 2, 3]))),
               ),
             ),
           ),
         ),
-        senum_arr: Schema.optional(
+        senum_arr: Schema.optionalKey(
           Schema.Unknown.pipe(
             Schema.decodeTo(
               Schema.Unknown,

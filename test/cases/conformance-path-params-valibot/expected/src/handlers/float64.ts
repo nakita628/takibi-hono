@@ -8,7 +8,15 @@ export const float64Handler = new Hono().get(
   describeRoute({ operationId: 'float64Param', responses: { '200': EchoResponse } }),
   validator(
     'param',
-    v.object({ value: v.pipe(v.string(), v.transform(Number), v.number(), v.finite()) }),
+    v.object({
+      value: v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.finite(),
+      ),
+    }),
   ),
   (c) => {},
 )

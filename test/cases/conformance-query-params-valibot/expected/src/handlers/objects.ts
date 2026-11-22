@@ -15,7 +15,8 @@ export const objectsHandler = new Hono().get(
             name: v.string(),
             age: v.pipe(
               v.string(),
-              v.transform(Number),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
               v.minValue(0),
@@ -30,7 +31,15 @@ export const objectsHandler = new Hono().get(
               v.transform((input) =>
                 input === undefined || Array.isArray(input) ? input : [input],
               ),
-              v.array(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+              v.array(
+                v.pipe(
+                  v.string(),
+                  v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.transform((input) => Number(input)),
+                  v.number(),
+                  v.safeInteger(),
+                ),
+              ),
             ),
             points: v.pipe(
               v.unknown(),
@@ -40,8 +49,20 @@ export const objectsHandler = new Hono().get(
               v.array(
                 v.partial(
                   v.object({
-                    x: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-                    y: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+                    x: v.pipe(
+                      v.string(),
+                      v.regex(/^-?(?:0|[1-9]\d*)$/),
+                      v.transform((input) => Number(input)),
+                      v.number(),
+                      v.safeInteger(),
+                    ),
+                    y: v.pipe(
+                      v.string(),
+                      v.regex(/^-?(?:0|[1-9]\d*)$/),
+                      v.transform((input) => Number(input)),
+                      v.number(),
+                      v.safeInteger(),
+                    ),
                   }),
                 ),
               ),
@@ -55,31 +76,81 @@ export const objectsHandler = new Hono().get(
             ),
             range: v.partial(
               v.object({
-                min: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-                max: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+                min: v.pipe(
+                  v.string(),
+                  v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.transform((input) => Number(input)),
+                  v.number(),
+                  v.safeInteger(),
+                ),
+                max: v.pipe(
+                  v.string(),
+                  v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.transform((input) => Number(input)),
+                  v.number(),
+                  v.safeInteger(),
+                ),
               }),
             ),
           }),
         ),
         deep_ref: v.object({
-          from: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-          to: v.optional(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+          from: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          to: v.optional(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+          ),
         }),
         spread: v.partial(
           v.object({
             sort: v.picklist(['asc', 'desc']),
-            size: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-            page: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            size: v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+            page: v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
           }),
         ),
         pairs: v.partial(
           v.object({
             name: v.string(),
-            age: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            age: v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
           }),
         ),
         page: v.string(),
-        limit: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+        limit: v.pipe(
+          v.string(),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
       }),
     ),
   ),

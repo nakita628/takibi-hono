@@ -9,11 +9,20 @@ export const requiredHandler = new Hono().get(
   validator(
     'cookie',
     z.object({
-      id: z.coerce.number().int(),
+      id: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int()),
       big: z.coerce.bigint().pipe(z.int64()),
       flag: z.stringbool(),
       name: z.string(),
-      note: z.coerce.number().int().exactOptional(),
+      note: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
     }),
   ),
   (c) => {},

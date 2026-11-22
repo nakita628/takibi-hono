@@ -10,10 +10,31 @@ export const openHandler = new Hono().get(
     'cookie',
     v.partial(
       v.object({
-        page: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-        bag: v.record(
+        page: v.pipe(
           v.string(),
-          v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.transform((input) => Number(input)),
+          v.number(),
+          v.safeInteger(),
+        ),
+        bag: v.pipe(
+          v.partial(v.looseObject({ known: v.string() })),
+          v.check((input) =>
+            Object.entries(input).every(
+              ([key, value]) =>
+                ['known'].includes(key) ||
+                v.safeParse(
+                  v.pipe(
+                    v.string(),
+                    v.regex(/^-?(?:0|[1-9]\d*)$/),
+                    v.transform((input) => Number(input)),
+                    v.number(),
+                    v.safeInteger(),
+                  ),
+                  value,
+                ).success,
+            ),
+          ),
         ),
       }),
     ),

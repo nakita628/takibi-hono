@@ -11,7 +11,8 @@ export const floatHandler = new Hono().get(
     v.object({
       value: v.pipe(
         v.string(),
-        v.transform(Number),
+        v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.transform((input) => Number(input)),
         v.number(),
         v.finite(),
         v.minValue(-3.4028234663852886e38),

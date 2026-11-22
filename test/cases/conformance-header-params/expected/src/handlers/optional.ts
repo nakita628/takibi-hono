@@ -14,19 +14,45 @@ export const optionalHandler = new Hono().get(
           ? Object.assign(Object.create(null), val)
           : val,
       z.object({
-        'x-int-opt': z.coerce.number().int().exactOptional(),
+        'x-int-opt': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
         'x-int64-opt': z.coerce.bigint().pipe(z.int64()).exactOptional(),
         'x-bool-opt': z.stringbool().exactOptional(),
         'x-str-opt': z.string().exactOptional(),
-        'x-ienum': z.coerce
-          .number()
+        'x-ienum': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
           .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))
           .exactOptional(),
         'x-benum': z.stringbool().pipe(z.literal(true)).exactOptional(),
-        'x-iconst': z.coerce.number().pipe(z.literal(7)).exactOptional(),
+        'x-iconst': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.literal(7))
+          .exactOptional(),
         'x-senum': z.enum(['asc', 'desc']).exactOptional(),
-        'x-ioneof': z.union([z.coerce.number().int(), z.literal('all')]).exactOptional(),
-        'x-range': z.coerce.number().int().min(1).max(100).exactOptional(),
+        'x-ioneof': z
+          .union([
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int()),
+            z.literal('all'),
+          ])
+          .exactOptional(),
+        'x-range': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1).max(100))
+          .exactOptional(),
         'x-length': z.string().min(2).max(4).exactOptional(),
         'x-pattern': z
           .string()
@@ -34,7 +60,12 @@ export const optionalHandler = new Hono().get(
           .exactOptional(),
         'x-tx-lower': z.string().toLowerCase().exactOptional(),
         'x-tx-email': z.string().toLowerCase().pipe(z.email()).exactOptional(),
-        'x-ref-int': z.coerce.number().int().min(0).exactOptional(),
+        'x-ref-int': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(0))
+          .exactOptional(),
         'x-str-arr': z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
@@ -42,19 +73,63 @@ export const optionalHandler = new Hono().get(
           )
           .exactOptional(),
         'x-obj': z
-          .object({ a: z.coerce.number().int().exactOptional(), b: z.string().exactOptional() })
+          .object({
+            a: z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int())
+              .exactOptional(),
+            b: z.string().exactOptional(),
+          })
           .exactOptional(),
         'x-objx': z
-          .object({ a: z.coerce.number().int().exactOptional(), b: z.string().exactOptional() })
+          .object({
+            a: z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int())
+              .exactOptional(),
+            b: z.string().exactOptional(),
+          })
           .exactOptional(),
         'x-request-id': z.uuid().exactOptional(),
-        'x-rate-limit': z.coerce.number().int().exactOptional(),
-        'accept-version': z.coerce.number().int().exactOptional(),
-        x_underscore: z.coerce.number().int().exactOptional(),
-        'x-inull': z
-          .preprocess((val) => (val === 'null' ? null : val), z.coerce.number().int().nullable())
+        'x-rate-limit': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
           .exactOptional(),
-        constructor: z.coerce.number().int().exactOptional(),
+        'accept-version': z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
+        x_underscore: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
+        'x-inull': z
+          .preprocess(
+            (val) => (val === 'null' ? null : val),
+            z
+              .string()
+              .regex(/^-?(?:0|[1-9]\d*)$/)
+              .transform((val) => Number(val))
+              .pipe(z.number().int())
+              .nullable(),
+          )
+          .exactOptional(),
+        constructor: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int())
+          .exactOptional(),
       }),
     ),
   ),

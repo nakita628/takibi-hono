@@ -11,13 +11,15 @@ export const literalsHandler = new Hono().get(
     type({
       'ienum?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
-          return Number.isFinite(value) ? value : ctx.error('a number')
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('1 | 2 | 3'),
       'nenum?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
+          const value = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(data)
+            ? Number(data)
+            : Number.NaN
           return Number.isFinite(value) ? value : ctx.error('a number')
         })
         .to('1.5 | 2.5'),
@@ -26,8 +28,8 @@ export const literalsHandler = new Hono().get(
         .to('true'),
       'iconst?': type('string')
         .pipe((data, ctx) => {
-          const value = Number(data)
-          return Number.isFinite(value) ? value : ctx.error('a number')
+          const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+          return Number.isSafeInteger(value) ? value : ctx.error('an integer')
         })
         .to('7'),
       'senum?': "'asc' | 'desc'",
@@ -37,7 +39,7 @@ export const literalsHandler = new Hono().get(
         (data) => (data === 'null' ? null : data),
         type(
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
         ).or('null'),
@@ -56,12 +58,12 @@ export const literalsHandler = new Hono().get(
           type('unknown').pipe((data, ctx) => {
             for (const branch of [
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
               type('unknown')
                 .pipe((data) => (data === 'null' ? null : data))
-                .to('null | null'),
+                .to('null'),
             ]) {
               const out = branch(data)
               if (!(out instanceof type.errors)) return out
@@ -77,7 +79,7 @@ export const literalsHandler = new Hono().get(
             (data) => (data === 'null' ? null : data),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).or('null'),
@@ -91,7 +93,7 @@ export const literalsHandler = new Hono().get(
             (data) => (data === undefined || Array.isArray(data) ? data : [data]),
             type(
               type('string').pipe((data, ctx) => {
-                const value = Number(data)
+                const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
                 return Number.isSafeInteger(value) ? value : ctx.error('an integer')
               }),
             ).array(),
@@ -102,7 +104,7 @@ export const literalsHandler = new Hono().get(
       'ioneof?': type('unknown').pipe((data, ctx) => {
         for (const branch of [
           type('string').pipe((data, ctx) => {
-            const value = Number(data)
+            const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
             return Number.isSafeInteger(value) ? value : ctx.error('an integer')
           }),
           type("'all'"),
@@ -117,8 +119,8 @@ export const literalsHandler = new Hono().get(
         type(
           type('string')
             .pipe((data, ctx) => {
-              const value = Number(data)
-              return Number.isFinite(value) ? value : ctx.error('a number')
+              const value = /^-?(?:0|[1-9]\d*)$/.test(data) ? Number(data) : Number.NaN
+              return Number.isSafeInteger(value) ? value : ctx.error('an integer')
             })
             .to('1 | 2 | 3'),
         ).array(),

@@ -22,7 +22,14 @@ export const typesHandler = new Hono().post(
       inherited: z
         .object({ constructor: z.int().exactOptional(), name: z.string().exactOptional() })
         .exactOptional(),
-      labelled: z.record(z.string(), z.int()).exactOptional(),
+      labelled: z
+        .looseObject({ name: z.string().exactOptional() })
+        .refine((val) =>
+          Object.entries(val).every(
+            ([key, value]) => ['name'].includes(key) || z.int().safeParse(value).success,
+          ),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

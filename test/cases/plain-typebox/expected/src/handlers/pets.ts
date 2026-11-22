@@ -10,8 +10,8 @@ export const petsHandler = new Hono()
       'query',
       Type.Object({
         limit: Type.Optional(
-          Codec(Type.String())
-            .Decode((value) => Number.parseInt(value, 10))
+          Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+            .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         ),
         tag: Type.Optional(TagSchema),
@@ -38,8 +38,8 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String())
-          .Decode((value) => Number.parseInt(value, 10))
+        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+          .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),
     ),
@@ -50,8 +50,8 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String())
-          .Decode((value) => Number.parseInt(value, 10))
+        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+          .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),
     ),
@@ -62,8 +62,8 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String())
-          .Decode((value) => Number.parseInt(value, 10))
+        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+          .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),
     ),
@@ -72,8 +72,10 @@ export const petsHandler = new Hono()
       Type.Object({
         caption: Type.String({ minLength: 1 }),
         featured: Type.Optional(
-          Codec(Type.Union([Type.Literal('true'), Type.Literal('false')]))
-            .Decode((value) => value === 'true')
+          Codec(
+            Type.String({ pattern: /^(?:true|1|yes|on|y|enabled|false|0|no|off|n|disabled)$/i }),
+          )
+            .Decode((value) => /^(?:true|1|yes|on|y|enabled)$/i.test(value))
             .Encode((value) => (value ? 'true' : 'false')),
         ),
       }),

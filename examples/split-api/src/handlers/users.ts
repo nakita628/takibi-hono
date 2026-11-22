@@ -20,7 +20,15 @@ export const usersHandler = new Hono()
     }),
     validator(
       'query',
-      z.object({ limit: z.coerce.number().int().min(1).max(100).default(20).exactOptional() }),
+      z.object({
+        limit: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1).max(100))
+          .default(20)
+          .exactOptional(),
+      }),
     ),
     (c) => c.json(store.users().slice(0, c.req.valid('query').limit ?? 20), 200),
   )
@@ -55,7 +63,16 @@ export const usersHandler = new Hono()
         },
       },
     }),
-    validator('param', z.object({ userId: z.coerce.number().int().min(1) })),
+    validator(
+      'param',
+      z.object({
+        userId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1)),
+      }),
+    ),
     (c) => {
       const user = store.user(c.req.valid('param').userId)
       return user ? c.json(user, 200) : c.json({ message: 'user not found' }, 404)

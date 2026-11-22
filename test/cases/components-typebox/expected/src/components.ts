@@ -66,8 +66,8 @@ export const UserIdParamsSchema = resolver(Compile(Type.String({ format: 'uuid' 
 export const PageParamsSchema = resolver(
   Compile(
     Type.Optional(
-      Codec(Type.String({ default: '1' }))
-        .Decode((value) => Number.parseInt(value, 10))
+      Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/, default: '1' }))
+        .Decode((value) => Number(value))
         .Encode((value) => String(value)),
     ),
   ),

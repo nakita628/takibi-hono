@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Effect
 
-The package is written on Effect v4 (`4.0.5`, pinned exactly to the release `hono-takibi` uses:
+The package is written on Effect v4 (`4.1.4`, pinned exactly to the release `hono-takibi` uses:
 its client generators return Effects that `src/core/client.ts` composes, so the two must share
 one `effect`. `oas-truth` hands over a result, not an Effect, so its schema-truth may pin
 another release).

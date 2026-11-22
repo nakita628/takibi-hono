@@ -1,32 +1,29 @@
 import { resolver } from 'hono-openapi'
-import { Effect, Schema } from 'effect'
+import { Effect, Schema, SchemaTransformation } from 'effect'
 
-type NodeType = { id: string; children?: readonly NodeType[] | undefined }
+type NodeType = { id: string; children?: readonly NodeType[] }
 
-export const NodeSchema: Schema.Codec<NodeType> = Schema.Struct({
+export const NodeSchema: Schema.Schema<NodeType> = Schema.Struct({
   id: Schema.String,
-  children: Schema.optional(Schema.Array(Schema.suspend(() => NodeSchema))),
+  children: Schema.optionalKey(Schema.Array(Schema.suspend(() => NodeSchema))),
 }).annotate({ identifier: 'Node' })
 
 export type Node = Schema.Schema.Type<typeof NodeSchema>
 
-type AuthorType = {
-  name?: string | undefined
-  posts?: readonly Schema.Schema.Type<typeof PostSchema>[] | undefined
-}
+type AuthorType = { name?: string; posts?: readonly Schema.Schema.Type<typeof PostSchema>[] }
 
-export const AuthorSchema: Schema.Codec<AuthorType> = Schema.Struct({
-  name: Schema.optional(Schema.String),
-  posts: Schema.optional(Schema.Array(Schema.suspend(() => PostSchema))),
+export const AuthorSchema: Schema.Schema<AuthorType> = Schema.Struct({
+  name: Schema.optionalKey(Schema.String),
+  posts: Schema.optionalKey(Schema.Array(Schema.suspend(() => PostSchema))),
 }).annotate({ identifier: 'Author' })
 
 export type Author = Schema.Schema.Type<typeof AuthorSchema>
 
-type PostType = { title: string; author?: Schema.Schema.Type<typeof AuthorSchema> | undefined }
+type PostType = { title: string; author?: Schema.Schema.Type<typeof AuthorSchema> }
 
-export const PostSchema: Schema.Codec<PostType> = Schema.Struct({
+export const PostSchema: Schema.Schema<PostType> = Schema.Struct({
   title: Schema.String,
-  author: Schema.optional(Schema.suspend(() => AuthorSchema)),
+  author: Schema.optionalKey(Schema.suspend(() => AuthorSchema)),
 }).annotate({ identifier: 'Post' })
 
 export type Post = Schema.Schema.Type<typeof PostSchema>
@@ -46,9 +43,18 @@ export const UserIdParamsSchema = resolver(
 )
 export const PageParamsSchema = resolver(
   Schema.toStandardSchemaV1(
-    Schema.FiniteFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)).pipe(
-      Schema.withDecodingDefaultType(Effect.succeed(1)),
-    ),
+    Schema.String.check(Schema.isPattern(/^-?(?:0|[1-9]\d*)$/))
+      .pipe(
+        Schema.decodeTo(
+          Schema.Finite,
+          SchemaTransformation.transform({
+            decode: (input) => Number(input),
+            encode: (output) => String(output),
+          }),
+        ),
+      )
+      .check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))
+      .pipe(Schema.withDecodingDefaultType(Effect.succeed(1))),
   ),
 )
 

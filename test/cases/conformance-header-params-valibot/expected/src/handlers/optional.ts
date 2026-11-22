@@ -17,7 +17,13 @@ export const optionalHandler = new Hono().get(
       ),
       v.partial(
         v.object({
-          'x-int-opt': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          'x-int-opt': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           'x-int64-opt': v.pipe(
             v.string(),
             v.regex(/^-?\d+$/),
@@ -33,7 +39,8 @@ export const optionalHandler = new Hono().get(
           'x-str-opt': v.string(),
           'x-ienum': v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.union([v.literal(1), v.literal(2), v.literal(3)]),
           ),
           'x-benum': v.pipe(
@@ -42,15 +49,27 @@ export const optionalHandler = new Hono().get(
             v.transform((input) => /^(?:true|1|yes|on|y|enabled)$/i.test(input)),
             v.literal(true),
           ),
-          'x-iconst': v.pipe(v.string(), v.transform(Number), v.literal(7)),
+          'x-iconst': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.literal(7),
+          ),
           'x-senum': v.picklist(['asc', 'desc']),
           'x-ioneof': v.union([
-            v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
             v.literal('all'),
           ]),
           'x-range': v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(1),
@@ -62,7 +81,8 @@ export const optionalHandler = new Hono().get(
           'x-tx-email': v.pipe(v.string(), v.toLowerCase(), v.email()),
           'x-ref-int': v.pipe(
             v.string(),
-            v.transform(Number),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
             v.minValue(0),
@@ -74,13 +94,25 @@ export const optionalHandler = new Hono().get(
           ),
           'x-obj': v.partial(
             v.object({
-              a: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              a: v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
               b: v.string(),
             }),
           ),
           'x-objx': v.partial(
             v.object({
-              a: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+              a: v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
               b: v.string(),
             }),
           ),
@@ -90,15 +122,47 @@ export const optionalHandler = new Hono().get(
               /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/,
             ),
           ),
-          'x-rate-limit': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-          'accept-version': v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
-          x_underscore: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          'x-rate-limit': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          'accept-version': v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          x_underscore: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
           'x-inull': v.pipe(
             v.unknown(),
             v.transform((input) => (input === 'null' ? null : input)),
-            v.nullable(v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger())),
+            v.nullable(
+              v.pipe(
+                v.string(),
+                v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.transform((input) => Number(input)),
+                v.number(),
+                v.safeInteger(),
+              ),
+            ),
           ),
-          constructor: v.pipe(v.string(), v.transform(Number), v.number(), v.safeInteger()),
+          constructor: v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
         }),
       ),
     ),

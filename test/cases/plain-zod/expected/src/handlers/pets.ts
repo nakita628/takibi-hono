@@ -9,7 +9,12 @@ export const petsHandler = new Hono()
     sValidator(
       'query',
       z.object({
-        limit: z.coerce.number().int().min(1).max(100).exactOptional(),
+        limit: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1).max(100))
+          .exactOptional(),
         tag: TagSchema.exactOptional(),
       }),
     ),
@@ -31,17 +36,44 @@ export const petsHandler = new Hono()
   )
   .get(
     '/pets/:petId',
-    sValidator('param', z.object({ petId: z.coerce.number().int().min(1) })),
+    sValidator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int().min(1)),
+      }),
+    ),
     (c) => {},
   )
   .delete(
     '/pets/:petId',
-    sValidator('param', z.object({ petId: z.coerce.number().int() })),
+    sValidator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     (c) => {},
   )
   .post(
     '/pets/:petId/photos',
-    sValidator('param', z.object({ petId: z.coerce.number().int() })),
+    sValidator(
+      'param',
+      z.object({
+        petId: z
+          .string()
+          .regex(/^-?(?:0|[1-9]\d*)$/)
+          .transform((val) => Number(val))
+          .pipe(z.number().int()),
+      }),
+    ),
     sValidator(
       'form',
       z.object({ caption: z.string().min(1), featured: z.stringbool().exactOptional() }),

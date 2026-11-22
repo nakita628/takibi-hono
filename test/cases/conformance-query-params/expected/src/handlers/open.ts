@@ -9,8 +9,27 @@ export const openHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      page: z.coerce.number().int().exactOptional(),
-      extra: z.record(z.string(), z.coerce.number().int()).exactOptional(),
+      page: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int())
+        .exactOptional(),
+      extra: z
+        .looseObject({ known: z.string().exactOptional() })
+        .refine((val) =>
+          Object.entries(val).every(
+            ([key, value]) =>
+              ['known'].includes(key) ||
+              z
+                .string()
+                .regex(/^-?(?:0|[1-9]\d*)$/)
+                .transform((val) => Number(val))
+                .pipe(z.number().int())
+                .safeParse(value).success,
+          ),
+        )
+        .exactOptional(),
     }),
   ),
   (c) => {},

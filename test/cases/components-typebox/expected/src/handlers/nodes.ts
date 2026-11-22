@@ -20,8 +20,8 @@ export const nodesHandler = new Hono().get(
     Compile(
       Type.Object({
         page: Type.Optional(
-          Codec(Type.String({ default: '1' }))
-            .Decode((value) => Number.parseInt(value, 10))
+          Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/, default: '1' }))
+            .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         ),
       }),

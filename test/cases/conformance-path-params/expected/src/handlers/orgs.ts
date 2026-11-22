@@ -9,7 +9,11 @@ export const orgsHandler = new Hono().get(
   validator(
     'param',
     z.object({
-      orgId: z.coerce.number().int(),
+      orgId: z
+        .string()
+        .regex(/^-?(?:0|[1-9]\d*)$/)
+        .transform((val) => Number(val))
+        .pipe(z.number().int()),
       repoId: z.uuid(),
       issueId: z.coerce.bigint().pipe(z.int64()),
     }),
