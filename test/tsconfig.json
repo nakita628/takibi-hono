@@ -9,6 +9,7 @@
     "scripts",
     "conformance/host.ts",
     "conformance/*/app.ts",
+    "pnpm-fix/*.test.ts",
     "vite-plugin/*.test.ts",
     "vite.config.ts"
   ]

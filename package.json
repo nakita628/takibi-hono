@@ -6,7 +6,7 @@
   "scripts": {
     "deps": "mkdir -p /tmp/pnpm-store && pnpm config set store-dir /tmp/pnpm-store &&rm -rf node_modules && rm -rf pnpm-lock.yaml && rm -rf ~/.pnpm-store && pnpm store prune && pnpm install --no-prefer-frozen-lockfile",
     "check": "vp fmt --check && vp run -r check && pnpm lint",
-    "fix": "vp fmt && vp run -r check --fix && markdownlint-cli2 --fix && textlint --fix '**/*.md'",
+    "fix": "vp fmt && vp run --filter ./packages/takibi-hono --filter ./test fix && markdownlint-cli2 --fix && textlint --fix '**/*.md'",
     "lint": "markdownlint-cli2 && textlint '**/*.md' && cspell --no-progress --dot '**' && secretlint '**/*' && node scripts/typespec.ts && node scripts/actionlint.ts -color && node scripts/zizmor.ts .github/workflows",
     "test": "vp run --filter ./packages/takibi-hono --filter ./test --filter './examples/*' test",
     "coverage": "vp run --filter ./packages/takibi-hono coverage"

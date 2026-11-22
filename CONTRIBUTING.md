@@ -523,7 +523,9 @@ A case is `cases/<name>/takibi-hono.config.ts` with `input` under `specs/` and e
 `__generated__/<name>/`; a `seed/` is copied in before the CLI runs (the merge case). A case
 without a `tsconfig.json` is golden only, and its config says why (components-effect: an
 upstream oas-truth type error). The Vite plugin case is self-contained in `vite-plugin/`
-because the plugin reads its config from the working directory.
+because the plugin reads its config from the working directory. `pnpm-fix/` reads the plan
+`vp run --dry-run` resolves for the root `pnpm fix`, which CI never runs, and pins the command it
+starts in each workspace.
 
 - A change in generated output fails `golden.test.ts` with a diff of the generated source. Read
   it; if the new output is right, `pnpm -F @takibi-hono/test update-expected` regenerates and
