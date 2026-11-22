@@ -11,8 +11,13 @@ alwaysApply: false
 - `test.yml` (Test): `vp install --frozen-lockfile` → `vp run takibi-hono#build` → the package
   tests → the end-to-end suite in `test/` (which drives `dist`) → `vp run check`, which ends in
   `pnpm lint` and so runs every linter. A new check goes into the root `package.json` scripts, so
-  local and CI cannot disagree about what "clean" means.
-- `release.yml` runs after Test succeeds on a push to `main`; see Releasing.
+  local and CI cannot disagree about what "clean" means. It also runs when started by hand, and
+  as the first job of `release.yml` (`workflow_call`).
+- `release-please.yml` (Release PR) runs on every push to `main`: when there is something to
+  release, it opens the version bump pull request, merges it and starts `release.yml`; see
+  Releasing.
+- `release.yml` runs after Test succeeds on a push to `main`, or when started on `main` by hand or
+  by `release-please.yml`, and then runs Test itself first; see Releasing.
 - **Actions are pinned to a commit digest with the tag kept as a comment**:
   `uses: actions/checkout@3d3c42e… # v7.0.1`. A floating tag is a mutable dependency with access to
   the job — never introduce one. Resolve a tag with
@@ -122,8 +127,21 @@ itself to, and its comments explain the choices.
 
 ## Releasing
 
-Releases are CI's job, driven by the `version` field of `packages/takibi-hono/package.json`.
-`release.yml` runs after Test passes on a push to `main` and, from the exact commit Test ran on:
+Releases are CI's job, from the version bump to the GitHub release: merging a `feat`, `fix` or
+`perf` change under `packages/takibi-hono/` into `main` is what releases it, with no approval.
+
+`release-please.yml` (Release PR) runs on every push to `main`, again when a `release` run that
+followed a push ends, and when started by hand. release-please (`release-please-config.json`) reads the Conventional
+Commits merged since the last release tag that change a file under `packages/takibi-hono/`, and
+works out the next version from them: `feat` raises the minor, `fix` and `perf` the patch, and a
+breaking change (`feat!:`, a `BREAKING CHANGE:` footer) the minor while the version is 0.x. Any
+other type releases nothing. When there is a next version, it opens
+`chore: bump version to <version>`, which moves `version` in `packages/takibi-hono/package.json`
+and `.release-please-manifest.json`; the workflow merges it (squash) and starts `release.yml` on
+`main`.
+
+`release.yml` runs after Test passes on a push to `main`, or when started on `main` — where its
+`test` job runs Test first — and, from that exact commit:
 
 1. **check** — reads the version and asks npm whether it is published;
 2. **tag** — creates `v<version>` on that commit, or verifies it is already there; a published
@@ -134,10 +152,21 @@ Releases are CI's job, driven by the `version` field of `packages/takibi-hono/pa
 
 Rules that follow:
 
-- **To release, bump `version` in its own commit (`chore: release takibi-hono <version>`), with
-  `pnpm check` and `pnpm test` green, and push to `main`.** Nothing else publishes.
+- **The commit subject is the release.** release-please reads the commits on `main`, and a
+  squash merge makes the pull request title the commit, so a title carries the type of what a user
+  gets: `fix(cli): …` publishes a patch, `docs: …` or `test: …` nothing.
+- **Never bump `version` by hand.** release-please counts from `.release-please-manifest.json`,
+  so a bump that `release.yml` asks for to recover from a failed release moves the manifest too,
+  in the same commit.
+- The bump pull request is opened and merged with the workflow's token, so no workflow runs on it,
+  and it carries `autorelease: pending` until its GitHub release exists. release-please opens no
+  new one while a merged one is pending; `release-please.yml` relabels it `autorelease: tagged`
+  once the release is out. Never merge, edit or relabel it by hand.
+- The repository has to let GitHub Actions create pull requests (Settings → Actions → General →
+  Workflow permissions), and `main` must not require a review or a status check of the bump pull
+  request, which nothing runs on.
 - **Never `npm publish` / `pnpm publish` by hand, and never create or move a `v*` tag by hand.**
-- Never reuse or roll back a published version; to fix a release, bump again.
+- Never reuse or roll back a published version; to fix a release, merge a `fix`.
 - If a job fails (an npm outage, a Trusted Publisher mismatch), fix the cause and re-run the failed
   jobs; every job is safe to re-run and the tag already points at the right commit.
 - npm's Trusted Publisher for `takibi-hono` names this repository, **workflow `release.yml`** and

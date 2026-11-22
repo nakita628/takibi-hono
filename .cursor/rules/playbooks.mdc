@@ -107,14 +107,21 @@ For a change to the Vite plugin, the handler / app output or the merge:
    decide whether it is right before updating the test.
 3. If oas-truth moved schema-truth to a new `effect`, do the effect bump in the same change.
 
-## Release (only when asked)
+## Release
 
-1. Confirm `main` is green.
-2. Bump `version` in `packages/takibi-hono/package.json` only (SemVer; while the version is `0.x`,
-   a breaking change to the config, the CLI or the generated output is a minor bump).
-3. `pnpm check` and `pnpm test`, then commit `chore: release takibi-hono <version>` and push to
-   `main`.
-4. Watch Test, then `release`: it tags `v<version>`, publishes to npm and creates the GitHub
-   release from that commit. Never publish or tag by hand.
-5. If a job fails, fix the cause and re-run the failed jobs. To fix a published release, bump
-   again — never reuse a version.
+A release has no step of its own: merging a `feat`, `fix` or `perf` change under
+`packages/takibi-hono/` releases it (see Releasing in the CI rule).
+
+1. Give the commit, or the title of the pull request that is squash-merged, the type of what a
+   user gets: `feat` for a new capability (a minor bump), `fix` or `perf` for the rest (a patch),
+   and `!` after the type for a breaking change to the config, the CLI or the generated output (a
+   minor while the version is `0.x`). Anything else (`docs`, `test`, `refactor`, `ci`, `chore`)
+   releases nothing.
+2. After the merge, watch Release PR, then `release`: Release PR opens
+   `chore: bump version to <version>`, merges it and starts `release`, which runs Test, then tags
+   `v<version>`, publishes to npm and creates the GitHub release. Never bump, publish or tag by
+   hand.
+3. If a job fails, fix the cause and re-run the failed jobs. To fix a published release, merge a
+   `fix` — never reuse a version.
+4. To choose the version yourself (`1.0.0`, say), put a `Release-As: <version>` footer in the body
+   of a commit that changes `packages/takibi-hono/`.

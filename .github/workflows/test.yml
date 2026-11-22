@@ -14,6 +14,10 @@ on:
     branches:
       - main
   pull_request:
+  # Started by hand on main, it is followed by release.yml as a push is.
+  workflow_dispatch: {}
+  # release.yml runs it first when it is started by workflow_dispatch, as release-please.yml does.
+  workflow_call: {}
 
 permissions:
   contents: read

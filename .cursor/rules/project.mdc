@@ -48,7 +48,10 @@ scripts/typespec.ts            fails when the @typespec/* packages in pnpm-lock.
 scripts/actionlint.ts          downloads a pinned actionlint, verifies its checksum, runs it
 scripts/zizmor.ts              downloads a pinned zizmor (workflow security audit), verifies it, runs it
 .github/workflows/test.yml     Test: build, unit tests, `vp run check` (every linter)
+.github/workflows/release-please.yml  Release PR: opens and merges the version bump, starts release.yml
 .github/workflows/release.yml  after Test on main: tag, npm publish, GitHub release
+release-please-config.json     how release-please works out the next version from the commits
+.release-please-manifest.json  the version last released, which release-please counts from
 .github/actionlint.yml         actionlint messages excused per file, each with its reason
 .github/zizmor.yml             zizmor findings excused, each with its reason
 README.md                      user docs; packages/takibi-hono/README.md is an identical copy
@@ -118,8 +121,8 @@ which part.
   (its Effects are composed in `src/core/client.ts`). They move together, in one change.
 - **The C-layer `x-*` extensions (code injection) stay unsupported.** `unsafeCodeExtensions` is
   never passed to schema-truth. See the architecture rule before touching vendor extensions.
-- **Never bump `version` in `packages/takibi-hono/package.json`** unless the task is a release that
-  was asked for: pushing a new version to `main` is what publishes it. Never `npm publish`,
+- **Never bump `version` in `packages/takibi-hono/package.json` by hand**: release-please's pull
+  request bumps it, and a new version on `main` is what publishes it. Never `npm publish`,
   `pnpm publish` or push a `v*` tag by hand, and never rename `release.yml` or its `release`
   environment without the matching npm Trusted Publisher change (see the CI rule).
 
@@ -139,5 +142,8 @@ which part.
 - One logical change per commit. The subject follows the existing history's conventional form,
   `type(scope): imperative summary` — `fix(vite-plugin): keep hand-written handlers when
   regenerating`, `ci: …`, `chore: …`, `docs: …`, `refactor: …`. The body explains why.
-- A release is its own commit: `chore: release takibi-hono <version>`.
+- The type is what releases (see the CI rule): `feat`, `fix` and `perf` that change
+  `packages/takibi-hono/` publish a new version once they reach `main`; every other type does not.
+- A release is release-please's own commit, `chore: bump version to <version>`, which its workflow
+  opens and merges; never write one by hand.
 - Do not commit generated output, secrets or local tooling files.

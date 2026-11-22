@@ -1,4 +1,10 @@
-<!-- The pull request title is the page's top-level heading, so the body starts at `##`. -->
+<!--
+The pull request title is the page's top-level heading, so the body starts at `##`. It is also the
+commit release-please reads once the pull request is squash-merged: `type(scope): summary`, where
+the type decides the release of a change under packages/takibi-hono/ — `feat` a minor, `fix` and
+`perf` a patch, a breaking change (`feat!:`) a minor while the version is 0.x, and any other type
+(docs, test, refactor, ci, chore) none.
+-->
 
 <!-- markdownlint-disable MD041 -->
 
@@ -20,7 +26,7 @@
 
 ## When
 
-<!-- Release impact: none | next release | version bumped. -->
+<!-- Release impact: none | next release. The version is bumped by the release-please pull request, not here. -->
 
 ## How
 
