@@ -120,6 +120,9 @@ which part.
   (its Effects are composed in `src/core/client.ts`). They move together, in one change.
 - **The C-layer `x-*` extensions (code injection) stay unsupported.** `unsafeCodeExtensions` is
   never passed to schema-truth. Read [Vendor extensions](#vendor-extensions-x-) before touching them.
+- **A mistake in oas-truth or schema-truth is fixed there, never worked around here.** Both live
+  in [nakita628/truth](https://github.com/nakita628/truth): report it as an issue there, as [Report a mistake to truth](#report-a-mistake-to-truth)
+  says, rather than string-patching or special-casing their output.
 - **Never bump `version` in `packages/takibi-hono/package.json` by hand**: release-please's pull
   request bumps it, and a new version on `main` is what publishes it. Never `npm publish`,
   `pnpm publish` or push a `v*` tag by hand, and never rename `release.yml` or its `release`
@@ -255,7 +258,7 @@ outputs are single files).
   without it, so an integer component would never accept its text). One that reads the same
   either way, such as a string enum, stays a reference and keeps its `$ref` in the document.
 - **Never patch oas-truth's output with string edits.** Fix the mistake in oas-truth or
-  schema-truth.
+  schema-truth, both in [nakita628/truth](https://github.com/nakita628/truth): [Report a mistake to truth](#report-a-mistake-to-truth) says how.
 
 ### Ref registration (hono-openapi `components.schemas`)
 
@@ -550,7 +553,7 @@ paths the suites expect of their own host.
 
 It runs on request, `pnpm -F @takibi-hono/test conformance`, and it is red: it measures how far
 schema-truth's coercion is from hono-takibi's, parameter by parameter, and is the list of
-what to report upstream. Nothing in it is adjusted to pass; a suite that cannot load is noted at
+what to report to truth. Nothing in it is adjusted to pass; a suite that cannot load is noted at
 the top of its document (the `format: trim` parameters). It is not part of `pnpm test` or CI.
 `TAKIBI_HONO_CONFORMANCE_LIB=valibot` (or `arktype`, `effect`) runs the suites against the
 `cases/conformance-<name>-<library>` apps instead of zod's; `TAKIBI_HONO_CONFORMANCE_DEBUG=1`
@@ -832,14 +835,39 @@ commit.
 2. Find the layer that owns the mistake — parsing and Components (oas-truth), a schema expression
    (schema-truth), a code builder (`generator/`), composition (`helper/`), the program
    (`core/`), the merge (`merge/`) — and fix it there, not downstream. A mistake in oas-truth or
-   schema-truth is fixed upstream, never by string-patching its output here.
+   schema-truth is fixed upstream, as [Report a mistake to truth](#report-a-mistake-to-truth) says, never
+   by string-patching its output here.
 3. Check whether the other four schema libraries, and `openapi: false`, have the same mistake.
+
+### Report a mistake to truth
+
+oas-truth (parsing, the OpenAPI types, the Components builders) and schema-truth (every schema
+expression, the parameter coercion, the `x-*` extensions) live in one repository,
+[nakita628/truth](https://github.com/nakita628/truth). When a generation problem is theirs:
+
+1. Show that it is: reproduce it at the smallest document, and trace the wrong code to their
+   output (`makeSchemaDeclarations`, `toExpression`, the `make*Code` builders) rather than to the
+   way `helper/`, `generator/`, `core/` or `merge/` compose it. A mistake of ours is fixed here.
+2. Try the latest oas-truth and schema-truth. If a newer release already fixes it, bump instead,
+   as [Bump oas-truth or the client-generation dependency](#bump-oas-truth-or-the-client-generation-dependency)
+   describes.
+3. Search the issues of nakita628/truth, open and closed, and add to the one that matches rather
+   than opening a duplicate.
+4. Otherwise open an issue there, in English, from its template: Bug report (`fix: …`) for wrong
+   output, Feature request (`feat: …`) for something missing. Give the package and its version,
+   the schema library and the setting it shows under (`openapi`, the parameter location), the
+   smallest document, the code generated and the code expected, and why the expected code is
+   right. Link the takibi-hono issue or pull request that found it.
+5. Change nothing here to work around it: no string patch, no special case, no test that pins the
+   wrong output. Link the upstream issue from the takibi-hono issue and leave that open; once the
+   fix is released, bump oas-truth and add the test that fails without it.
 
 ### A request to support a vendor extension (`x-*`)
 
 1. Classify it with the three layers of [Vendor extensions](#vendor-extensions-x-).
 2. A or B: it belongs in schema-truth (and oas-truth's `Schema` type), not here — takibi-hono
-   only passes it through. Add a transparency test here only if the pass-through itself changes.
+   only passes it through. Open it as a feature request in [nakita628/truth](https://github.com/nakita628/truth).
+   Add a transparency test here only if the pass-through itself changes.
 3. C (code injection): decline, citing [Vendor extensions](#vendor-extensions-x-). Do not add a flag, an option or an
    allowlist for it.
 
