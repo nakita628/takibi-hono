@@ -531,12 +531,14 @@ const RESERVED = new Set([
 
 /**
  * The export of a group of a split app, which is a handler file: its name as an identifier
- * (`pets`, `userProfiles`, `_20100401`), `__root` for the root as hono-takibi names it, and
- * `__` before a word of the language (`__delete`).
+ * (`pets`, `userProfiles`, `_20100401`), `__root` for the root as hono-takibi names it, `__`
+ * before a word of the language (`__delete`), and `_` for a name with no ASCII letter or digit
+ * (`日本語`, whose handler is `Handler`), which `nameDistinct` numbers when two files have it.
  */
 function toGroupName(fileName: string) {
   if (fileName === '__root') return '__root'
   const base = toHandlerVarName(fileName).replace(/Handler$/u, '')
+  if (base === '') return '_'
   return RESERVED.has(base) ? `__${base}` : base
 }
 
