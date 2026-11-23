@@ -543,7 +543,8 @@ function toGroupName(fileName: string) {
 /**
  * A name per file, no two the same and none of them in `taken`: in the order of the file
  * names, the first file of a name keeps it and a later one is numbered (`freeName`), past
- * every name a file has of its own, so that a file whose name nothing else has never loses it.
+ * every name a file has of its own, so that no file loses its name to another file's number.
+ * A name in `taken` is numbered even when one file alone has it.
  */
 function nameDistinct(
   fileNames: readonly string[],
