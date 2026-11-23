@@ -481,9 +481,10 @@ export function mergeAppFile(existingCode: string, generatedCode: string) {
 }
 
 // `export const <name>=<app>.route('/',<file>Handler)…`: a group of a split app, as the
-// generator writes it, its handler numbered too (`userProfilesHandler2`).
+// generator writes it, its handler numbered too (`userProfilesHandler2`) or bare when the file
+// name has no ASCII letter or digit (`export const _=app.route('/',Handler)`).
 const GROUP_EXPORT =
-  /^export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*[A-Za-z_$][\w$]*(?:\s*\.route\(\s*['"]\/['"]\s*,\s*[A-Za-z_$][\w$]*Handler\d*\s*,?\s*\))+\s*;?$/u
+  /^export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*[A-Za-z_$][\w$]*(?:\s*\.route\(\s*['"]\/['"]\s*,\s*(?:[A-Za-z_$][\w$]*)?Handler\d*\s*,?\s*\))+\s*;?$/u
 
 /**
  * The exports the generator owns: `api`, the whole app, or the groups of a split one. The

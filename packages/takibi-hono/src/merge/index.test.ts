@@ -1047,6 +1047,58 @@ describe('mergeAppFile', () => {
     )
   })
 
+  it('replaces the group of a handler file with no ASCII letter or digit', () => {
+    const existing = [
+      "import { Hono } from 'hono'",
+      "import { cors } from 'hono/cors'",
+      "import { Handler, petsHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      'app.use(cors())',
+      '',
+      "export const _ = app.route('/', Handler)",
+      '',
+      "export const pets = app.route('/', petsHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    const generated = [
+      "import { Hono } from 'hono'",
+      "import { Handler, Handler2, petsHandler } from './handlers'",
+      '',
+      'const app = new Hono()',
+      '',
+      "export const _ = app.route('/', Handler)",
+      '',
+      "export const _2 = app.route('/', Handler2)",
+      '',
+      "export const pets = app.route('/', petsHandler)",
+      '',
+      'export default app',
+      '',
+    ].join('\n')
+    expect(mergeAppFile(existing, generated)).toBe(
+      [
+        "import { Hono } from 'hono'",
+        "import { Handler, Handler2, petsHandler } from './handlers'",
+        "import { cors } from 'hono/cors'",
+        '',
+        'const app = new Hono()',
+        'app.use(cors())',
+        '',
+        "export const _ = app.route('/', Handler)",
+        '',
+        "export const _2 = app.route('/', Handler2)",
+        '',
+        "export const pets = app.route('/', petsHandler)",
+        '',
+        'export default app',
+        '',
+      ].join('\n'),
+    )
+  })
+
   it("keeps the user's relative import the app entry uses, and drops the handlers' old path", () => {
     const existing = [
       "import { Hono } from 'hono'",
