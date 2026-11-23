@@ -401,6 +401,7 @@ describe('nameHandlers', () => {
     ['Pets', 'petsHandler'],
     ['URLs', 'urlsHandler'],
     ['IDs', 'idsHandler'],
+    ['日本語', '_Handler'],
   ])('%s → %s', (fileName, expected) => {
     expect(nameHandlers([fileName])(fileName)).toBe(expected)
   })
@@ -421,6 +422,10 @@ describe('nameHandlers', () => {
     [
       ['a-b', 'a_b', 'aB'],
       ['aBHandler', 'aBHandler2', 'aBHandler3'],
+    ],
+    [
+      ['日本語', '中文'],
+      ['_Handler', '_Handler2'],
     ],
   ])('%j, sorted, export %j', (fileNames, expected) => {
     expect([...fileNames].sort().map(nameHandlers(fileNames))).toStrictEqual(expected)
@@ -448,6 +453,7 @@ describe('nameGroups', () => {
     ['user-profiles', 'userProfiles'],
     ['2010-04-01', '_20100401'],
     ['delete', '__delete'],
+    ['日本語', '_'],
   ])('%s → %s', (fileName, expected) => {
     expect(nameGroups([fileName])(fileName)).toBe(expected)
   })
@@ -470,6 +476,10 @@ describe('nameGroups', () => {
     [
       ['pets', 'pets-handler'],
       ['pets', 'petsHandler2'],
+    ],
+    [
+      ['日本語', '中文'],
+      ['_', '_2'],
     ],
   ])('%j, sorted, are the groups %j', (fileNames, expected) => {
     expect([...fileNames].sort().map(nameGroups(fileNames))).toStrictEqual(expected)
@@ -542,6 +552,25 @@ const app=new Hono()
 export const userProfiles=app.route('/',userProfilesHandler)
 
 export const userProfiles2=app.route('/',userProfilesHandler2)
+
+export default app`)
+  })
+
+  it('exports a group for handler files with no ASCII letter or digit in a split app', () => {
+    expect(
+      makeAppCode(['日本語', '中文'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+        split: true,
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{_Handler,_Handler2}from'./handlers'
+
+const app=new Hono()
+
+export const _=app.route('/',_Handler)
+
+export const _2=app.route('/',_Handler2)
 
 export default app`)
   })
