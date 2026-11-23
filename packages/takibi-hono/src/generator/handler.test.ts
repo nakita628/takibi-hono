@@ -427,6 +427,20 @@ describe('nameHandlers', () => {
   })
 })
 
+describe('nameHandlers beside defineHandler definitions', () => {
+  it('numbers a handler file past the definitions, which keep their names', () => {
+    const routes = [{ method: 'get', path: '/pets', parameters: [], operation: { responses: {} } }]
+    const fileNames = ['pets', 'get-pets', 'get_pets']
+    const definitions = [...nameOperations(routes as never, fileNames).values()]
+    expect(definitions).toStrictEqual(['getPetsHandler2'])
+    expect([...fileNames].sort().map(nameHandlers(fileNames, definitions))).toStrictEqual([
+      'getPetsHandler',
+      'getPetsHandler3',
+      'petsHandler',
+    ])
+  })
+})
+
 describe('nameGroups', () => {
   it.each([
     ['users', 'users'],
@@ -570,7 +584,7 @@ describe('nameOperations', () => {
       { method: 'post', path: '/comments', parameters: [], operation: { responses: {} } },
       { method: 'post', path: '/comments/', parameters: [], operation: { responses: {} } },
     ]
-    expect([...nameOperations(routes as never, ['postCommentsHandler']).values()]).toStrictEqual([
+    expect([...nameOperations(routes as never, ['post-comments']).values()]).toStrictEqual([
       'postCommentsHandler2',
       'postCommentsIndexHandler',
     ])
@@ -675,7 +689,7 @@ export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Sc
 
 describe('makeHandlerCode with defineHandler', () => {
   it('calls each definition with the stub handler, which takes the validated targets apart', () => {
-    const names = nameOperations(petRoutes as never, ['petsHandler'])
+    const names = nameOperations(petRoutes as never, ['pets'])
     expect(
       makeHandlerCode('petsHandler', petRoutes as never, {
         lib: 'zod',

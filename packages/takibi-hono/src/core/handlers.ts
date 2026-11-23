@@ -74,8 +74,7 @@ export function writeDefinitions(
     const definitions = layout.definitions
     if (definitions === undefined) return undefined
     const { groups } = handlerFiles
-    const files = [...handlerFiles.fileOf.values()]
-    const named = nameOperations([...groups.values()].flat(), files.map(nameHandlers(files)))
+    const named = nameOperations([...groups.values()].flat(), [...handlerFiles.fileOf.values()])
     const dir = targetDirectory(definitions)
     const entries = makeDefinitionEntries([...groups.values()].flat(), named, {
       lib: config.schema,
@@ -148,7 +147,7 @@ export function writeHandlers(
           defineHandler: { from: makeSpecifier(layout, handlersDir, definitions), names: named },
         }),
     }
-    const handlerOf = nameHandlers([...fileOf.values()])
+    const handlerOf = nameHandlers([...fileOf.values()], [...(named?.values() ?? [])])
     const { codes, kept } = carryMovedRoutes(
       handlerFiles,
       new Map(
@@ -192,15 +191,20 @@ export function writeHandlers(
   })
 }
 
-/** The app entry; user imports and middleware survive through `mergeAppFile`. */
+/**
+ * The app entry; user imports and middleware survive through `mergeAppFile`. `named` is what
+ * `writeDefinitions` answered, so that the handlers are imported as their files export them.
+ */
 export function writeApp(
   handlerFiles: ReadonlyMap<string, string>,
   config: TakibiHonoConfig,
   layout: Layout,
+  named: ReadonlyMap<string, string> | undefined,
 ) {
   const code = makeAppCode([...handlerFiles.values()], {
     basePath: config.basePath,
     split: config.split,
+    definitions: [...(named?.values() ?? [])],
     handlersImport: `./${path.relative(layout.appDir, layout.handlersDir).replaceAll('\\', '/')}`,
   })
   return writeMerged(path.join(layout.appDir, 'index.ts'), code, mergeAppFile)

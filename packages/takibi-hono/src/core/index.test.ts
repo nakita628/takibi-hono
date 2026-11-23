@@ -654,7 +654,7 @@ export const userProfilesHandler2 = new Hono().get('/user_profiles', (c) => c.te
 `)
     })
 
-    it('names the definitions of defineHandler past the numbered exports', async () => {
+    it('numbers the export past the definitions of defineHandler, which keep their names', async () => {
       await fsp.writeFile(
         'definitions.yaml',
         `openapi: 3.1.0
@@ -677,7 +677,7 @@ paths:
       )
       expect(read('src/definitions.ts')).toBe(`import { defineHandler } from 'hono/factory'
 
-export const getPetsHandler3 = defineHandler({})
+export const getPetsHandler2 = defineHandler({})
 
 export const getGetPetsHandler = defineHandler({})
 
@@ -686,18 +686,30 @@ export const getGetPetsHandler2 = defineHandler({})
       expect(read('src/handlers/get_pets.ts')).toBe(`import { Hono } from 'hono'
 import { getGetPetsHandler } from '../definitions'
 
-export const getPetsHandler2 = new Hono().get(
+export const getPetsHandler3 = new Hono().get(
   '/get_pets',
   getGetPetsHandler(async (c) => {}),
 )
 `)
       expect(read('src/handlers/pets.ts')).toBe(`import { Hono } from 'hono'
-import { getPetsHandler3 } from '../definitions'
+import { getPetsHandler2 } from '../definitions'
 
 export const petsHandler = new Hono().get(
   '/pets',
-  getPetsHandler3(async (c) => {}),
+  getPetsHandler2(async (c) => {}),
 )
+`)
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { getPetsHandler, getPetsHandler3, petsHandler } from './handlers'
+
+const app = new Hono()
+
+export const api = app
+  .route('/', getPetsHandler)
+  .route('/', getPetsHandler3)
+  .route('/', petsHandler)
+
+export default app
 `)
     })
 
@@ -755,6 +767,8 @@ const hcUserProfiles2WithType = (...args: Parameters<typeof hc>): UserProfiles2C
 
 export const userProfiles2Client = hcUserProfiles2WithType('/')
 `)
+      // hono-takibi numbers the functions in document order and the groups are numbered in
+      // file name order, so `getUserProfiles` (`/user_profiles`) calls `userProfiles2Client`.
       expect(read('src/rpc.ts')).toBe(`import type { ClientRequestOptions } from 'hono/client'
 import { userProfiles2Client, userProfilesClient, __rootClient, rootClient } from './client'
 

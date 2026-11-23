@@ -344,11 +344,14 @@ function validatedTargets(route: Route, context: HandlerContext, adapter: Compon
 
 /**
  * The definition name of every route, in order: its method and path, numbered when a name is
- * taken (`postCommentsHandler2` beside the group export of `/post-comments`, which the handler
- * file that imports the definition exports) or already given to an earlier route.
+ * the one a handler file is exported under (`postCommentsHandler2` beside the group export of
+ * `/post-comments`, which the handler file that imports the definition exports) or already
+ * given to an earlier route. `handlerFileNames` are the handler files, without `.ts`; a file
+ * that is numbered itself (`nameHandlers`) is numbered past these names, so that a definition
+ * keeps its name when a handler file joins another of the same export.
  */
-export function nameOperations(routes: readonly Route[], taken: Iterable<string>) {
-  const names = new Set(taken)
+export function nameOperations(routes: readonly Route[], handlerFileNames: readonly string[]) {
+  const names = new Set(handlerFileNames.map(toHandlerVarName))
   return new Map(
     routes.map((route) => {
       const name = freeName(toOperationVarName(route.method, route.path), names)
@@ -561,10 +564,12 @@ function nameDistinct(
  * `toHandlerVarName` names it. Two files whose names differ only in what is no letter or digit
  * (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) would export one
  * name, which the barrel and the app entry cannot hold twice, so the later file is numbered:
- * `userProfilesHandler` and `userProfilesHandler2`.
+ * `userProfilesHandler` and `userProfilesHandler2`. `definitions` are the `defineHandler`
+ * definitions (`nameOperations`), which a handler file imports beside its own export: a
+ * numbered export takes none of their names.
  */
-export function nameHandlers(fileNames: readonly string[]) {
-  const names = nameDistinct(fileNames, toHandlerVarName, [])
+export function nameHandlers(fileNames: readonly string[], definitions: readonly string[] = []) {
+  const names = nameDistinct(fileNames, toHandlerVarName, definitions)
   return (fileName: string) => names.get(fileName) ?? toHandlerVarName(fileName)
 }
 
@@ -574,8 +579,8 @@ export function nameHandlers(fileNames: readonly string[]) {
  * handlers beside the groups it exports, so a group does not take a handler's name either
  * (`/pets-handler` beside `/pets` is `petsHandler2`).
  */
-export function nameGroups(fileNames: readonly string[]) {
-  const handlerOf = nameHandlers(fileNames)
+export function nameGroups(fileNames: readonly string[], definitions: readonly string[] = []) {
+  const handlerOf = nameHandlers(fileNames, definitions)
   const names = nameDistinct(fileNames, toGroupName, fileNames.map(handlerOf))
   return (fileName: string) => names.get(fileName) ?? toGroupName(fileName)
 }
@@ -593,11 +598,13 @@ export function makeAppCode(
     readonly basePath: string | undefined
     readonly handlersImport: string
     readonly split?: boolean | undefined
+    /** The `defineHandler` definitions, whose names no numbered handler takes. */
+    readonly definitions?: readonly string[] | undefined
   },
 ) {
   const files = handlerFileNames.toSorted()
-  const handlerOf = nameHandlers(files)
-  const groupOf = nameGroups(files)
+  const handlerOf = nameHandlers(files, options.definitions)
+  const groupOf = nameGroups(files, options.definitions)
   const names = files.map(handlerOf)
   const app = options.split === true ? freeName('app', files.map(groupOf)) : 'app'
   const created = options.basePath
