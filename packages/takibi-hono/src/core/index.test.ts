@@ -775,6 +775,68 @@ export async function getRoot(options?: ClientRequestOptions) {
 }
 `)
     })
+
+    it('swaps the numbered groups for api when split is turned on and off', async () => {
+      const api = `import { Hono } from 'hono'
+import { rootHandler, rootHandler2, userProfilesHandler, userProfilesHandler2 } from './handlers'
+
+const app = new Hono()
+
+export const api = app
+  .route('/', rootHandler)
+  .route('/', rootHandler2)
+  .route('/', userProfilesHandler)
+  .route('/', userProfilesHandler2)
+
+export default app
+`
+      await runGenerator(hono(config))
+      await runGenerator(hono({ ...config, split: true }))
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { rootHandler, rootHandler2, userProfilesHandler, userProfilesHandler2 } from './handlers'
+
+const app = new Hono()
+
+export const __root = app.route('/', rootHandler)
+
+export const root = app.route('/', rootHandler2)
+
+export const userProfiles = app.route('/', userProfilesHandler)
+
+export const userProfiles2 = app.route('/', userProfilesHandler2)
+
+export default app
+`)
+      await runGenerator(hono(config))
+      expect(read('src/index.ts')).toBe(api)
+    })
+
+    it('drops the numbered group of a deleted path from a split app', async () => {
+      await runGenerator(hono({ ...config, split: true }))
+      await fsp.writeFile(
+        'profiles.yaml',
+        `openapi: 3.1.0
+info: { title: Profiles, version: 1.0.0 }
+paths:
+  /user-profiles:
+    get: { responses: { '200': { description: ok } } }
+  /:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(hono({ ...config, split: true }))
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { rootHandler, userProfilesHandler } from './handlers'
+
+const app = new Hono()
+
+export const __root = app.route('/', rootHandler)
+
+export const userProfiles = app.route('/', userProfilesHandler)
+
+export default app
+`)
+    })
   })
 
   it('imports components of another package by its package name', async () => {
