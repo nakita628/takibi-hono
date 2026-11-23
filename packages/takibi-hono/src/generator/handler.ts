@@ -404,7 +404,7 @@ export function makeDefinitionsCode(
  * renamed by hand to `realTimeEvents.ts` exports `realTimeEventsHandler`), but for a leading
  * capital or acronym, which is lowercased (`APIKeys` → `apiKeysHandler`, `URLs` → `urlsHandler`).
  */
-export function toHandlerVarName(fileName: string) {
+function toHandlerVarName(fileName: string) {
   const [first = '', ...rest] = (fileName === '__root' ? 'root' : fileName)
     .replaceAll(/[^A-Za-z0-9]+/gu, ' ')
     .trim()
@@ -531,10 +531,53 @@ const RESERVED = new Set([
  * (`pets`, `userProfiles`, `_20100401`), `__root` for the root as hono-takibi names it, and
  * `__` before a word of the language (`__delete`).
  */
-export function toGroupName(fileName: string) {
+function toGroupName(fileName: string) {
   if (fileName === '__root') return '__root'
   const base = toHandlerVarName(fileName).replace(/Handler$/u, '')
   return RESERVED.has(base) ? `__${base}` : base
+}
+
+/**
+ * A name per file, no two the same and none of them in `taken`: in the order of the file
+ * names, the first file of a name keeps it and a later one is numbered (`freeName`), past
+ * every name a file has of its own, so that a file whose name nothing else has never loses it.
+ */
+function nameDistinct(
+  fileNames: readonly string[],
+  nameOf: (fileName: string) => string,
+  taken: readonly string[],
+) {
+  const files = [...new Set(fileNames)].toSorted()
+  const own = files.map(nameOf)
+  return files.reduce((names, file) => {
+    const base = nameOf(file)
+    const given = [...taken, ...names.values()]
+    return names.set(file, given.includes(base) ? freeName(base, [...own, ...given]) : base)
+  }, new Map<string, string>())
+}
+
+/**
+ * The export of each handler file of a handlers directory (`fileNames`, without `.ts`), as
+ * `toHandlerVarName` names it. Two files whose names differ only in what is no letter or digit
+ * (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) would export one
+ * name, which the barrel and the app entry cannot hold twice, so the later file is numbered:
+ * `userProfilesHandler` and `userProfilesHandler2`.
+ */
+export function nameHandlers(fileNames: readonly string[]) {
+  const names = nameDistinct(fileNames, toHandlerVarName, [])
+  return (fileName: string) => names.get(fileName) ?? toHandlerVarName(fileName)
+}
+
+/**
+ * The group of each handler file of a split app, as `toGroupName` names it and distinct the
+ * way `nameHandlers` is (`userProfiles` and `userProfiles2`). The app entry imports the
+ * handlers beside the groups it exports, so a group does not take a handler's name either
+ * (`/pets-handler` beside `/pets` is `petsHandler2`).
+ */
+export function nameGroups(fileNames: readonly string[]) {
+  const handlerOf = nameHandlers(fileNames)
+  const names = nameDistinct(fileNames, toGroupName, fileNames.map(handlerOf))
+  return (fileName: string) => names.get(fileName) ?? toGroupName(fileName)
 }
 
 /**
@@ -553,18 +596,17 @@ export function makeAppCode(
   },
 ) {
   const files = handlerFileNames.toSorted()
-  const names = files.map(toHandlerVarName)
-  const app = options.split === true ? freeName('app', files.map(toGroupName)) : 'app'
+  const handlerOf = nameHandlers(files)
+  const groupOf = nameGroups(files)
+  const names = files.map(handlerOf)
+  const app = options.split === true ? freeName('app', files.map(groupOf)) : 'app'
   const created = options.basePath
     ? `new Hono().basePath(${JSON.stringify(options.basePath)})`
     : 'new Hono()'
   const routes =
     options.split === true
       ? files
-          .map(
-            (file) =>
-              `export const ${toGroupName(file)}=${app}.route('/',${toHandlerVarName(file)})`,
-          )
+          .map((file) => `export const ${groupOf(file)}=${app}.route('/',${handlerOf(file)})`)
           .join('\n\n')
       : `export const api=app${names.map((name) => `.route('/',${name})`).join('')}`
   return `import{Hono}from'hono'\nimport{${names.join(',')}}from'${options.handlersImport}'\n\nconst ${app}=${created}\n\n${routes}\n\nexport default ${app}`

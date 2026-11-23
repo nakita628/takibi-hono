@@ -4,9 +4,9 @@ import {
   makeAppCode,
   makeDefinitionsCode,
   makeHandlerCode,
+  nameGroups,
+  nameHandlers,
   nameOperations,
-  toGroupName,
-  toHandlerVarName,
   toOperationVarName,
 } from './handler.js'
 
@@ -389,7 +389,7 @@ export const todosHandler=new Hono().get('/todos',describeRoute({operationId:"To
   })
 })
 
-describe('toHandlerVarName', () => {
+describe('nameHandlers', () => {
   it.each([
     ['users', 'usersHandler'],
     ['__root', 'rootHandler'],
@@ -402,11 +402,32 @@ describe('toHandlerVarName', () => {
     ['URLs', 'urlsHandler'],
     ['IDs', 'idsHandler'],
   ])('%s → %s', (fileName, expected) => {
-    expect(toHandlerVarName(fileName)).toBe(expected)
+    expect(nameHandlers([fileName])(fileName)).toBe(expected)
+  })
+
+  it.each([
+    [
+      ['user_profiles', 'user-profiles'],
+      ['userProfilesHandler', 'userProfilesHandler2'],
+    ],
+    [
+      ['root', '__root'],
+      ['rootHandler', 'rootHandler2'],
+    ],
+    [
+      ['userProfiles', 'user-profiles', 'pets'],
+      ['petsHandler', 'userProfilesHandler', 'userProfilesHandler2'],
+    ],
+    [
+      ['a-b', 'a_b', 'aB'],
+      ['aBHandler', 'aBHandler2', 'aBHandler3'],
+    ],
+  ])('%j, sorted, export %j', (fileNames, expected) => {
+    expect([...fileNames].sort().map(nameHandlers(fileNames))).toStrictEqual(expected)
   })
 })
 
-describe('toGroupName', () => {
+describe('nameGroups', () => {
   it.each([
     ['users', 'users'],
     ['__root', '__root'],
@@ -414,7 +435,30 @@ describe('toGroupName', () => {
     ['2010-04-01', '_20100401'],
     ['delete', '__delete'],
   ])('%s → %s', (fileName, expected) => {
-    expect(toGroupName(fileName)).toBe(expected)
+    expect(nameGroups([fileName])(fileName)).toBe(expected)
+  })
+
+  it.each([
+    [
+      ['user_profiles', 'user-profiles'],
+      ['userProfiles', 'userProfiles2'],
+    ],
+    [
+      ['root', '__root'],
+      ['__root', 'root'],
+    ],
+    // `user-profiles2.ts` keeps its group, so the file numbered beside it takes the next one.
+    [
+      ['user_profiles', 'user-profiles', 'user-profiles2'],
+      ['userProfiles', 'userProfiles2', 'userProfiles3'],
+    ],
+    // The app entry imports `petsHandler`, so the group of `pets-handler.ts` is numbered.
+    [
+      ['pets', 'pets-handler'],
+      ['pets', 'petsHandler2'],
+    ],
+  ])('%j, sorted, are the groups %j', (fileNames, expected) => {
+    expect([...fileNames].sort().map(nameGroups(fileNames))).toStrictEqual(expected)
   })
 })
 
@@ -449,6 +493,41 @@ export const __root=app.route('/',rootHandler)
 export const userProfiles=app.route('/',userProfilesHandler)
 
 export const users=app.route('/',usersHandler)
+
+export default app`)
+  })
+
+  it('gives two handler files of one name distinct exports', () => {
+    expect(
+      makeAppCode(['user_profiles', 'user-profiles'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{userProfilesHandler,userProfilesHandler2}from'./handlers'
+
+const app=new Hono()
+
+export const api=app.route('/',userProfilesHandler).route('/',userProfilesHandler2)
+
+export default app`)
+  })
+
+  it('gives two handler files of one name distinct groups in a split app', () => {
+    expect(
+      makeAppCode(['user_profiles', 'user-profiles'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+        split: true,
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{userProfilesHandler,userProfilesHandler2}from'./handlers'
+
+const app=new Hono()
+
+export const userProfiles=app.route('/',userProfilesHandler)
+
+export const userProfiles2=app.route('/',userProfilesHandler2)
 
 export default app`)
   })

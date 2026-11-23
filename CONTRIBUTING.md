@@ -212,7 +212,8 @@ entry are **merged**, not rewritten: `writeHandlers` / `writeApp` read the exist
 `mergeHandlerFile` / `mergeAppFile` carry across handler bodies, user imports, non-handler code and
 route JSDoc. `writeHandlers` itself deletes the handler files no route maps to any more, once the handlers of their routes are carried to the file each route moved to (`core/handler-files.ts`), and keeps one that still holds something not carried.
 `mergeAppFile` owns the route exports of the app entry: `api`, or with `split` one export per
-handler file (`export const pets = app.route('/', petsHandler)`, its name from `toGroupName`).
+handler file (`export const pets = app.route('/', petsHandler)`, its name from `nameGroups`).
+Two handler files that would export one name (`user-profiles.ts` and `user_profiles.ts`) are numbered by `nameHandlers` / `nameGroups`: `userProfilesHandler2`, group `userProfiles2`.
 The span from the first to the last is replaced, so turning `split` on or off swaps one form for
 the other; the client groups and rpc / hooks' `grouping` use the same names.
 

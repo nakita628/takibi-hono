@@ -9,7 +9,7 @@ import type { OpenAPI } from 'oas-truth'
 
 import { emit } from '../emit/index.js'
 import { makeClientCode } from '../generator/client.js'
-import { toGroupName } from '../generator/handler.js'
+import { nameGroups } from '../generator/handler.js'
 import { collectRoutes, makeHandlerFileName } from '../helper/operations.js'
 import type { ClientOptions, HookLibrary, Layout, Target, TakibiHonoConfig } from './layout.js'
 import { HOOK_LIBRARIES, makeSpecifier, targetModule } from './layout.js'
@@ -100,23 +100,29 @@ function clientSpecifier(layout: Layout, key: string, output: string) {
 /** The handler file of each group, as `writeHandlers` answers it; a group missing from it is its own file. */
 type HandlerFiles = ReadonlyMap<string, string>
 
+/** The handler file of every group of the document, sorted as the app entry exports them. */
+function groupFiles(openapi: OpenAPI, config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
+  return [...collectRoutes(openapi, config.fileNameCase).keys()]
+    .map((group) => handlerFiles.get(group) ?? group)
+    .toSorted()
+}
+
 /**
  * The group an operation of a split app belongs to, as rpc and the hooks are handed it: the
  * export of its handler file, as the app entry names it.
  */
-function makeGrouping(config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
+function makeGrouping(openapi: OpenAPI, config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
+  const groupOf = nameGroups(groupFiles(openapi, config, handlerFiles))
   return (route: string) => {
     const group = makeHandlerFileName(route, config.fileNameCase)
-    return toGroupName(handlerFiles.get(group) ?? group)
+    return groupOf(handlerFiles.get(group) ?? group)
   }
 }
 
 /** The groups of a split app, in the order the app entry exports them. */
 function makeGroups(openapi: OpenAPI, config: TakibiHonoConfig, handlerFiles: HandlerFiles) {
-  return [...collectRoutes(openapi, config.fileNameCase).keys()]
-    .map((group) => handlerFiles.get(group) ?? group)
-    .toSorted()
-    .map(toGroupName)
+  const files = groupFiles(openapi, config, handlerFiles)
+  return files.map(nameGroups(files))
 }
 
 /** Writes the typed client (one per group of a split app), which rpc and the hooks import. */
@@ -172,7 +178,7 @@ function delegateClients(
   handlerFiles: HandlerFiles,
 ) {
   const { basePath } = config
-  const grouping = makeGrouping(config, handlerFiles)
+  const grouping = makeGrouping(openapi, config, handlerFiles)
   return Effect.gen(function* () {
     // hono-takibi declares its own (structurally equivalent) OpenAPI document type.
     // oxlint-disable-next-line typescript/consistent-type-assertions, typescript/no-unsafe-type-assertion -- see above

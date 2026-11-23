@@ -10,8 +10,8 @@ import {
   makeAppCode,
   makeDefinitionEntries,
   makeHandlerCode,
+  nameHandlers,
   nameOperations,
-  toHandlerVarName,
 } from '../generator/handler.js'
 import { makeBarrel, withImports } from '../helper/imports.js'
 import { makeLibraryImports } from '../helper/library.js'
@@ -74,10 +74,8 @@ export function writeDefinitions(
     const definitions = layout.definitions
     if (definitions === undefined) return undefined
     const { groups } = handlerFiles
-    const named = nameOperations(
-      [...groups.values()].flat(),
-      [...handlerFiles.fileOf.values()].map(toHandlerVarName),
-    )
+    const files = [...handlerFiles.fileOf.values()]
+    const named = nameOperations([...groups.values()].flat(), files.map(nameHandlers(files)))
     const dir = targetDirectory(definitions)
     const entries = makeDefinitionEntries([...groups.values()].flat(), named, {
       lib: config.schema,
@@ -150,12 +148,13 @@ export function writeHandlers(
           defineHandler: { from: makeSpecifier(layout, handlersDir, definitions), names: named },
         }),
     }
+    const handlerOf = nameHandlers([...fileOf.values()])
     const { codes, kept } = carryMovedRoutes(
       handlerFiles,
       new Map(
         [...groups].map(([group, routes]) => [
           group,
-          makeHandlerCode(toHandlerVarName(fileOf.get(group) ?? group), routes, context),
+          makeHandlerCode(handlerOf(fileOf.get(group) ?? group), routes, context),
         ]),
       ),
     )

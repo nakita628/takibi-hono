@@ -582,6 +582,201 @@ export default app
     })
   })
 
+  describe('handler files of one export name', () => {
+    const config = { input: 'profiles.yaml', schema: 'zod' } as const
+
+    beforeEach(async () => {
+      await fsp.writeFile(
+        'profiles.yaml',
+        `openapi: 3.1.0
+info: { title: Profiles, version: 1.0.0 }
+paths:
+  /user_profiles:
+    get: { responses: { '200': { description: ok } } }
+  /user-profiles:
+    get: { responses: { '200': { description: ok } } }
+  /:
+    get: { responses: { '200': { description: ok } } }
+  /root:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+    })
+
+    it('numbers the export of the later file', async () => {
+      await runGenerator(hono(config))
+      expect(list('src/handlers')).toStrictEqual([
+        '__root.ts',
+        'index.ts',
+        'root.ts',
+        'user-profiles.ts',
+        'user_profiles.ts',
+      ])
+      expect(read('src/handlers/user-profiles.ts')).toBe(`import { Hono } from 'hono'
+
+export const userProfilesHandler = new Hono().get('/user-profiles', (c) => {})
+`)
+      expect(read('src/handlers/user_profiles.ts')).toBe(`import { Hono } from 'hono'
+
+export const userProfilesHandler2 = new Hono().get('/user_profiles', (c) => {})
+`)
+      expect(read('src/handlers/root.ts')).toBe(`import { Hono } from 'hono'
+
+export const rootHandler2 = new Hono().get('/root', (c) => {})
+`)
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { rootHandler, rootHandler2, userProfilesHandler, userProfilesHandler2 } from './handlers'
+
+const app = new Hono()
+
+export const api = app
+  .route('/', rootHandler)
+  .route('/', rootHandler2)
+  .route('/', userProfilesHandler)
+  .route('/', userProfilesHandler2)
+
+export default app
+`)
+    })
+
+    it('keeps the handlers of both files when run again', async () => {
+      await runGenerator(hono(config))
+      await fill('src/handlers/user-profiles.ts', "'/user-profiles'", "(c) => c.text('kebab')")
+      await fill('src/handlers/user_profiles.ts', "'/user_profiles'", "(c) => c.text('snake')")
+      await runGenerator(hono(config))
+      expect(read('src/handlers/user-profiles.ts')).toBe(`import { Hono } from 'hono'
+
+export const userProfilesHandler = new Hono().get('/user-profiles', (c) => c.text('kebab'))
+`)
+      expect(read('src/handlers/user_profiles.ts')).toBe(`import { Hono } from 'hono'
+
+export const userProfilesHandler2 = new Hono().get('/user_profiles', (c) => c.text('snake'))
+`)
+    })
+
+    it('names the definitions of defineHandler past the numbered exports', async () => {
+      await fsp.writeFile(
+        'definitions.yaml',
+        `openapi: 3.1.0
+info: { title: Definitions, version: 1.0.0 }
+paths:
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /get_pets:
+    get: { responses: { '200': { description: ok } } }
+  /get-pets:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(
+        hono({
+          input: 'definitions.yaml',
+          schema: 'zod',
+          defineHandler: { output: 'src/definitions.ts', template: true },
+        }),
+      )
+      expect(read('src/definitions.ts')).toBe(`import { defineHandler } from 'hono/factory'
+
+export const getPetsHandler3 = defineHandler({})
+
+export const getGetPetsHandler = defineHandler({})
+
+export const getGetPetsHandler2 = defineHandler({})
+`)
+      expect(read('src/handlers/get_pets.ts')).toBe(`import { Hono } from 'hono'
+import { getGetPetsHandler } from '../definitions'
+
+export const getPetsHandler2 = new Hono().get(
+  '/get_pets',
+  getGetPetsHandler(async (c) => {}),
+)
+`)
+      expect(read('src/handlers/pets.ts')).toBe(`import { Hono } from 'hono'
+import { getPetsHandler3 } from '../definitions'
+
+export const petsHandler = new Hono().get(
+  '/pets',
+  getPetsHandler3(async (c) => {}),
+)
+`)
+    })
+
+    it('numbers the group of a split app, in the app entry, the client and rpc', async () => {
+      await runGenerator(
+        hono({
+          ...config,
+          split: true,
+          client: { output: 'src/client.ts', baseUrl: '/' },
+          rpc: { output: 'src/rpc.ts' },
+        }),
+      )
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { rootHandler, rootHandler2, userProfilesHandler, userProfilesHandler2 } from './handlers'
+
+const app = new Hono()
+
+export const __root = app.route('/', rootHandler)
+
+export const root = app.route('/', rootHandler2)
+
+export const userProfiles = app.route('/', userProfilesHandler)
+
+export const userProfiles2 = app.route('/', userProfilesHandler2)
+
+export default app
+`)
+      expect(read('src/client.ts')).toBe(`import { hc } from 'hono/client'
+import type { __root, root, userProfiles, userProfiles2 } from '.'
+
+type __RootClient = ReturnType<typeof hc<typeof __root>>
+
+const hc__RootWithType = (...args: Parameters<typeof hc>): __RootClient =>
+  hc<typeof __root>(...args)
+
+export const __rootClient = hc__RootWithType('/')
+
+type RootClient = ReturnType<typeof hc<typeof root>>
+
+const hcRootWithType = (...args: Parameters<typeof hc>): RootClient => hc<typeof root>(...args)
+
+export const rootClient = hcRootWithType('/')
+
+type UserProfilesClient = ReturnType<typeof hc<typeof userProfiles>>
+
+const hcUserProfilesWithType = (...args: Parameters<typeof hc>): UserProfilesClient =>
+  hc<typeof userProfiles>(...args)
+
+export const userProfilesClient = hcUserProfilesWithType('/')
+
+type UserProfiles2Client = ReturnType<typeof hc<typeof userProfiles2>>
+
+const hcUserProfiles2WithType = (...args: Parameters<typeof hc>): UserProfiles2Client =>
+  hc<typeof userProfiles2>(...args)
+
+export const userProfiles2Client = hcUserProfiles2WithType('/')
+`)
+      expect(read('src/rpc.ts')).toBe(`import type { ClientRequestOptions } from 'hono/client'
+import { userProfiles2Client, userProfilesClient, __rootClient, rootClient } from './client'
+
+export async function getUserProfiles(options?: ClientRequestOptions) {
+  return await userProfiles2Client.user_profiles.$get(undefined, options)
+}
+
+export async function getUserProfiles2(options?: ClientRequestOptions) {
+  return await userProfilesClient['user-profiles'].$get(undefined, options)
+}
+
+export async function get(options?: ClientRequestOptions) {
+  return await __rootClient.index.$get(undefined, options)
+}
+
+export async function getRoot(options?: ClientRequestOptions) {
+  return await rootClient.root.$get(undefined, options)
+}
+`)
+    })
+  })
+
   it('imports components of another package by its package name', async () => {
     await fsp.mkdir('apps/api', { recursive: true })
     await fsp.mkdir('packages/components', { recursive: true })
