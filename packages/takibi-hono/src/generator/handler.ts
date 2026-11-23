@@ -404,7 +404,7 @@ export function makeDefinitionsCode(
  * renamed by hand to `realTimeEvents.ts` exports `realTimeEventsHandler`), but for a leading
  * capital or acronym, which is lowercased (`APIKeys` → `apiKeysHandler`, `URLs` → `urlsHandler`).
  */
-function toHandlerVarName(fileName: string) {
+export function toHandlerVarName(fileName: string) {
   const [first = '', ...rest] = (fileName === '__root' ? 'root' : fileName)
     .replaceAll(/[^A-Za-z0-9]+/gu, ' ')
     .trim()

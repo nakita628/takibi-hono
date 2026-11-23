@@ -12,6 +12,7 @@ import {
   makeHandlerCode,
   nameHandlers,
   nameOperations,
+  toHandlerVarName,
 } from '../generator/handler.js'
 import { makeBarrel, withImports } from '../helper/imports.js'
 import { makeLibraryImports } from '../helper/library.js'
@@ -74,8 +75,13 @@ export function writeDefinitions(
     const definitions = layout.definitions
     if (definitions === undefined) return undefined
     const { groups } = handlerFiles
-    const files = [...handlerFiles.fileOf.values()]
-    const named = nameOperations([...groups.values()].flat(), files.map(nameHandlers(files)))
+    // The unnumbered exports only: a definition is never in one module with a handler export,
+    // and a numbered export (`getPetsHandler2`) reserved here would renumber the definitions
+    // existing code imports whenever a colliding path is added.
+    const named = nameOperations(
+      [...groups.values()].flat(),
+      [...handlerFiles.fileOf.values()].map(toHandlerVarName),
+    )
     const dir = targetDirectory(definitions)
     const entries = makeDefinitionEntries([...groups.values()].flat(), named, {
       lib: config.schema,

@@ -654,7 +654,7 @@ export const userProfilesHandler2 = new Hono().get('/user_profiles', (c) => c.te
 `)
     })
 
-    it('names the definitions of defineHandler past the numbered exports', async () => {
+    it('keeps the names of the defineHandler definitions', async () => {
       await fsp.writeFile(
         'definitions.yaml',
         `openapi: 3.1.0
@@ -677,7 +677,7 @@ paths:
       )
       expect(read('src/definitions.ts')).toBe(`import { defineHandler } from 'hono/factory'
 
-export const getPetsHandler3 = defineHandler({})
+export const getPetsHandler2 = defineHandler({})
 
 export const getGetPetsHandler = defineHandler({})
 
@@ -692,13 +692,57 @@ export const getPetsHandler2 = new Hono().get(
 )
 `)
       expect(read('src/handlers/pets.ts')).toBe(`import { Hono } from 'hono'
-import { getPetsHandler3 } from '../definitions'
+import { getPetsHandler2 } from '../definitions'
 
 export const petsHandler = new Hono().get(
   '/pets',
-  getPetsHandler3(async (c) => {}),
+  getPetsHandler2(async (c) => {}),
 )
 `)
+    })
+
+    it('keeps a filled defineHandler call when a colliding path is added', async () => {
+      const template = hono({
+        input: 'definitions.yaml',
+        schema: 'zod',
+        defineHandler: { output: 'src/definitions.ts', template: true },
+      })
+      await fsp.writeFile(
+        'definitions.yaml',
+        `openapi: 3.1.0
+info: { title: Definitions, version: 1.0.0 }
+paths:
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /get-pets:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(template)
+      await fill('src/handlers/pets.ts', "'/pets'", '(c) => c.json([])')
+      await fsp.writeFile(
+        'definitions.yaml',
+        `openapi: 3.1.0
+info: { title: Definitions, version: 1.0.0 }
+paths:
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /get-pets:
+    get: { responses: { '200': { description: ok } } }
+  /get_pets:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(template)
+      expect(read('src/handlers/pets.ts')).toBe(`import { Hono } from 'hono'
+import { getPetsHandler2 } from '../definitions'
+
+export const petsHandler = new Hono().get(
+  '/pets',
+  getPetsHandler2(async (c) => c.json([])),
+)
+`)
+      expect(read('src/definitions.ts')).toContain('export const getPetsHandler2 = defineHandler')
     })
 
     it('numbers the group of a split app, in the app entry, the client and rpc', async () => {
