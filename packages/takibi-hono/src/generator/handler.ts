@@ -406,8 +406,6 @@ export function makeDefinitionsCode(
  * `rootHandler`: what is no letter or digit is a word break, and a word keeps its case (a file
  * renamed by hand to `realTimeEvents.ts` exports `realTimeEventsHandler`), but for a leading
  * capital or acronym, which is lowercased (`APIKeys` → `apiKeysHandler`, `URLs` → `urlsHandler`).
- * A name with no ASCII letter or digit (`日本語`) is `_` (`_Handler`), which `nameDistinct`
- * numbers when two files have it.
  */
 function toHandlerVarName(fileName: string) {
   const [first = '', ...rest] = (fileName === '__root' ? 'root' : fileName)
@@ -418,8 +416,8 @@ function toHandlerVarName(fileName: string) {
     caps.toLowerCase(),
   )
   const base = `${head}${rest.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}`
-  // A path segment can start with a digit (`/2010-04-01`), or have no letter or digit at all.
-  return `${base === '' || /^[0-9]/u.test(base) ? '_' : ''}${base}Handler`
+  // A path segment can start with a digit (`/2010-04-01`).
+  return `${/^[0-9]/u.test(base) ? '_' : ''}${base}Handler`
 }
 
 /** One `new Hono()` route chain; every handler body is a `(c)=>{}` stub for the merge to fill. */
@@ -533,12 +531,14 @@ const RESERVED = new Set([
 
 /**
  * The export of a group of a split app, which is a handler file: its name as an identifier
- * (`pets`, `userProfiles`, `_20100401`, `_` for a name with no ASCII letter or digit), `__root` for the root as hono-takibi names it, and
- * `__` before a word of the language (`__delete`).
+ * (`pets`, `userProfiles`, `_20100401`), `__root` for the root as hono-takibi names it, `__`
+ * before a word of the language (`__delete`), and `_` for a name with no ASCII letter or digit
+ * (`日本語`, whose handler is `Handler`), which `nameDistinct` numbers when two files have it.
  */
 function toGroupName(fileName: string) {
   if (fileName === '__root') return '__root'
   const base = toHandlerVarName(fileName).replace(/Handler$/u, '')
+  if (base === '') return '_'
   return RESERVED.has(base) ? `__${base}` : base
 }
 

@@ -401,7 +401,7 @@ describe('nameHandlers', () => {
     ['Pets', 'petsHandler'],
     ['URLs', 'urlsHandler'],
     ['IDs', 'idsHandler'],
-    ['日本語', '_Handler'],
+    ['日本語', 'Handler'],
   ])('%s → %s', (fileName, expected) => {
     expect(nameHandlers([fileName])(fileName)).toBe(expected)
   })
@@ -425,7 +425,7 @@ describe('nameHandlers', () => {
     ],
     [
       ['日本語', '中文'],
-      ['_Handler', '_Handler2'],
+      ['Handler', 'Handler2'],
     ],
   ])('%j, sorted, export %j', (fileNames, expected) => {
     expect([...fileNames].sort().map(nameHandlers(fileNames))).toStrictEqual(expected)
@@ -564,13 +564,13 @@ export default app`)
         split: true,
       }),
     ).toBe(`import{Hono}from'hono'
-import{_Handler,_Handler2}from'./handlers'
+import{Handler,Handler2}from'./handlers'
 
 const app=new Hono()
 
-export const _=app.route('/',_Handler)
+export const _=app.route('/',Handler)
 
-export const _2=app.route('/',_Handler2)
+export const _2=app.route('/',Handler2)
 
 export default app`)
   })
