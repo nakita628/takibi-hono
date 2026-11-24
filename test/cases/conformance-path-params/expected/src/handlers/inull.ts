@@ -12,10 +12,11 @@ export const inullHandler = new Hono().get(
       value: z.preprocess(
         (val) => (val === 'null' ? null : val),
         z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .nullable(),
       ),
     }),

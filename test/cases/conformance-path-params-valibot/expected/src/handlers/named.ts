@@ -12,6 +12,7 @@ export const namedHandler = new Hono().get(
       'user-id': v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer' }),
         v.transform((input) => Number(input)),
         v.number(),
         v.safeInteger(),

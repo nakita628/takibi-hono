@@ -21,6 +21,7 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 0 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -31,6 +32,7 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.metadata({ type: 'number' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.finite(),
@@ -56,6 +58,7 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', enum: [1, 2] }),
             v.transform((input) => Number(input)),
             v.union([v.literal(1), v.literal(2)]),
           ),
@@ -68,20 +71,25 @@ export const urlencodedHandler = new Hono().post(
             v.literal(true),
           ),
         ),
-        limit: v.optional(
-          v.pipe(
-            v.string(),
-            v.regex(/^-?(?:0|[1-9]\d*)$/),
-            v.transform((input) => Number(input)),
-            v.number(),
-            v.safeInteger(),
+        limit: v.pipe(
+          v.optional(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+            '20',
           ),
-          '20',
+          v.metadata({ default: 20 }),
         ),
         count: v.optional(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 0 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -110,6 +118,7 @@ export const urlencodedHandler = new Hono().post(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -141,6 +150,7 @@ export const urlencodedHandler = new Hono().post(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -153,6 +163,7 @@ export const urlencodedHandler = new Hono().post(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),

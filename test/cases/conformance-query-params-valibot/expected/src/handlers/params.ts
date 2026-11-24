@@ -13,6 +13,7 @@ export const paramsHandler = new Hono().get(
         integer: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -24,6 +25,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -33,6 +35,7 @@ export const paramsHandler = new Hono().get(
         int32: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: -2147483648, maximum: 2147483647 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -46,6 +49,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', minimum: -2147483648, maximum: 2147483647 }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -95,6 +99,7 @@ export const paramsHandler = new Hono().get(
         uint32: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: 0, maximum: 4294967295 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -108,6 +113,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', minimum: 0, maximum: 4294967295 }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -139,6 +145,7 @@ export const paramsHandler = new Hono().get(
         number: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -150,6 +157,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({ type: 'number' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
@@ -159,6 +167,11 @@ export const paramsHandler = new Hono().get(
         float: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({
+            type: 'number',
+            minimum: -3.4028234663852886e38,
+            maximum: 3.4028234663852886e38,
+          }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -172,6 +185,11 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({
+                type: 'number',
+                minimum: -3.4028234663852886e38,
+                maximum: 3.4028234663852886e38,
+              }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
@@ -183,6 +201,11 @@ export const paramsHandler = new Hono().get(
         float32: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({
+            type: 'number',
+            minimum: -3.4028234663852886e38,
+            maximum: 3.4028234663852886e38,
+          }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -196,6 +219,11 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({
+                type: 'number',
+                minimum: -3.4028234663852886e38,
+                maximum: 3.4028234663852886e38,
+              }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
@@ -207,6 +235,7 @@ export const paramsHandler = new Hono().get(
         float64: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -218,6 +247,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({ type: 'number' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
@@ -227,6 +257,7 @@ export const paramsHandler = new Hono().get(
         double: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -238,6 +269,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({ type: 'number' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),
@@ -247,6 +279,7 @@ export const paramsHandler = new Hono().get(
         numpassword: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -258,6 +291,7 @@ export const paramsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+              v.metadata({ type: 'number' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.finite(),

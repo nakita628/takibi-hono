@@ -15,17 +15,21 @@ export const optionalHandler = new Hono().get(
           : val,
       z.object({
         int_opt: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         int64_opt: z.coerce.bigint().pipe(z.int64()).exactOptional(),
         num_opt: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-          .transform((val) => Number(val))
-          .pipe(z.number())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+                ? Number(val)
+                : val,
+            z.number(),
+          )
           .exactOptional(),
         bool_opt: z.stringbool().exactOptional(),
         str_opt: z.string().exactOptional(),
@@ -34,51 +38,55 @@ export const optionalHandler = new Hono().get(
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
             z.array(
-              z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int()),
+              z.preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              ),
             ),
           )
           .exactOptional(),
         'page-size': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'filter[name]': z.string().exactOptional(),
         $top: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'user.id': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'ids[]': z
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
             z.array(
-              z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int()),
+              z.preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              ),
             ),
           )
           .exactOptional(),
         Int_Opt: z.string().exactOptional(),
         constructor: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
       }),
     ),

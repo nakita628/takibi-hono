@@ -10,35 +10,38 @@ export const refsHandler = new Hono().get(
     'query',
     z.object({
       ref_int: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int().min(0))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int().min(0),
+        )
         .exactOptional(),
       ref_big: z.coerce.bigint().pipe(z.int64()).exactOptional(),
       ref_num: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       ref_bool: z.stringbool().exactOptional(),
       ref_enum: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.union([z.literal(1), z.literal(2), z.literal(3)]),
+        )
         .exactOptional(),
       ref_str: NameSchema.exactOptional(),
       ref_arr: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),
@@ -46,26 +49,26 @@ export const refsHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int().min(0)),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int().min(0),
+            ),
           ),
         )
         .exactOptional(),
       allof_ref: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int().min(0))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int().min(0),
+        )
         .meta({ description: 'A count.' })
         .exactOptional(),
       ref_ref: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int().min(0))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int().min(0),
+        )
         .exactOptional(),
     }),
   ),

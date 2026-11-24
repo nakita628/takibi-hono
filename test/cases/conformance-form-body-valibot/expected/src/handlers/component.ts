@@ -13,6 +13,7 @@ export const componentHandler = new Hono().post(
       price: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', minimum: 0 }),
         v.transform((input) => Number(input)),
         v.number(),
         v.safeInteger(),

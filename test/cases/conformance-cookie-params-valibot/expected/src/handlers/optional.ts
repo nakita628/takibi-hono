@@ -20,6 +20,7 @@ export const optionalHandler = new Hono().get(
           int_opt: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -40,6 +41,7 @@ export const optionalHandler = new Hono().get(
           ienum: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', enum: [1, 2, 3] }),
             v.transform((input) => Number(input)),
             v.union([v.literal(1), v.literal(2), v.literal(3)]),
           ),
@@ -52,6 +54,7 @@ export const optionalHandler = new Hono().get(
           iconst: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', enum: [7] }),
             v.transform((input) => Number(input)),
             v.literal(7),
           ),
@@ -60,6 +63,7 @@ export const optionalHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -69,6 +73,7 @@ export const optionalHandler = new Hono().get(
           range: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 1, maximum: 100 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -80,6 +85,7 @@ export const optionalHandler = new Hono().get(
           ref_int: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 0 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -91,6 +97,7 @@ export const optionalHandler = new Hono().get(
               size: v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -102,6 +109,7 @@ export const optionalHandler = new Hono().get(
               a: v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -114,6 +122,7 @@ export const optionalHandler = new Hono().get(
           'session-id': v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -121,6 +130,7 @@ export const optionalHandler = new Hono().get(
           'user.id': v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -133,6 +143,7 @@ export const optionalHandler = new Hono().get(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -142,6 +153,7 @@ export const optionalHandler = new Hono().get(
           constructor: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),

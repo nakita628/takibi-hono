@@ -15,43 +15,47 @@ export const optionalHandler = new Hono().get(
           : val,
       z.object({
         'x-int-opt': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'x-int64-opt': z.coerce.bigint().pipe(z.int64()).exactOptional(),
         'x-bool-opt': z.stringbool().exactOptional(),
         'x-str-opt': z.string().exactOptional(),
         'x-ienum': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.union([z.literal(1), z.literal(2), z.literal(3)]),
+          )
           .exactOptional(),
         'x-benum': z.stringbool().pipe(z.literal(true)).exactOptional(),
         'x-iconst': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.literal(7))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.literal(7),
+          )
           .exactOptional(),
         'x-senum': z.enum(['asc', 'desc']).exactOptional(),
         'x-ioneof': z
           .union([
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
             z.literal('all'),
           ])
           .exactOptional(),
         'x-range': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(1).max(100))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int().min(1).max(100),
+          )
           .exactOptional(),
         'x-length': z.string().min(2).max(4).exactOptional(),
         'x-pattern': z
@@ -61,10 +65,11 @@ export const optionalHandler = new Hono().get(
         'x-tx-lower': z.string().toLowerCase().exactOptional(),
         'x-tx-email': z.string().toLowerCase().pipe(z.email()).exactOptional(),
         'x-ref-int': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(0))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int().min(0),
+          )
           .exactOptional(),
         'x-str-arr': z
           .preprocess(
@@ -75,10 +80,11 @@ export const optionalHandler = new Hono().get(
         'x-obj': z
           .object({
             a: z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int())
+              .preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              )
               .exactOptional(),
             b: z.string().exactOptional(),
           })
@@ -86,49 +92,55 @@ export const optionalHandler = new Hono().get(
         'x-objx': z
           .object({
             a: z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int())
+              .preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              )
               .exactOptional(),
             b: z.string().exactOptional(),
           })
           .exactOptional(),
         'x-request-id': z.uuid().exactOptional(),
         'x-rate-limit': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'accept-version': z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         x_underscore: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         'x-inull': z
           .preprocess(
             (val) => (val === 'null' ? null : val),
             z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int())
+              .preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              )
               .nullable(),
           )
           .exactOptional(),
         constructor: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
       }),
     ),

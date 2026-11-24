@@ -12,6 +12,7 @@ export const ienumHandler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', enum: [1, 2] }),
         v.transform((input) => Number(input)),
         v.union([v.literal(1), v.literal(2)]),
       ),

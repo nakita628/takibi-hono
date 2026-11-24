@@ -9,11 +9,10 @@ export const namedHandler = new Hono().get(
   validator(
     'param',
     z.object({
-      'user-id': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int()),
+      'user-id': z.preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.number().int(),
+      ),
       post_id: z.stringbool(),
     }),
   ),

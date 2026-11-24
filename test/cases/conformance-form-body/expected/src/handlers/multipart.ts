@@ -11,21 +11,21 @@ export const multipartHandler = new Hono().post(
     z.object({
       file: z.file(),
       age: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
       active: z.stringbool().exactOptional(),
       ids: z
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),

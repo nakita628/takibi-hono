@@ -13,21 +13,22 @@ export const objectsHandler = new Hono().get(
         .object({
           name: z.string().exactOptional(),
           age: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int().min(0))
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int().min(0),
+            )
             .exactOptional(),
           active: z.stringbool().exactOptional(),
           ids: z
             .preprocess(
               (val) => (val === undefined || Array.isArray(val) ? val : [val]),
               z.array(
-                z
-                  .string()
-                  .regex(/^-?(?:0|[1-9]\d*)$/)
-                  .transform((val) => Number(val))
-                  .pipe(z.number().int()),
+                z.preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                ),
               ),
             )
             .exactOptional(),
@@ -37,16 +38,22 @@ export const objectsHandler = new Hono().get(
               z.array(
                 z.object({
                   x: z
-                    .string()
-                    .regex(/^-?(?:0|[1-9]\d*)$/)
-                    .transform((val) => Number(val))
-                    .pipe(z.number().int())
+                    .preprocess(
+                      (val) =>
+                        typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val)
+                          ? Number(val)
+                          : val,
+                      z.number().int(),
+                    )
                     .exactOptional(),
                   y: z
-                    .string()
-                    .regex(/^-?(?:0|[1-9]\d*)$/)
-                    .transform((val) => Number(val))
-                    .pipe(z.number().int())
+                    .preprocess(
+                      (val) =>
+                        typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val)
+                          ? Number(val)
+                          : val,
+                      z.number().int(),
+                    )
                     .exactOptional(),
                 }),
               ),
@@ -61,16 +68,18 @@ export const objectsHandler = new Hono().get(
           range: z
             .object({
               min: z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int())
+                .preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                )
                 .exactOptional(),
               max: z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int())
+                .preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                )
                 .exactOptional(),
             })
             .exactOptional(),
@@ -78,16 +87,17 @@ export const objectsHandler = new Hono().get(
         .exactOptional(),
       deep_ref: z
         .object({
-          from: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int()),
+          from: z.preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          ),
           to: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
         })
         .exactOptional(),
@@ -95,16 +105,18 @@ export const objectsHandler = new Hono().get(
         .object({
           sort: z.enum(['asc', 'desc']).exactOptional(),
           size: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
           page: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
         })
         .exactOptional(),
@@ -112,19 +124,20 @@ export const objectsHandler = new Hono().get(
         .object({
           name: z.string().exactOptional(),
           age: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
         })
         .exactOptional(),
       page: z.string().exactOptional(),
       limit: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
     }),
   ),

@@ -9,19 +9,18 @@ export const requiredHandler = new Hono().get(
   validator(
     'header',
     z.object({
-      'x-id': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int()),
+      'x-id': z.preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.number().int(),
+      ),
       'x-big': z.coerce.bigint().pipe(z.int64()),
       'x-flag': z.stringbool(),
       'x-name': z.string(),
       'x-note': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
     }),
   ),

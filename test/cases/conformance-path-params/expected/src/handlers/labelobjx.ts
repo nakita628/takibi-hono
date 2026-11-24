@@ -11,10 +11,11 @@ export const labelobjxHandler = new Hono().get(
     z.object({
       value: z.object({
         a: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
         b: z.string().exactOptional(),
       }),

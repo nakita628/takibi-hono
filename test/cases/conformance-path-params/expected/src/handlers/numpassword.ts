@@ -9,11 +9,13 @@ export const numpasswordHandler = new Hono().get(
   validator(
     'param',
     z.object({
-      value: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number()),
+      value: z.preprocess(
+        (val) =>
+          typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+            ? Number(val)
+            : val,
+        z.number(),
+      ),
     }),
   ),
   (c) => {},

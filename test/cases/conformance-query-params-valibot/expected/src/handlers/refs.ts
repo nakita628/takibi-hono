@@ -13,6 +13,7 @@ export const refsHandler = new Hono().get(
         ref_int: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: 0 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -28,6 +29,7 @@ export const refsHandler = new Hono().get(
         ref_num: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -40,6 +42,7 @@ export const refsHandler = new Hono().get(
         ref_enum: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', enum: [1, 2, 3] }),
           v.transform((input) => Number(input)),
           v.union([v.literal(1), v.literal(2), v.literal(3)]),
         ),
@@ -51,6 +54,7 @@ export const refsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -64,6 +68,7 @@ export const refsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', minimum: 0 }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -75,6 +80,7 @@ export const refsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 0 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -85,6 +91,7 @@ export const refsHandler = new Hono().get(
         ref_ref: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: 0 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),

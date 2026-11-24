@@ -10,61 +10,79 @@ export const headersHandler = new Hono().get(
     'header',
     z.object({
       'x-integer': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
       'x-int32': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.int32())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.int32(),
+        )
         .exactOptional(),
       'x-int64': z.coerce.bigint().pipe(z.int64()).exactOptional(),
       'x-bigint': z.coerce.bigint().exactOptional(),
       'x-uint32': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.uint32())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.uint32(),
+        )
         .exactOptional(),
       'x-uint64': z.coerce.bigint().pipe(z.uint64()).exactOptional(),
       'x-number': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       'x-float': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float32())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float32(),
+        )
         .exactOptional(),
       'x-float32': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float32())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float32(),
+        )
         .exactOptional(),
       'x-float64': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float64())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float64(),
+        )
         .exactOptional(),
       'x-double': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       'x-numpassword': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       'x-boolean': z.stringbool().exactOptional(),
       'x-string': z.string().exactOptional(),
@@ -140,11 +158,11 @@ export const headersHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),

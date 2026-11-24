@@ -10,10 +10,10 @@ export const defaultsHandler = new Hono().get(
     'header',
     z.object({
       'x-int-def': z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .default(20)
         .exactOptional(),
       'x-int64-def': z.coerce.bigint().pipe(z.int64()).default(5n).exactOptional(),

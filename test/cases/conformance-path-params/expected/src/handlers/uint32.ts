@@ -9,11 +9,10 @@ export const uint32Handler = new Hono().get(
   validator(
     'param',
     z.object({
-      value: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.uint32()),
+      value: z.preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.uint32(),
+      ),
     }),
   ),
   (c) => {},

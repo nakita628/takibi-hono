@@ -17,15 +17,19 @@ export const inheritedHandler = new Hono().get(
       ),
       v.object({
         toString: v.string(),
-        valueOf: v.optional(
-          v.pipe(
-            v.string(),
-            v.regex(/^-?(?:0|[1-9]\d*)$/),
-            v.transform((input) => Number(input)),
-            v.number(),
-            v.safeInteger(),
+        valueOf: v.pipe(
+          v.optional(
+            v.pipe(
+              v.string(),
+              v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
+              v.transform((input) => Number(input)),
+              v.number(),
+              v.safeInteger(),
+            ),
+            '3',
           ),
-          '3',
+          v.metadata({ default: 3 }),
         ),
         hasOwnProperty: v.optional(
           v.pipe(
@@ -42,6 +46,7 @@ export const inheritedHandler = new Hono().get(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -53,6 +58,7 @@ export const inheritedHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),

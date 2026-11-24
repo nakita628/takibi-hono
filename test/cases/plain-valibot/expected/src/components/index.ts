@@ -29,6 +29,7 @@ export type Error = v.InferOutput<typeof ErrorSchema>
 export const LimitParamsSchema = v.pipe(
   v.string(),
   v.regex(/^-?(?:0|[1-9]\d*)$/),
+  v.metadata({ type: 'integer', minimum: 1, maximum: 100 }),
   v.transform((input) => Number(input)),
   v.number(),
   v.safeInteger(),

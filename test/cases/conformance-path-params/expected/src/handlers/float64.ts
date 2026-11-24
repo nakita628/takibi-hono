@@ -9,11 +9,13 @@ export const float64Handler = new Hono().get(
   validator(
     'param',
     z.object({
-      value: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float64()),
+      value: z.preprocess(
+        (val) =>
+          typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+            ? Number(val)
+            : val,
+        z.float64(),
+      ),
     }),
   ),
   (c) => {},

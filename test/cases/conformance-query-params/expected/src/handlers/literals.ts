@@ -10,23 +10,26 @@ export const literalsHandler = new Hono().get(
     'query',
     z.object({
       ienum: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)]))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.union([z.literal(1), z.literal(2), z.literal(3)]),
+        )
         .exactOptional(),
       nenum: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.union([z.literal(1.5), z.literal(2.5)]))
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.union([z.literal(1.5), z.literal(2.5)]),
+        )
         .exactOptional(),
       benum: z.stringbool().pipe(z.literal(true)).exactOptional(),
       iconst: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.literal(7))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.literal(7),
+        )
         .exactOptional(),
       senum: z.enum(['asc', 'desc']).exactOptional(),
       sconst: z.literal('fixed').exactOptional(),
@@ -35,10 +38,11 @@ export const literalsHandler = new Hono().get(
         .preprocess(
           (val) => (val === 'null' ? null : val),
           z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .nullable(),
         )
         .exactOptional(),
@@ -50,11 +54,11 @@ export const literalsHandler = new Hono().get(
           (val) => (val === 'null' ? null : val),
           z
             .union([
-              z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int()),
+              z.preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              ),
               z.preprocess((val) => (val === 'null' ? null : val), z.null()),
             ])
             .nullable(),
@@ -67,10 +71,11 @@ export const literalsHandler = new Hono().get(
             z.preprocess(
               (val) => (val === 'null' ? null : val),
               z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int())
+                .preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                )
                 .nullable(),
             ),
           ),
@@ -83,11 +88,11 @@ export const literalsHandler = new Hono().get(
             .preprocess(
               (val) => (val === undefined || Array.isArray(val) ? val : [val]),
               z.array(
-                z
-                  .string()
-                  .regex(/^-?(?:0|[1-9]\d*)$/)
-                  .transform((val) => Number(val))
-                  .pipe(z.number().int()),
+                z.preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                ),
               ),
             )
             .nullable(),
@@ -96,11 +101,11 @@ export const literalsHandler = new Hono().get(
       snull: z.string().nullable().exactOptional(),
       ioneof: z
         .union([
-          z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int()),
+          z.preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          ),
           z.literal('all'),
         ])
         .exactOptional(),
@@ -108,11 +113,11 @@ export const literalsHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.union([z.literal(1), z.literal(2), z.literal(3)])),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.union([z.literal(1), z.literal(2), z.literal(3)]),
+            ),
           ),
         )
         .exactOptional(),

@@ -9,11 +9,13 @@ export const nenumHandler = new Hono().get(
   validator(
     'param',
     z.object({
-      value: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.union([z.literal(0.5), z.literal(2.5)])),
+      value: z.preprocess(
+        (val) =>
+          typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+            ? Number(val)
+            : val,
+        z.union([z.literal(0.5), z.literal(2.5)]),
+      ),
     }),
   ),
   (c) => {},

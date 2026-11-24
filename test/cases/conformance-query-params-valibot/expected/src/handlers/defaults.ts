@@ -9,15 +9,19 @@ export const defaultsHandler = new Hono().get(
   validator(
     'query',
     v.object({
-      int_def: v.optional(
-        v.pipe(
-          v.string(),
-          v.regex(/^-?(?:0|[1-9]\d*)$/),
-          v.transform((input) => Number(input)),
-          v.number(),
-          v.safeInteger(),
+      int_def: v.pipe(
+        v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          '20',
         ),
-        '20',
+        v.metadata({ default: 20 }),
       ),
       int64_def: v.optional(
         v.pipe(
@@ -29,15 +33,19 @@ export const defaultsHandler = new Hono().get(
         ),
         '5',
       ),
-      num_def: v.optional(
-        v.pipe(
-          v.string(),
-          v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
-          v.transform((input) => Number(input)),
-          v.number(),
-          v.finite(),
+      num_def: v.pipe(
+        v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.metadata({ type: 'number' }),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.finite(),
+          ),
+          '0.5',
         ),
-        '0.5',
+        v.metadata({ default: 0.5 }),
       ),
       bool_def: v.optional(
         v.pipe(
@@ -73,6 +81,7 @@ export const defaultsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),

@@ -12,6 +12,7 @@ export const rangeHandler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', minimum: 1, maximum: 10 }),
         v.transform((input) => Number(input)),
         v.number(),
         v.safeInteger(),

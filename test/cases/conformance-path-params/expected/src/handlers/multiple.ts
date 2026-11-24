@@ -9,11 +9,10 @@ export const multipleHandler = new Hono().get(
   validator(
     'param',
     z.object({
-      value: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int().multipleOf(5)),
+      value: z.preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.number().int().multipleOf(5),
+      ),
     }),
   ),
   (c) => {},

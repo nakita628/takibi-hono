@@ -16,6 +16,7 @@ export const objectsHandler = new Hono().get(
             age: v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', minimum: 0 }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -35,6 +36,7 @@ export const objectsHandler = new Hono().get(
                 v.pipe(
                   v.string(),
                   v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.metadata({ type: 'integer' }),
                   v.transform((input) => Number(input)),
                   v.number(),
                   v.safeInteger(),
@@ -52,6 +54,7 @@ export const objectsHandler = new Hono().get(
                     x: v.pipe(
                       v.string(),
                       v.regex(/^-?(?:0|[1-9]\d*)$/),
+                      v.metadata({ type: 'integer' }),
                       v.transform((input) => Number(input)),
                       v.number(),
                       v.safeInteger(),
@@ -59,6 +62,7 @@ export const objectsHandler = new Hono().get(
                     y: v.pipe(
                       v.string(),
                       v.regex(/^-?(?:0|[1-9]\d*)$/),
+                      v.metadata({ type: 'integer' }),
                       v.transform((input) => Number(input)),
                       v.number(),
                       v.safeInteger(),
@@ -79,6 +83,7 @@ export const objectsHandler = new Hono().get(
                 min: v.pipe(
                   v.string(),
                   v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.metadata({ type: 'integer' }),
                   v.transform((input) => Number(input)),
                   v.number(),
                   v.safeInteger(),
@@ -86,6 +91,7 @@ export const objectsHandler = new Hono().get(
                 max: v.pipe(
                   v.string(),
                   v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.metadata({ type: 'integer' }),
                   v.transform((input) => Number(input)),
                   v.number(),
                   v.safeInteger(),
@@ -98,6 +104,7 @@ export const objectsHandler = new Hono().get(
           from: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -106,6 +113,7 @@ export const objectsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -118,6 +126,7 @@ export const objectsHandler = new Hono().get(
             size: v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -125,6 +134,7 @@ export const objectsHandler = new Hono().get(
             page: v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -137,6 +147,7 @@ export const objectsHandler = new Hono().get(
             age: v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -147,6 +158,7 @@ export const objectsHandler = new Hono().get(
         limit: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
