@@ -18,11 +18,10 @@ export const ErrorSchema = z.object({ message: z.string() })
 
 export type Error = z.infer<typeof ErrorSchema>
 
-export const LimitParamsSchema = z
-  .string()
-  .regex(/^-?(?:0|[1-9]\d*)$/)
-  .transform((val) => Number(val))
-  .pipe(z.number().int().min(1).max(100))
+export const LimitParamsSchema = z.preprocess(
+  (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+  z.number().int().min(1).max(100),
+)
 export const RequestIdParamsSchema = z.string()
 
 export const TotalCountHeaderSchema = z.int()

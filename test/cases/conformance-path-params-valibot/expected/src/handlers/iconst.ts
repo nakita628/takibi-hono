@@ -12,6 +12,7 @@ export const iconstHandler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', enum: [7] }),
         v.transform((input) => Number(input)),
         v.literal(7),
       ),

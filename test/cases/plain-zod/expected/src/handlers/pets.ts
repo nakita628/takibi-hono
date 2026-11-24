@@ -10,10 +10,11 @@ export const petsHandler = new Hono()
       'query',
       z.object({
         limit: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(1).max(100))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int().min(1).max(100),
+          )
           .exactOptional(),
         tag: TagSchema.exactOptional(),
       }),
@@ -39,11 +40,10 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       z.object({
-        petId: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(1)),
+        petId: z.preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int().min(1),
+        ),
       }),
     ),
     (c) => {},
@@ -53,11 +53,10 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       z.object({
-        petId: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int()),
+        petId: z.preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        ),
       }),
     ),
     (c) => {},
@@ -67,11 +66,10 @@ export const petsHandler = new Hono()
     sValidator(
       'param',
       z.object({
-        petId: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int()),
+        petId: z.preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        ),
       }),
     ),
     sValidator(

@@ -7,13 +7,25 @@ export class OpenAPIError extends Data.TaggedError('OpenAPIError')<{
 }> {}
 
 /**
+ * Whether oas-truth's `parseOpenAPI` takes this input: a `.yaml`, `.yml`, `.json` or `.tsp`
+ * path, or an http(s) URL. oas-truth dropped its own `isOpenAPIInput` in 0.8.
+ */
+function isOpenAPIInput(input: string): input is Parameters<typeof truth.parseOpenAPI>[0] {
+  return (
+    ['.yaml', '.yml', '.json', '.tsp'].some((extension) => input.endsWith(extension)) ||
+    input.startsWith('http://') ||
+    input.startsWith('https://')
+  )
+}
+
+/**
  * Parses an OpenAPI (`.yaml` / `.json`) or TypeSpec (`.tsp`) document through oas-truth.
  * oas-truth never throws and answers with a result; this is where that result becomes
  * the error channel.
  */
 export function parseOpenAPI(input: string) {
   return Effect.gen(function* () {
-    if (!truth.isOpenAPIInput(input)) {
+    if (!isOpenAPIInput(input)) {
       return yield* new OpenAPIError({
         message: `Not an OpenAPI (.yaml / .yml / .json), TypeSpec (.tsp) or http(s) input: ${input}`,
       })

@@ -16,38 +16,45 @@ export const urlencodedHandler = new Hono().post(
       z.object({
         name: z.string().exactOptional(),
         age: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(0))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int().min(0),
+          )
           .exactOptional(),
         ratio: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-          .transform((val) => Number(val))
-          .pipe(z.number())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+                ? Number(val)
+                : val,
+            z.number(),
+          )
           .exactOptional(),
         big: z.coerce.bigint().pipe(z.int64()).exactOptional(),
         active: z.stringbool().exactOptional(),
         level: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.union([z.literal(1), z.literal(2)]))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.union([z.literal(1), z.literal(2)]),
+          )
           .exactOptional(),
         agreed: z.stringbool().pipe(z.literal(true)).exactOptional(),
         limit: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .default(20)
           .exactOptional(),
         count: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int().min(0))
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int().min(0),
+          )
           .exactOptional(),
         flag: z.stringbool().exactOptional(),
         tags: z
@@ -60,11 +67,11 @@ export const urlencodedHandler = new Hono().post(
           .preprocess(
             (val) => (val === undefined || Array.isArray(val) ? val : [val]),
             z.array(
-              z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int()),
+              z.preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              ),
             ),
           )
           .exactOptional(),
@@ -79,19 +86,21 @@ export const urlencodedHandler = new Hono().post(
           .preprocess(
             (val) => (val === 'null' ? null : val),
             z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int())
+              .preprocess(
+                (val) =>
+                  typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                z.number().int(),
+              )
               .nullable(),
           )
           .exactOptional(),
         label: z.string().nullable().exactOptional(),
         constructor: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
       }),
     ),

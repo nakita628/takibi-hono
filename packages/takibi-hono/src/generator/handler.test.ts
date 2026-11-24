@@ -92,7 +92,7 @@ import{describeRoute,resolver,validator}from'hono-openapi'
 import*as z from'zod'
 import{PetSchema,NotFoundResponse}from'../components'
 
-export const petsHandler=new Hono().get('/pets/:id',describeRoute({tags:["pets"],operationId:"true",responses:{"200":{description:"ok",headers:{"X-Rate":{schema:{type:"integer"}}},content:{"application/json":{schema:resolver(PetSchema)}}},"404":NotFoundResponse}}),validator('param',z.object({id:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int())})),validator('query',z.object({limit:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional()})),(c)=>{}).post('/pets',describeRoute({responses:{"201":{description:"created"}}}),validator('json',PetSchema),(c)=>{}).on('HEAD','/pets',describeRoute({responses:{}}),(c)=>{})`)
+export const petsHandler=new Hono().get('/pets/:id',describeRoute({tags:["pets"],operationId:"true",responses:{"200":{description:"ok",headers:{"X-Rate":{schema:{type:"integer"}}},content:{"application/json":{schema:resolver(PetSchema)}}},"404":NotFoundResponse}}),validator('param',z.object({id:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int())})),validator('query',z.object({limit:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional()})),(c)=>{}).post('/pets',describeRoute({responses:{"201":{description:"created"}}}),validator('json',PetSchema),(c)=>{}).on('HEAD','/pets',describeRoute({responses:{}}),(c)=>{})`)
   })
 
   it('keeps a response $ref as a Reference Object when the responses module is not generated', () => {
@@ -109,7 +109,7 @@ import{describeRoute,resolver,validator}from'hono-openapi'
 import*as z from'zod'
 import{PetSchema}from'../components'
 
-export const petsHandler=new Hono().get('/pets/:id',describeRoute({tags:["pets"],operationId:"true",responses:{"200":{description:"ok",headers:{"X-Rate":{schema:{type:"integer"}}},content:{"application/json":{schema:resolver(PetSchema)}}},"404":{$ref:"#/components/responses/NotFound"}}}),validator('param',z.object({id:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int())})),validator('query',z.object({limit:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional()})),(c)=>{})`)
+export const petsHandler=new Hono().get('/pets/:id',describeRoute({tags:["pets"],operationId:"true",responses:{"200":{description:"ok",headers:{"X-Rate":{schema:{type:"integer"}}},content:{"application/json":{schema:resolver(PetSchema)}}},"404":{$ref:"#/components/responses/NotFound"}}}),validator('param',z.object({id:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int())})),validator('query',z.object({limit:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional()})),(c)=>{})`)
   })
 
   it.each([
@@ -120,7 +120,7 @@ import{sValidator}from'@hono/standard-validator'
 import*as z from'zod'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',z.object({id:z.string()})),sValidator('query',z.object({q:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional()})),sValidator('json',ItemSchema),sValidator('form',z.object({file:z.string().exactOptional()})),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',z.object({id:z.string()})),sValidator('query',z.object({q:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional()})),sValidator('json',ItemSchema),sValidator('form',z.object({file:z.string().exactOptional()})),(c)=>{})`,
     ],
     [
       'valibot',
@@ -129,7 +129,7 @@ import{sValidator}from'@hono/standard-validator'
 import*as v from'valibot'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.regex(/^-?(?:0|[1-9]\\d*)$/),v.transform((input)=>Number(input)),v.number(),v.safeInteger())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',sValidator('param',v.object({id:v.string()})),sValidator('query',v.partial(v.object({q:v.pipe(v.string(),v.regex(/^-?(?:0|[1-9]\\d*)$/),v.metadata({type:'integer'}),v.transform((input)=>Number(input)),v.number(),v.safeInteger())}))),sValidator('json',ItemSchema),sValidator('form',v.partial(v.object({file:v.string()}))),(c)=>{})`,
     ],
     [
       'typebox',
@@ -138,7 +138,7 @@ import{tbValidator}from'@hono/typebox-validator'
 import{Type,Codec}from'typebox'
 import{ItemSchema}from'../components'
 
-export const itemsHandler=new Hono().put('/items/:id',tbValidator('param',Type.Object({id:Type.String()})),tbValidator('query',Type.Object({q:Type.Optional(Codec(Type.String({pattern:/^-?(?:0|[1-9]\\d*)$/})).Decode((value)=>Number(value)).Encode((value)=>String(value)))})),tbValidator('json',ItemSchema),tbValidator('form',Type.Object({file:Type.Optional(Type.String())})),(c)=>{})`,
+export const itemsHandler=new Hono().put('/items/:id',tbValidator('param',Type.Object({id:Type.String()})),tbValidator('query',Type.Object({q:Type.Optional(Codec(Type.String({pattern:"^-?(?:0|[1-9]\\\\d*)$"})).Decode((value)=>Number(value)).Encode((value)=>String(value)))})),tbValidator('json',ItemSchema),tbValidator('form',Type.Object({file:Type.Optional(Type.String())})),(c)=>{})`,
     ],
     [
       'arktype',
@@ -208,7 +208,7 @@ export const itemsHandler=new Hono().put('/items/:id',sValidator('param',Schema.
 import{sValidator}from'@hono/standard-validator'
 import*as z from'zod'
 
-export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
+export const uploadsHandler=new Hono().post('/uploads',sValidator('header',z.object({"x-count":z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional()})),sValidator('cookie',z.object({debug:z.stringbool().exactOptional()})),sValidator('form',z.object({size:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional(),file:z.file().exactOptional()})),(c)=>{})`)
   })
 
   it('expands a referenced component that reads differently from text', () => {
@@ -254,7 +254,7 @@ import{sValidator}from'@hono/standard-validator'
 import*as z from'zod'
 import{TagSchema,NodeSchema}from'../components'
 
-export const uploadsHandler=new Hono().post('/uploads',sValidator('query',z.object({count:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int().min(0)).exactOptional(),tag:TagSchema.exactOptional()})),sValidator('cookie',z.object({node:NodeSchema.exactOptional()})),sValidator('form',z.object({size:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int().min(0)).exactOptional()})),(c)=>{})`)
+export const uploadsHandler=new Hono().post('/uploads',sValidator('query',z.object({count:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int().min(0)).exactOptional(),tag:TagSchema.exactOptional()})),sValidator('cookie',z.object({node:NodeSchema.exactOptional()})),sValidator('form',z.object({size:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int().min(0)).exactOptional()})),(c)=>{})`)
   })
 
   it('reads a header parameter under its lowercased name, as Hono hands it over', () => {
@@ -283,7 +283,7 @@ export const uploadsHandler=new Hono().post('/uploads',sValidator('query',z.obje
 import{sValidator}from'@hono/standard-validator'
 import*as z from'zod'
 
-export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object({"x-rate-limit":z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()),"x-request-id":z.string()})),(c)=>{})`)
+export const limitsHandler=new Hono().get('/limits',sValidator('header',z.object({"x-rate-limit":z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()),"x-request-id":z.string()})),(c)=>{})`)
   })
 
   it.each([
@@ -664,7 +664,7 @@ describe('makeDefinitionsCode', () => {
 import*as z from'zod'
 import{PetSchema}from'../components'
 
-export const getPetsIdHandler=defineHandler({param:z.object({id:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int())}),query:z.object({limit:z.string().regex(/^-?(?:0|[1-9]\\d*)$/).transform((val)=>Number(val)).pipe(z.number().int()).exactOptional()}),response:PetSchema})
+export const getPetsIdHandler=defineHandler({param:z.object({id:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int())}),query:z.object({limit:z.preprocess((val)=>typeof val==='string'&&/^-?(?:0|[1-9]\\d*)$/.test(val)?Number(val):val,z.number().int()).exactOptional()}),response:PetSchema})
 
 export const postPetsHandler=defineHandler({json:PetSchema})
 

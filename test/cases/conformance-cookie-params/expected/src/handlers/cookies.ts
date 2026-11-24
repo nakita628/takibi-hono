@@ -10,61 +10,79 @@ export const cookiesHandler = new Hono().get(
     'cookie',
     z.object({
       integer: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
       int32: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.int32())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.int32(),
+        )
         .exactOptional(),
       int64: z.coerce.bigint().pipe(z.int64()).exactOptional(),
       bigint: z.coerce.bigint().exactOptional(),
       uint32: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.uint32())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.uint32(),
+        )
         .exactOptional(),
       uint64: z.coerce.bigint().pipe(z.uint64()).exactOptional(),
       number: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       float: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float32())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float32(),
+        )
         .exactOptional(),
       float32: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float32())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float32(),
+        )
         .exactOptional(),
       float64: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.float64())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.float64(),
+        )
         .exactOptional(),
       double: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       numpassword: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/)
-        .transform((val) => Number(val))
-        .pipe(z.number())
+        .preprocess(
+          (val) =>
+            typeof val === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(val)
+              ? Number(val)
+              : val,
+          z.number(),
+        )
         .exactOptional(),
       boolean: z.stringbool().exactOptional(),
       string: z.string().exactOptional(),
@@ -141,11 +159,11 @@ export const cookiesHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),

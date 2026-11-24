@@ -38,7 +38,7 @@
     "@typespec/openapi3": "catalog:",
     "effect": "4.1.4",
     "hono-takibi": "0.32.5",
-    "oas-truth": "^0.7.0",
+    "oas-truth": "^0.8.1",
     "oxc-parser": "^0.159.0",
     "oxfmt": "^0.79.0"
   },

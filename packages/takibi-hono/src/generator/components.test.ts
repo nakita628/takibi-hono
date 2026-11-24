@@ -67,7 +67,7 @@ describe('makeComponentCode', () => {
     ).toStrictEqual([
       {
         fileName: 'index',
-        code: 'export const PageSizeParamsSchema=v.pipe(v.string(),v.regex(/^-?(?:0|[1-9]\\d*)$/),v.transform((input)=>Number(input)),v.number(),v.safeInteger())\n\nexport type PageSizeParamsSchema=v.InferOutput<typeof PageSizeParamsSchema>',
+        code: "export const PageSizeParamsSchema=v.pipe(v.string(),v.regex(/^-?(?:0|[1-9]\\d*)$/),v.metadata({type:'integer'}),v.transform((input)=>Number(input)),v.number(),v.safeInteger())\n\nexport type PageSizeParamsSchema=v.InferOutput<typeof PageSizeParamsSchema>",
       },
     ])
   })

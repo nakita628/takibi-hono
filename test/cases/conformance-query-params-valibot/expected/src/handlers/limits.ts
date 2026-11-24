@@ -13,6 +13,7 @@ export const limitsHandler = new Hono().get(
         range: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: 1, maximum: 100 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -22,6 +23,7 @@ export const limitsHandler = new Hono().get(
         exclusive: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -31,6 +33,7 @@ export const limitsHandler = new Hono().get(
         multiple: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', multipleOf: 5 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -54,6 +57,7 @@ export const limitsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -69,6 +73,7 @@ export const limitsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -83,6 +88,7 @@ export const limitsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', minimum: 1, maximum: 9 }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),

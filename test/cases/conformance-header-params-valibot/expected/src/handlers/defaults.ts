@@ -9,15 +9,19 @@ export const defaultsHandler = new Hono().get(
   validator(
     'header',
     v.object({
-      'x-int-def': v.optional(
-        v.pipe(
-          v.string(),
-          v.regex(/^-?(?:0|[1-9]\d*)$/),
-          v.transform((input) => Number(input)),
-          v.number(),
-          v.safeInteger(),
+      'x-int-def': v.pipe(
+        v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          '20',
         ),
-        '20',
+        v.metadata({ default: 20 }),
       ),
       'x-int64-def': v.optional(
         v.pipe(

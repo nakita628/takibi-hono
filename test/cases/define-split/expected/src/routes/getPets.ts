@@ -5,10 +5,10 @@ import { TagSchema, PetSchema } from '@/components'
 export const getPetsHandler = defineHandler({
   query: z.object({
     limit: z
-      .string()
-      .regex(/^-?(?:0|[1-9]\d*)$/)
-      .transform((val) => Number(val))
-      .pipe(z.number().int().min(1).max(100))
+      .preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.number().int().min(1).max(100),
+      )
       .exactOptional(),
     tag: TagSchema.exactOptional(),
   }),

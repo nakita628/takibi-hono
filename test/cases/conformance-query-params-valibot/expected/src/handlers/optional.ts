@@ -20,6 +20,7 @@ export const optionalHandler = new Hono().get(
           int_opt: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -34,6 +35,7 @@ export const optionalHandler = new Hono().get(
           num_opt: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.metadata({ type: 'number' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.finite(),
@@ -57,6 +59,7 @@ export const optionalHandler = new Hono().get(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -66,6 +69,7 @@ export const optionalHandler = new Hono().get(
           'page-size': v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -74,6 +78,7 @@ export const optionalHandler = new Hono().get(
           $top: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -81,6 +86,7 @@ export const optionalHandler = new Hono().get(
           'user.id': v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -92,6 +98,7 @@ export const optionalHandler = new Hono().get(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -102,6 +109,7 @@ export const optionalHandler = new Hono().get(
           constructor: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),

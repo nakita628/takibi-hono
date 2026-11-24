@@ -13,11 +13,11 @@ export const stylesHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),
@@ -25,11 +25,11 @@ export const stylesHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),
@@ -37,11 +37,11 @@ export const stylesHandler = new Hono().get(
         .preprocess(
           (val) => (val === undefined || Array.isArray(val) ? val : [val]),
           z.array(
-            z
-              .string()
-              .regex(/^-?(?:0|[1-9]\d*)$/)
-              .transform((val) => Number(val))
-              .pipe(z.number().int()),
+            z.preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            ),
           ),
         )
         .exactOptional(),
@@ -49,10 +49,11 @@ export const stylesHandler = new Hono().get(
         .object({
           name: z.string().exactOptional(),
           age: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
         })
         .exactOptional(),

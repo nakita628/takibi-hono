@@ -56,16 +56,20 @@ export const UserIdParamsSchema = resolver(
   ),
 )
 export const PageParamsSchema = resolver(
-  v.optional(
-    v.pipe(
-      v.string(),
-      v.regex(/^-?(?:0|[1-9]\d*)$/),
-      v.transform((input) => Number(input)),
-      v.number(),
-      v.safeInteger(),
-      v.minValue(1),
+  v.pipe(
+    v.optional(
+      v.pipe(
+        v.string(),
+        v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', minimum: 1 }),
+        v.transform((input) => Number(input)),
+        v.number(),
+        v.safeInteger(),
+        v.minValue(1),
+      ),
+      '1',
     ),
-    '1',
+    v.metadata({ default: 1 }),
   ),
 )
 

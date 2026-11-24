@@ -18,10 +18,10 @@ export const nodesHandler = new Hono().get(
     'query',
     z.object({
       page: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int().min(1))
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int().min(1),
+        )
         .default(1)
         .exactOptional(),
     }),

@@ -3,7 +3,7 @@ import { Effect, Schema, SchemaTransformation } from 'effect'
 
 type NodeType = { id: string; children?: readonly NodeType[] }
 
-export const NodeSchema: Schema.Schema<NodeType> = Schema.Struct({
+export const NodeSchema: Schema.Codec<NodeType, unknown> = Schema.Struct({
   id: Schema.String,
   children: Schema.optionalKey(Schema.Array(Schema.suspend(() => NodeSchema))),
 }).annotate({ identifier: 'Node' })
@@ -12,7 +12,7 @@ export type Node = Schema.Schema.Type<typeof NodeSchema>
 
 type AuthorType = { name?: string; posts?: readonly Schema.Schema.Type<typeof PostSchema>[] }
 
-export const AuthorSchema: Schema.Schema<AuthorType> = Schema.Struct({
+export const AuthorSchema: Schema.Codec<AuthorType, unknown> = Schema.Struct({
   name: Schema.optionalKey(Schema.String),
   posts: Schema.optionalKey(Schema.Array(Schema.suspend(() => PostSchema))),
 }).annotate({ identifier: 'Author' })
@@ -21,7 +21,7 @@ export type Author = Schema.Schema.Type<typeof AuthorSchema>
 
 type PostType = { title: string; author?: Schema.Schema.Type<typeof AuthorSchema> }
 
-export const PostSchema: Schema.Schema<PostType> = Schema.Struct({
+export const PostSchema: Schema.Codec<PostType, unknown> = Schema.Struct({
   title: Schema.String,
   author: Schema.optionalKey(Schema.suspend(() => AuthorSchema)),
 }).annotate({ identifier: 'Post' })

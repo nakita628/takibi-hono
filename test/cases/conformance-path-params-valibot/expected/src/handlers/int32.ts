@@ -12,6 +12,7 @@ export const int32Handler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)$/),
+        v.metadata({ type: 'integer', minimum: -2147483648, maximum: 2147483647 }),
         v.transform((input) => Number(input)),
         v.number(),
         v.safeInteger(),

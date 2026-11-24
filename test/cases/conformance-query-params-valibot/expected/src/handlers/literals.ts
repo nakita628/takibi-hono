@@ -13,12 +13,14 @@ export const literalsHandler = new Hono().get(
         ienum: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', enum: [1, 2, 3] }),
           v.transform((input) => Number(input)),
           v.union([v.literal(1), v.literal(2), v.literal(3)]),
         ),
         nenum: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number', enum: [1.5, 2.5] }),
           v.transform((input) => Number(input)),
           v.union([v.literal(1.5), v.literal(2.5)]),
         ),
@@ -31,6 +33,7 @@ export const literalsHandler = new Hono().get(
         iconst: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', enum: [7] }),
           v.transform((input) => Number(input)),
           v.literal(7),
         ),
@@ -44,6 +47,7 @@ export const literalsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),
@@ -69,6 +73,7 @@ export const literalsHandler = new Hono().get(
               v.pipe(
                 v.string(),
                 v.regex(/^-?(?:0|[1-9]\d*)$/),
+                v.metadata({ type: 'integer' }),
                 v.transform((input) => Number(input)),
                 v.number(),
                 v.safeInteger(),
@@ -92,6 +97,7 @@ export const literalsHandler = new Hono().get(
                 v.pipe(
                   v.string(),
                   v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.metadata({ type: 'integer' }),
                   v.transform((input) => Number(input)),
                   v.number(),
                   v.safeInteger(),
@@ -113,6 +119,7 @@ export const literalsHandler = new Hono().get(
                 v.pipe(
                   v.string(),
                   v.regex(/^-?(?:0|[1-9]\d*)$/),
+                  v.metadata({ type: 'integer' }),
                   v.transform((input) => Number(input)),
                   v.number(),
                   v.safeInteger(),
@@ -126,6 +133,7 @@ export const literalsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -139,6 +147,7 @@ export const literalsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer', enum: [1, 2, 3] }),
               v.transform((input) => Number(input)),
               v.union([v.literal(1), v.literal(2), v.literal(3)]),
             ),

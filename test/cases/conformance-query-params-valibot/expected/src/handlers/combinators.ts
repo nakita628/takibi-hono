@@ -13,6 +13,7 @@ export const combinatorsHandler = new Hono().get(
         allof: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer', minimum: 5 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -22,6 +23,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 1 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -30,6 +32,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', maximum: 10 }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -40,6 +43,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -50,6 +54,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -64,6 +69,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.metadata({ type: 'number' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.finite(),
@@ -74,6 +80,7 @@ export const combinatorsHandler = new Hono().get(
         not_zero: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
@@ -84,6 +91,7 @@ export const combinatorsHandler = new Hono().get(
         typeless_min: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number', minimum: 1 }),
           v.transform((input) => Number(input)),
           v.number(),
           v.finite(),
@@ -93,6 +101,7 @@ export const combinatorsHandler = new Hono().get(
         nconst: v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+          v.metadata({ type: 'number', enum: [2] }),
           v.transform((input) => Number(input)),
           v.literal(2),
         ),
@@ -100,6 +109,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -110,6 +120,7 @@ export const combinatorsHandler = new Hono().get(
           v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+            v.metadata({ type: 'number' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.finite(),
@@ -127,6 +138,7 @@ export const combinatorsHandler = new Hono().get(
             v.pipe(
               v.string(),
               v.regex(/^-?(?:0|[1-9]\d*)$/),
+              v.metadata({ type: 'integer' }),
               v.transform((input) => Number(input)),
               v.number(),
               v.safeInteger(),

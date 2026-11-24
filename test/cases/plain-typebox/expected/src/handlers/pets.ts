@@ -10,7 +10,17 @@ export const petsHandler = new Hono()
       'query',
       Type.Object({
         limit: Type.Optional(
-          Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+          Codec(
+            Type.Refine(
+              Type.Refine(
+                Type.String({ pattern: '^-?(?:0|[1-9]\\d*)$' }),
+                (value) => Number(value) >= 1,
+                () => 'must be >= 1',
+              ),
+              (value) => Number(value) <= 100,
+              () => 'must be <= 100',
+            ),
+          )
             .Decode((value) => Number(value))
             .Encode((value) => String(value)),
         ),
@@ -38,7 +48,13 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+        petId: Codec(
+          Type.Refine(
+            Type.String({ pattern: '^-?(?:0|[1-9]\\d*)$' }),
+            (value) => Number(value) >= 1,
+            () => 'must be >= 1',
+          ),
+        )
           .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),
@@ -50,7 +66,7 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+        petId: Codec(Type.String({ pattern: '^-?(?:0|[1-9]\\d*)$' }))
           .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),
@@ -62,7 +78,7 @@ export const petsHandler = new Hono()
     tbValidator(
       'param',
       Type.Object({
-        petId: Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/ }))
+        petId: Codec(Type.String({ pattern: '^-?(?:0|[1-9]\\d*)$' }))
           .Decode((value) => Number(value))
           .Encode((value) => String(value)),
       }),

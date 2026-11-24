@@ -13,32 +13,41 @@ export const absentHandler = new Hono().get(
         v.pipe(
           v.string(),
           v.regex(/^-?(?:0|[1-9]\d*)$/),
+          v.metadata({ type: 'integer' }),
           v.transform((input) => Number(input)),
           v.number(),
           v.safeInteger(),
         ),
       ),
-      empty_def: v.optional(
-        v.pipe(
-          v.string(),
-          v.regex(/^-?(?:0|[1-9]\d*)$/),
-          v.transform((input) => Number(input)),
-          v.number(),
-          v.safeInteger(),
+      empty_def: v.pipe(
+        v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer' }),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+          ),
+          '7',
         ),
-        '7',
+        v.metadata({ default: 7 }),
       ),
       empty_str: v.optional(v.string()),
-      ref_def: v.optional(
-        v.pipe(
-          v.string(),
-          v.regex(/^-?(?:0|[1-9]\d*)$/),
-          v.transform((input) => Number(input)),
-          v.number(),
-          v.safeInteger(),
-          v.minValue(0),
+      ref_def: v.pipe(
+        v.optional(
+          v.pipe(
+            v.string(),
+            v.regex(/^-?(?:0|[1-9]\d*)$/),
+            v.metadata({ type: 'integer', minimum: 0 }),
+            v.transform((input) => Number(input)),
+            v.number(),
+            v.safeInteger(),
+            v.minValue(0),
+          ),
+          '3',
         ),
-        '3',
+        v.metadata({ default: 3 }),
       ),
     }),
   ),

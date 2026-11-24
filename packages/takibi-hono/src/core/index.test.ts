@@ -149,10 +149,11 @@ export const petsHandler = new Hono()
       'query',
       z.object({
         limit: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
       }),
     ),
@@ -236,6 +237,7 @@ export const petsHandler = new Hono()
           limit: v.pipe(
             v.string(),
             v.regex(/^-?(?:0|[1-9]\\d*)$/),
+            v.metadata({ type: 'integer' }),
             v.transform((input) => Number(input)),
             v.number(),
             v.safeInteger(),
@@ -290,10 +292,11 @@ export const petsHandler = new Hono()
       'query',
       z.object({
         limit: z
-          .string()
-          .regex(/^-?(?:0|[1-9]\\d*)$/)
-          .transform((val) => Number(val))
-          .pipe(z.number().int())
+          .preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          )
           .exactOptional(),
       }),
     ),

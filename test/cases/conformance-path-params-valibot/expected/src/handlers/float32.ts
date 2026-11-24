@@ -12,6 +12,11 @@ export const float32Handler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.metadata({
+          type: 'number',
+          minimum: -3.4028234663852886e38,
+          maximum: 3.4028234663852886e38,
+        }),
         v.transform((input) => Number(input)),
         v.number(),
         v.finite(),

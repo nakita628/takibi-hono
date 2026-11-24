@@ -12,6 +12,7 @@ export const nenumHandler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.metadata({ type: 'number', enum: [0.5, 2.5] }),
         v.transform((input) => Number(input)),
         v.union([v.literal(0.5), v.literal(2.5)]),
       ),

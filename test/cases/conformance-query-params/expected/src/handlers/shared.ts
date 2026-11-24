@@ -13,10 +13,11 @@ export const sharedHandler = new Hono().get(
         .object({
           name: z.string().exactOptional(),
           age: z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int())
+            .preprocess(
+              (val) =>
+                typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+              z.number().int(),
+            )
             .exactOptional(),
         })
         .exactOptional(),

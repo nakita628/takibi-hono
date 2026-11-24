@@ -9,29 +9,28 @@ export const requiredHandler = new Hono().get(
   validator(
     'query',
     z.object({
-      id: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int()),
+      id: z.preprocess(
+        (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+        z.number().int(),
+      ),
       big: z.coerce.bigint().pipe(z.int64()),
       flag: z.stringbool(),
       name: z.string(),
       tags: z.preprocess(
         (val) => (val === undefined || Array.isArray(val) ? val : [val]),
         z.array(
-          z
-            .string()
-            .regex(/^-?(?:0|[1-9]\d*)$/)
-            .transform((val) => Number(val))
-            .pipe(z.number().int()),
+          z.preprocess(
+            (val) =>
+              typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+            z.number().int(),
+          ),
         ),
       ),
       note: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
     }),
   ),

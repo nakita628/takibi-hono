@@ -12,6 +12,7 @@ export const numberHandler = new Hono().get(
       value: v.pipe(
         v.string(),
         v.regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/),
+        v.metadata({ type: 'number' }),
         v.transform((input) => Number(input)),
         v.number(),
         v.finite(),

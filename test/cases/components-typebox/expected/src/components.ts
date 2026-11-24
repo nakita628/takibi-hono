@@ -98,7 +98,13 @@ export const UserIdParamsSchema = resolver(toStandardSchemaV1(Type.String({ form
 export const PageParamsSchema = resolver(
   toStandardSchemaV1(
     Type.Optional(
-      Codec(Type.String({ pattern: /^-?(?:0|[1-9]\d*)$/, default: '1' }))
+      Codec(
+        Type.Refine(
+          Type.String({ pattern: '^-?(?:0|[1-9]\\d*)$', default: '1' }),
+          (value) => Number(value) >= 1,
+          () => 'must be >= 1',
+        ),
+      )
         .Decode((value) => Number(value))
         .Encode((value) => String(value)),
     ),

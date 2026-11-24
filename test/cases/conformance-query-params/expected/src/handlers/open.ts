@@ -10,10 +10,10 @@ export const openHandler = new Hono().get(
     'query',
     z.object({
       page: z
-        .string()
-        .regex(/^-?(?:0|[1-9]\d*)$/)
-        .transform((val) => Number(val))
-        .pipe(z.number().int())
+        .preprocess(
+          (val) => (typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val),
+          z.number().int(),
+        )
         .exactOptional(),
       extra: z
         .looseObject({ known: z.string().exactOptional() })
@@ -22,10 +22,11 @@ export const openHandler = new Hono().get(
             ([key, value]) =>
               ['known'].includes(key) ||
               z
-                .string()
-                .regex(/^-?(?:0|[1-9]\d*)$/)
-                .transform((val) => Number(val))
-                .pipe(z.number().int())
+                .preprocess(
+                  (val) =>
+                    typeof val === 'string' && /^-?(?:0|[1-9]\d*)$/.test(val) ? Number(val) : val,
+                  z.number().int(),
+                )
                 .safeParse(value).success,
           ),
         )
