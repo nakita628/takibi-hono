@@ -35,6 +35,9 @@ function makeRoutes(path: string, rawPathItem: PathItem, openapi: OpenAPI): read
   })
 }
 
+/** How a handler file is named after the first segment of its paths; kebab case when unset. */
+export type FileNameCase = 'kebab-case' | 'lowercase'
+
 /**
  * A path segment in kebab case: every run of what is no letter or digit is a word break, and so
  * is a change of case, an acronym being one word. `realTimeEvents` as `real-time-events`,
@@ -53,18 +56,19 @@ function toKebabCase(segment: string) {
 
 /**
  * `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. The first segment
- * is lowercased, or with `fileNameCase: 'kebab-case'` written in kebab case
- * (`/realTimeEvents` → `real-time-events`); a segment with no ASCII letter or digit, which kebab
- * case would leave empty, is lowercased all the same rather than taken for the root.
+ * is written in kebab case (`/realTimeEvents` → `real-time-events`), or with
+ * `fileNameCase: 'lowercase'` lowercased (`realtimeevents`); a segment with no ASCII letter or
+ * digit, which kebab case would leave empty, is lowercased all the same rather than taken for
+ * the root.
  */
-export function makeHandlerFileName(path: string, fileNameCase?: 'kebab-case') {
+export function makeHandlerFileName(path: string, fileNameCase?: FileNameCase) {
   const segment = path.split('/').find(Boolean)
   if (segment === undefined) return '__root'
-  const kebab = fileNameCase === 'kebab-case' ? toKebabCase(segment) : ''
+  const kebab = fileNameCase === 'lowercase' ? '' : toKebabCase(segment)
   return kebab === '' ? segment.toLowerCase() : kebab
 }
 
-export function collectRoutes(openapi: OpenAPI, fileNameCase?: 'kebab-case') {
+export function collectRoutes(openapi: OpenAPI, fileNameCase?: FileNameCase) {
   const paths: { readonly [path: string]: PathItem } = openapi.paths
   return Object.entries(paths).reduce((groups, [path, pathItem]) => {
     const routes = makeRoutes(path.replaceAll(/\{([^}]+)\}/gu, ':$1'), pathItem, openapi)

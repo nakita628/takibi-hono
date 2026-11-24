@@ -322,14 +322,14 @@ paths:
       responses:
         '200': { description: ok }
 `
-    const config = { input: 'events.yaml', schema: 'zod' } as const
-    const kebab = { ...config, fileNameCase: 'kebab-case' } as const
+    const kebab = { input: 'events.yaml', schema: 'zod' } as const
+    const lowercase = { ...kebab, fileNameCase: 'lowercase' } as const
 
     beforeEach(async () => {
       await fsp.writeFile('events.yaml', KEBAB_SPEC)
     })
 
-    it('names a fresh handler file in kebab case and keeps camelCase exports', async () => {
+    it('names a fresh handler file in kebab case by default and keeps camelCase exports', async () => {
       await runGenerator(hono(kebab))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
@@ -348,6 +348,28 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
       )
     })
 
+    it("names a fresh handler file the same with 'kebab-case' spelled out", async () => {
+      await runGenerator(hono({ ...kebab, fileNameCase: 'kebab-case' }))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'real-time-events.ts',
+        'user-profiles.ts',
+      ])
+    })
+
+    it("lowercases the name of a fresh handler file with 'lowercase'", async () => {
+      await runGenerator(hono(lowercase))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'realtimeevents.ts',
+        'user_profiles.ts',
+      ])
+      expect(read('src/handlers/realtimeevents.ts')).toBe(`import { Hono } from 'hono'
+
+export const realtimeeventsHandler = new Hono().get('/realTimeEvents', (c) => {})
+`)
+    })
+
     it('keeps an implementation when it runs again', async () => {
       await runGenerator(hono(kebab))
       await implement('src/handlers/real-time-events.ts')
@@ -361,7 +383,7 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
     })
 
     it('keeps the files of a project generated in the other case', async () => {
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'realtimeevents.ts',
@@ -376,10 +398,10 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
       ])
       expect(read('src/handlers/realtimeevents.ts')).toContain("(c) => c.text('live'))")
 
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/real-time-events.ts')
       await fsp.rename('src/handlers/user_profiles.ts', 'src/handlers/user-profiles.ts')
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'real-time-events.ts',
@@ -389,10 +411,10 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
     })
 
     it('regenerates a file renamed by hand in place', async () => {
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       await implement('src/handlers/realtimeevents.ts')
       await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/realTimeEvents.ts')
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'realTimeEvents.ts',
@@ -429,7 +451,8 @@ paths:
       responses:
         '200': { description: ok }
 `
-    const moved = { input: 'moved.yaml', schema: 'zod' } as const
+    const movedKebab = { input: 'moved.yaml', schema: 'zod' } as const
+    const moved = { ...movedKebab, fileNameCase: 'lowercase' } as const
 
     it('carries handlers, with their imports and helpers, to the file their route moved to', async () => {
       await fsp.writeFile('moved.yaml', MOVED_SPEC)
@@ -456,7 +479,7 @@ paths:
       )
       await fill('src/handlers/{org_id}.ts', "'/:org_id/items'", "(c) => c.text('org')")
 
-      await runGenerator(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGenerator(hono(movedKebab))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'org-id.ts',
@@ -489,7 +512,7 @@ paths:
         '(c) => c.text(String(LIMIT))',
         'const LIMIT = 50\n',
       )
-      await runGenerator(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGenerator(hono(movedKebab))
       expect(list('src/handlers')).toContain('user_profiles.ts')
       const kebabFile = read('src/handlers/user-profiles.ts')
       expect(kebabFile).toContain('const LIMIT = 50')
@@ -505,7 +528,7 @@ paths:
         'src/handlers/user-profiles.ts',
         `${read('src/handlers/user-profiles.ts')}\nconst broken = (\n`,
       )
-      await runGeneratorError(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGeneratorError(hono(movedKebab))
       expect(read('src/handlers/user_profiles.ts')).toContain("(c) => c.text('a')")
       expect(read('src/handlers/user-profiles.ts')).toContain('const broken = (')
     })
@@ -583,7 +606,7 @@ export default app
   })
 
   describe('handler files of one export name', () => {
-    const config = { input: 'profiles.yaml', schema: 'zod' } as const
+    const config = { input: 'profiles.yaml', schema: 'zod', fileNameCase: 'lowercase' } as const
 
     beforeEach(async () => {
       await fsp.writeFile(
@@ -672,6 +695,7 @@ paths:
         hono({
           input: 'definitions.yaml',
           schema: 'zod',
+          fileNameCase: 'lowercase',
           defineHandler: { output: 'src/definitions.ts', template: true },
         }),
       )

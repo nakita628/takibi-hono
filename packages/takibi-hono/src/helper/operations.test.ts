@@ -69,8 +69,10 @@ describe('makeHandlerFileName', () => {
     ['/', '__root'],
     ['/Users/{id}', 'users'],
     ['/v1/items', 'v1'],
-  ])('%s → %s', (path, expected) => {
-    expect(makeHandlerFileName(path)).toBe(expected)
+    ['/realTimeEvents', 'realtimeevents'],
+    ['/user_profiles/{id}', 'user_profiles'],
+  ])('lowercase: %s → %s', (path, expected) => {
+    expect(makeHandlerFileName(path, 'lowercase')).toBe(expected)
   })
 
   it.each([
@@ -83,8 +85,9 @@ describe('makeHandlerFileName', () => {
     ['/2010-04-01/calls', '2010-04-01'],
     ['/ユーザー/{id}', 'ユーザー'],
     ['/{}/x', '{}'],
-  ])('kebab-case: %s → %s', (path, expected) => {
+  ])('kebab-case, and by default: %s → %s', (path, expected) => {
     expect(makeHandlerFileName(path, 'kebab-case')).toBe(expected)
+    expect(makeHandlerFileName(path)).toBe(expected)
   })
 })
 

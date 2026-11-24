@@ -82,15 +82,17 @@ export default defineConfig({
   // registered on the one app.
   split: false,
 
-  // Handler files are named by the first segment of the path, lowercased:
-  // `/realTimeEvents` → `src/handlers/realtimeevents.ts`. `'kebab-case'` names them in kebab
-  // case instead (`real-time-events.ts`, `/user_profiles` → `user-profiles.ts`), as
-  // hono-takibi does. The export (`realTimeEventsHandler`), the group of `split` and the
-  // client are named after the handler file, its hyphens read as word breaks. An existing
-  // handler file whose name matches once case, `-` and `_` are ignored stays the file of its
-  // group and keeps its name, and so its export: switching this does not rename a file, and
+  // Handler files are named by the first segment of the path, in kebab case:
+  // `/realTimeEvents` → `src/handlers/real-time-events.ts`, `/user_profiles` →
+  // `user-profiles.ts`, as hono-takibi does. `'lowercase'` lowercases the segment as it is
+  // instead (`realtimeevents.ts`, `user_profiles.ts`), the names written before kebab case
+  // became the default.
+  // The export (`realTimeEventsHandler`), the group of `split` and the client are named
+  // after the handler file, its hyphens read as word breaks. An existing handler file whose
+  // name matches once case, `-` and `_` are ignored stays the file of its group and keeps
+  // its name, and so its export: neither the default nor switching this renames a file, and
   // the handlers of routes that move between files move with them.
-  // fileNameCase: 'kebab-case',
+  fileNameCase: 'kebab-case',
 
   // Generated files import one another relatively, under `pathAlias` when the target is in
   // the directory of the app entry (matches the `paths` in your tsconfig, e.g. "@/*":
@@ -349,7 +351,7 @@ When regenerating, takibi-hono **preserves your hand-written code**:
 
 Route metadata (describeRoute, validators) is updated from the spec. New routes are added with a stub `(c) => {}`. Deleted routes are removed.
 
-A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). Two handler files whose names read as the same export (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) get distinct ones: the first by filename keeps the name and the next is numbered (`userProfilesHandler` and `userProfilesHandler2`), as are its `split` group and client (`userProfiles2`, `userProfiles2Client`). The numbers follow the filenames, so adding a path whose file sorts first (`/user-profiles` beside an existing `/user_profiles`) moves the unnumbered names to the new file: code importing `userProfilesHandler` or `userProfilesClient` then gets the other file's. A route that moves to another handler file (switching `fileNameCase` can regroup paths) takes its handler with it, along with the imports and helpers that handler uses. A handler file no route maps to any more is deleted only when nothing of it would be lost; one that still holds a helper that was not carried is kept for you to remove.
+A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). Two handler files whose names read as the same export (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) get distinct ones: the first by filename keeps the name and the next is numbered (`userProfilesHandler` and `userProfilesHandler2`), as are its `split` group and client (`userProfiles2`, `userProfiles2Client`). The numbers follow the filenames, so with `fileNameCase: 'lowercase'` adding a path whose file sorts first (`/user-profiles` beside an existing `/user_profiles`) moves the unnumbered names to the new file: code importing `userProfilesHandler` or `userProfilesClient` then gets the other file's. A route that moves to another handler file (switching `fileNameCase` can regroup paths) takes its handler with it, along with the imports and helpers that handler uses. A handler file no route maps to any more is deleted only when nothing of it would be lost; one that still holds a helper that was not carried is kept for you to remove.
 
 ## Example
 

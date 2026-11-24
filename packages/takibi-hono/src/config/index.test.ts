@@ -34,6 +34,10 @@ describe('parseConfig', () => {
     },
   )
 
+  it.each(['kebab-case', 'lowercase'])('accepts fileNameCase %s', async (fileNameCase) => {
+    expect(await parse({ ...base, fileNameCase })).toStrictEqual({ ...base, fileNameCase })
+  })
+
   it('accepts every field, normalizing single-file component outputs to <dir>/index.ts', async () => {
     const config = {
       ...base,
@@ -342,6 +346,11 @@ describe('parseConfig', () => {
     ],
     ['a non-boolean readonly', { ...base, readonly: 'yes' }, 'readonly: Expected boolean'],
     ['a non-boolean split', { ...base, split: 'groups' }, 'split: Expected boolean'],
+    [
+      'an unknown fileNameCase',
+      { ...base, fileNameCase: 'camelCase' },
+      'fileNameCase: Expected "kebab-case" | "lowercase"',
+    ],
     [
       'a format that is not an object',
       { ...base, format: [] },
