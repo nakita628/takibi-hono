@@ -68,11 +68,39 @@ export function makeHandlerFileName(path: string, fileNameCase?: FileNameCase) {
   return kebab === '' ? segment.toLowerCase() : kebab
 }
 
+/** Whether the first segment of `path` holds a path parameter (`/{slug}`, `/{org_id}/items`). */
+function startsAtParameter(path: string) {
+  return path.split('/').find(Boolean)?.includes('{') === true
+}
+
+/**
+ * The group of every path of the document, as `makeHandlerFileName` names it, but for a first
+ * segment that is a parameter and would share its kebab-case name with a static one
+ * (`/{user}` beside `/user`, `/{org_id}` beside `/org-id`): it keeps its lowercased name
+ * (`{user}`), a group of its own. In one group, and so one handler file, the parameter route
+ * would answer for the static one, or the static one be registered behind the parameter
+ * routes of other files.
+ */
+export function nameHandlerFiles(openapi: OpenAPI, fileNameCase?: FileNameCase) {
+  const statics = new Set(
+    Object.keys(openapi.paths)
+      .filter((path) => !startsAtParameter(path))
+      .map((path) => makeHandlerFileName(path, fileNameCase)),
+  )
+  return (path: string) => {
+    const name = makeHandlerFileName(path, fileNameCase)
+    return startsAtParameter(path) && statics.has(name)
+      ? makeHandlerFileName(path, 'lowercase')
+      : name
+  }
+}
+
 export function collectRoutes(openapi: OpenAPI, fileNameCase?: FileNameCase) {
   const paths: { readonly [path: string]: PathItem } = openapi.paths
+  const nameOf = nameHandlerFiles(openapi, fileNameCase)
   return Object.entries(paths).reduce((groups, [path, pathItem]) => {
     const routes = makeRoutes(path.replaceAll(/\{([^}]+)\}/gu, ':$1'), pathItem, openapi)
-    const name = makeHandlerFileName(path, fileNameCase)
+    const name = nameOf(path)
     return routes.length > 0 ? groups.set(name, [...(groups.get(name) ?? []), ...routes]) : groups
   }, new Map<string, readonly Route[]>())
 }

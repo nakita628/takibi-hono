@@ -98,6 +98,14 @@ async function fill(file: string, route: string, body: string, prologue = '') {
   await fsp.writeFile(file, `${filled.slice(0, end)}\n${prologue}${filled.slice(end)}`)
 }
 
+function indexSpec(routes: readonly string[]) {
+  return `openapi: 3.1.0
+info: { title: Index, version: 1.0.0 }
+paths:
+${routes.map((route) => `  ${route}:\n    get: { responses: { '200': { description: ok } } }`).join('\n')}
+`
+}
+
 describe('hono', () => {
   it('hono-openapi mode: components, handlers, webhooks and the app', async () => {
     await runGenerator(
@@ -619,6 +627,48 @@ export default app
 `)
     })
 
+    it('keeps a parameter route out of the file of a static route of its name', async () => {
+      await fsp.writeFile(
+        'tenant.yaml',
+        `openapi: 3.1.0
+info: { title: Tenant, version: 1.0.0 }
+paths:
+  /{tenant}/items:
+    get:
+      parameters:
+        - { name: tenant, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /tenant:
+    get: { responses: { '200': { description: ok } } }
+  /{org}:
+    get:
+      parameters:
+        - { name: org, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /zebra:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(hono({ input: 'tenant.yaml', schema: 'zod' }))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'org.ts',
+        'tenant.ts',
+        'zebra.ts',
+        '{tenant}.ts',
+      ])
+      expect(read('src/handlers/tenant.ts')).toBe(`import { Hono } from 'hono'
+
+export const tenantHandler = new Hono().get('/tenant', (c) => {})
+`)
+      expect(read('src/index.ts')).toContain(`export const api = app
+  .route('/', tenantHandler)
+  .route('/', zebraHandler)
+  .route('/', orgHandler)
+  .route('/', tenantHandler2)
+`)
+    })
+
     it('keeps a group named as the barrel out of index.ts', async () => {
       await fsp.writeFile(
         'index.yaml',
@@ -653,6 +703,18 @@ paths:
       await runGenerator(hono(index))
       expect(list('src/handlers')).toStrictEqual(['__index.ts', 'index.ts', 'pets.ts'])
       expect(read('src/handlers/__index.ts')).toContain("(c) => c.text('docs')")
+    })
+
+    it('leaves the file of a reserved name to its group when a group of a like name is added', async () => {
+      const index = { input: 'index.yaml', schema: 'zod', fileNameCase: 'lowercase' } as const
+      await fsp.writeFile('index.yaml', indexSpec(['/index']))
+      await runGenerator(hono(index))
+      await fill('src/handlers/__index.ts', "'/index'", "(c) => c.text('index')")
+      await fsp.writeFile('index.yaml', indexSpec(['/_index', '/index']))
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', '_index.ts', 'index.ts'])
+      expect(read('src/handlers/__index.ts')).toContain("'/index', (c) => c.text('index')")
+      expect(read('src/handlers/_index.ts')).toContain("'/_index'")
     })
 
     it('keeps a group named as the webhooks file out of webhooks.ts', async () => {

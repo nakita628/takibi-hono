@@ -44,7 +44,13 @@ function matchHandlerFiles(
   reserved: readonly string[],
 ) {
   const exact = new Set(names.filter((name) => existing.includes(name)))
-  return names.reduce((files, name) => {
+  // A group of a reserved name finds its `__` file only by the loose match, so it looks first:
+  // a group added later (`/_index` beside `/index`) does not take that file from it.
+  const ordered = [
+    ...names.filter((name) => reserved.includes(name)),
+    ...names.filter((name) => !reserved.includes(name)),
+  ]
+  const matched = ordered.reduce((files, name) => {
     if (exact.has(name)) return files.set(name, name)
     const taken = new Set([...exact, ...files.values()])
     const loose = looseName(name)
@@ -53,6 +59,7 @@ function matchHandlerFiles(
     const used = new Set([...reserved, ...names.filter((other) => other !== name), ...taken])
     return files.set(name, reserved.includes(name) ? freeFileName(`__${name}`, used) : name)
   }, new Map<string, string>())
+  return new Map(names.map((name) => [name, matched.get(name) ?? name]))
 }
 
 /** `name`, behind as many more `_` as it takes to be none of `used`. */
@@ -68,7 +75,7 @@ function freeFileName(name: string, used: ReadonlySet<string>): string {
 export function parameterFiles(files: HandlerFiles) {
   return [...files.groups]
     .filter(([, routes]) =>
-      routes.some((route) => route.path.split('/').find(Boolean)?.startsWith(':') === true),
+      routes.some((route) => route.path.split('/').find(Boolean)?.includes(':') === true),
     )
     .map(([group]) => files.fileOf.get(group) ?? group)
 }
