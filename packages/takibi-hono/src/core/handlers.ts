@@ -19,7 +19,7 @@ import { collectWebhookRoutes } from '../helper/operations.js'
 import { mergeAppFile, mergeHandlerFile } from '../merge/index.js'
 import { makeAggregateCode } from './components.js'
 import type { HandlerFiles } from './handler-files.js'
-import { carryMovedRoutes } from './handler-files.js'
+import { carryMovedRoutes, parameterFiles } from './handler-files.js'
 import type { Layout, TakibiHonoConfig } from './layout.js'
 import { makeSpecifier, targetDirectory } from './layout.js'
 
@@ -194,16 +194,18 @@ export function writeHandlers(
 /**
  * The app entry; user imports and middleware survive through `mergeAppFile`. `named` is what
  * `writeDefinitions` answered, so that the handlers are imported as their files export them.
+ * The files with a route that starts at a path parameter are registered last.
  */
 export function writeApp(
-  handlerFiles: ReadonlyMap<string, string>,
+  handlerFiles: HandlerFiles,
   config: TakibiHonoConfig,
   layout: Layout,
   named: ReadonlyMap<string, string> | undefined,
 ) {
-  const code = makeAppCode([...handlerFiles.values()], {
+  const code = makeAppCode([...handlerFiles.fileOf.values()], {
     basePath: config.basePath,
     split: config.split,
+    last: parameterFiles(handlerFiles),
     definitions: [...(named?.values() ?? [])],
     handlersImport: `./${path.relative(layout.appDir, layout.handlersDir).replaceAll('\\', '/')}`,
   })

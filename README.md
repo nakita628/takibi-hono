@@ -90,8 +90,10 @@ export default defineConfig({
   // The export (`realTimeEventsHandler`), the group of `split` and the client are named
   // after the handler file, its hyphens read as word breaks. An existing handler file whose
   // name matches once case, `-` and `_` are ignored stays the file of its group and keeps
-  // its name, and so its export: neither the default nor switching this renames a file, and
-  // the handlers of routes that move between files move with them.
+  // its name, and so its export. A file whose name differs in more (`v1.0.ts` for `v1-0`,
+  // `{org_id}.ts` for `org-id`), or whose group joins another (`/user_profiles` and
+  // `/user-profiles` are one group in kebab case, with one export), is written under the
+  // new name, and the handlers of its routes move with them.
   fileNameCase: 'kebab-case',
 
   // Generated files import one another relatively, under `pathAlias` when the target is in
@@ -241,7 +243,10 @@ The one-shot mode is `defineHandler: { output }` without a config file: a single
 document's components and the [`defineHandler`](#definehandler) definition of every operation
 (`getPetsHandler`), as hono-takibi's `-o` writes the route definitions its handlers import. The
 input defaults to the one of `openapi.yaml`, `openapi.json` or `main.tsp` in the current
-directory, and the library (`-s`) to `zod`. Nothing in the file is yours, so it is written
+directory, and the library (`-s`) to `zod`. A definition does not take the name a handler file
+would export (`postCommentsHandler` of `POST /comments` beside `/postComments` is
+`postCommentsHandler2`), by the filenames of the default `fileNameCase`; use a config file to
+set another. Nothing in the file is yours, so it is written
 over; your app calls each definition with its handler, `app.get('/pets',
 getPetsHandler(async (c, { query }) => ...))`. To have the handlers and the app written too,
 move to a config with `template: true`: the file stays the same.
@@ -351,7 +356,9 @@ When regenerating, takibi-hono **preserves your hand-written code**:
 
 Route metadata (describeRoute, validators) is updated from the spec. New routes are added with a stub `(c) => {}`. Deleted routes are removed.
 
-A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). Two handler files whose names read as the same export (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) get distinct ones: the first by filename keeps the name and the next is numbered (`userProfilesHandler` and `userProfilesHandler2`), as are its `split` group and client (`userProfiles2`, `userProfiles2Client`). The numbers follow the filenames, so with `fileNameCase: 'lowercase'` adding a path whose file sorts first (`/user-profiles` beside an existing `/user_profiles`) moves the unnumbered names to the new file: code importing `userProfilesHandler` or `userProfilesClient` then gets the other file's. A route that moves to another handler file (switching `fileNameCase` can regroup paths) takes its handler with it, along with the imports and helpers that handler uses. A handler file no route maps to any more is deleted only when nothing of it would be lost; one that still holds a helper that was not carried is kept for you to remove.
+A handler file is found by its name with case, `-` and `_` ignored, so a file renamed from `realtimeevents.ts` to `real-time-events.ts` or `realTimeEvents.ts` keeps its handlers; its export, `split` group and client take the new name (`realTimeEventsHandler`). Two handler files whose names read as the same export (`user-profiles.ts` and `user_profiles.ts`, `__root.ts` and `root.ts`) get distinct ones: the first by filename keeps the name and the next is numbered (`userProfilesHandler` and `userProfilesHandler2`), as are its `split` group and client (`userProfiles2`, `userProfiles2Client`). The numbers follow the filenames, so adding a path whose file sorts first (`/` beside an existing `/root`, or with `fileNameCase: 'lowercase'` `/user-profiles` beside an existing `/user_profiles`) moves the unnumbered names to the new file: code importing `userProfilesHandler` or `userProfilesClient` then gets the other file's. A route that moves to another handler file takes its handler with it, along with the imports and helpers that handler uses: the kebab-case default, like switching `fileNameCase`, can regroup paths and rename a file (`/user_profiles` and `/user-profiles` become one group, so the numbered export and `split` client of the second go away, and `{org_id}.ts` becomes `org-id.ts`). A handler file no route maps to any more is deleted only when nothing of it would be lost; one that still holds a helper that was not carried is kept for you to remove.
+
+A group never takes the name of a file of the handlers directory that is no group's: `/index` (and `/_index` or `/{index}` with the kebab-case default) is written to `__index.ts`, not over the barrel, and still exports `indexHandler`; `webhooks.ts` and a definitions file in the directory are kept the same way. The app entry registers the handler files in the order of their names, those with a route that starts at a path parameter (`/{slug}`) after the others, so that such a route does not answer for the static ones.
 
 ## Example
 

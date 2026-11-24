@@ -579,6 +579,115 @@ paths:
       expect(list('src/handlers')).toStrictEqual(['__root.ts', 'index.ts'])
     })
 
+    it('registers a group that starts at a path parameter after the static ones', async () => {
+      await fsp.writeFile(
+        'slug.yaml',
+        `openapi: 3.1.0
+info: { title: Slug, version: 1.0.0 }
+paths:
+  /users:
+    get: { responses: { '200': { description: ok } } }
+  /{slug}:
+    get:
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /{org_id}/items:
+    get:
+      parameters:
+        - { name: org_id, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+`,
+      )
+      const slug = { input: 'slug.yaml', schema: 'zod' } as const
+      await runGenerator(hono({ ...slug, fileNameCase: 'lowercase' }))
+      await fill('src/handlers/{org_id}.ts', "'/:org_id/items'", "(c) => c.text('org')")
+      expect(read('src/index.ts')).toContain(
+        "app.route('/', usersHandler).route('/', orgIdHandler).route('/', slugHandler)",
+      )
+      await runGenerator(hono(slug))
+      expect(list('src/handlers')).toStrictEqual(['index.ts', 'org-id.ts', 'slug.ts', 'users.ts'])
+      expect(read('src/handlers/org-id.ts')).toContain("(c) => c.text('org')")
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { orgIdHandler, slugHandler, usersHandler } from './handlers'
+
+const app = new Hono()
+
+export const api = app.route('/', usersHandler).route('/', orgIdHandler).route('/', slugHandler)
+
+export default app
+`)
+    })
+
+    it('keeps a group named as the barrel out of index.ts', async () => {
+      await fsp.writeFile(
+        'index.yaml',
+        `openapi: 3.1.0
+info: { title: Index, version: 1.0.0 }
+paths:
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /{index}/docs:
+    get:
+      parameters:
+        - { name: index, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+`,
+      )
+      const index = { input: 'index.yaml', schema: 'zod' } as const
+      await runGenerator(hono({ ...index, fileNameCase: 'lowercase' }))
+      expect(list('src/handlers')).toStrictEqual(['index.ts', 'pets.ts', '{index}.ts'])
+      await fill('src/handlers/{index}.ts', "'/:index/docs'", "(c) => c.text('docs')")
+
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', 'index.ts', 'pets.ts'])
+      expect(read('src/handlers/__index.ts')).toContain('export const indexHandler = new Hono()')
+      expect(read('src/handlers/__index.ts')).toContain("(c) => c.text('docs')")
+      expect(read('src/handlers/index.ts')).toBe(
+        "export * from './__index'\nexport * from './pets'\n",
+      )
+      expect(read('src/index.ts')).toContain(
+        "import { indexHandler, petsHandler } from './handlers'",
+      )
+
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', 'index.ts', 'pets.ts'])
+      expect(read('src/handlers/__index.ts')).toContain("(c) => c.text('docs')")
+    })
+
+    it('keeps a group named as the webhooks file out of webhooks.ts', async () => {
+      await fsp.writeFile(
+        'hooks.yaml',
+        `openapi: 3.1.0
+info: { title: Hooks, version: 1.0.0 }
+paths:
+  /webhooks:
+    get: { responses: { '200': { description: ok } } }
+  /index:
+    get: { responses: { '200': { description: ok } } }
+  /__index:
+    get: { responses: { '200': { description: ok } } }
+webhooks:
+  newUser:
+    post: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(
+        hono({ input: 'hooks.yaml', schema: 'zod', openapi: true, fileNameCase: 'lowercase' }),
+      )
+      expect(list('src/handlers')).toStrictEqual([
+        '___index.ts',
+        '__index.ts',
+        '__webhooks.ts',
+        'index.ts',
+        'webhooks.ts',
+      ])
+      expect(read('src/handlers/webhooks.ts')).toContain("'/newUser'")
+      expect(read('src/handlers/__webhooks.ts')).toContain("'/webhooks'")
+      expect(read('src/handlers/__index.ts')).toContain("'/__index'")
+      expect(read('src/handlers/___index.ts')).toContain("'/index'")
+    })
+
     it('exports each group of a split app under its camelCase name', async () => {
       await runGenerator(
         hono({

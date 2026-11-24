@@ -32,16 +32,45 @@ function looseName(name: string) {
  * whose name matches once case, `-` and `_` are ignored (`realtimeevents.ts` for
  * `real-time-events`, or a file renamed by hand), else the group's own name. A project written
  * in one case keeps its files when `fileNameCase` is switched. No file is taken twice.
+ *
+ * `reserved` are the files of the handlers directory that are no group's (the barrel `index`,
+ * `webhooks`, the definitions), which `existing` does not list. A group of such a name
+ * (`/index`, or `/_index` and `/{index}` in kebab case) is written to that name behind `__`
+ * (`__index.ts`, which still exports `indexHandler`) rather than over the reserved file.
  */
-function matchHandlerFiles(names: readonly string[], existing: readonly string[]) {
+function matchHandlerFiles(
+  names: readonly string[],
+  existing: readonly string[],
+  reserved: readonly string[],
+) {
   const exact = new Set(names.filter((name) => existing.includes(name)))
   return names.reduce((files, name) => {
     if (exact.has(name)) return files.set(name, name)
     const taken = new Set([...exact, ...files.values()])
     const loose = looseName(name)
     const found = existing.find((file) => !taken.has(file) && looseName(file) === loose)
-    return files.set(name, found ?? name)
+    if (found !== undefined) return files.set(name, found)
+    const used = new Set([...reserved, ...names.filter((other) => other !== name), ...taken])
+    return files.set(name, reserved.includes(name) ? freeFileName(`__${name}`, used) : name)
   }, new Map<string, string>())
+}
+
+/** `name`, behind as many more `_` as it takes to be none of `used`. */
+function freeFileName(name: string, used: ReadonlySet<string>): string {
+  return used.has(name) ? freeFileName(`_${name}`, used) : name
+}
+
+/**
+ * The handler files that hold a route whose first segment is a path parameter (`/{slug}`,
+ * `/{org_id}/items`). Such a route matches the first segment of every other group, so the app
+ * entry registers these files after the others (`makeAppCode`).
+ */
+export function parameterFiles(files: HandlerFiles) {
+  return [...files.groups]
+    .filter(([, routes]) =>
+      routes.some((route) => route.path.split('/').find(Boolean)?.startsWith(':') === true),
+    )
+    .map(([group]) => files.fileOf.get(group) ?? group)
 }
 
 /** The groups with no handlers directory read: each group is its own file. */
@@ -83,7 +112,11 @@ export function resolveHandlerFiles(openapi: OpenAPI, config: TakibiHonoConfig, 
     )
     const files: HandlerFiles = {
       groups,
-      fileOf: matchHandlerFiles([...groups.keys()], names),
+      fileOf: matchHandlerFiles([...groups.keys()], names, [
+        'index',
+        ...(webhooks ? ['webhooks'] : []),
+        ...(definitionsFile === undefined ? [] : [definitionsFile.slice(0, -'.ts'.length)]),
+      ]),
       existing: new Map(codes.flatMap(([name, code]) => (code === null ? [] : [[name, code]]))),
     }
     return files
