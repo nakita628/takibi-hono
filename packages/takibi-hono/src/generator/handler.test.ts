@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import {
   makeAppCode,
+  makeDefinitionEntries,
   makeDefinitionsCode,
   makeHandlerCode,
   nameGroups,
@@ -747,6 +748,45 @@ export const putItemsIdHandler=defineHandler({param:Schema.toStandardSchemaV1(Sc
         lib: 'typebox',
       }),
     ).toThrow('defineHandler takes Standard Schema validators, which typebox has none of')
+  })
+})
+
+describe('makeDefinitionEntries', () => {
+  const context = { lib: 'zod', components: {} as never, imports: [] } as const
+  const fileNames = (paths: readonly string[], handlerFileNames: readonly string[]) => {
+    const routes = paths.map((path) => ({
+      method: 'get',
+      path,
+      parameters: [],
+      operation: { responses: {} },
+    }))
+    const names = nameOperations(routes as never, handlerFileNames)
+    return makeDefinitionEntries(routes as never, names, context).map(
+      ({ name, fileName }) => [name, fileName] as const,
+    )
+  }
+
+  it('names the file of a definition without Handler', () => {
+    expect(fileNames(['/pets', '/pets/{id}'], ['get-pets'])).toStrictEqual([
+      ['getPetsHandler2', 'getPets2'],
+      ['getPetsIdHandler', 'getPetsId'],
+    ])
+  })
+
+  it('names the files of definitions that read as one file after the definitions', () => {
+    expect(fileNames(['/pets', '/pets2', '/users'], ['get-pets'])).toStrictEqual([
+      ['getPetsHandler2', 'getPetsHandler2'],
+      ['getPets2Handler', 'getPets2Handler'],
+      ['getUsersHandler', 'getUsers'],
+    ])
+  })
+
+  it('moves a definition out of the file another falls back to', () => {
+    expect(fileNames(['/x', '/x2', '/x-handler'], ['get-x', 'get-x-handler'])).toStrictEqual([
+      ['getXHandler2', 'getXHandler2'],
+      ['getX2Handler', 'getX2Handler'],
+      ['getXHandlerHandler2', 'getXHandlerHandler2'],
+    ])
   })
 })
 

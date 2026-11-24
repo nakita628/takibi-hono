@@ -307,7 +307,9 @@ Each request target the operation declares (`param`, `query`, `header`, `cookie`
 responses (`anyOf` them when they differ), so the value the handler returns is validated too.
 The components sit in this file unless `components` names a module of their own; `split: true`
 makes `output` a directory with one file per definition (`getPets.ts`) and an `index.ts`
-barrel, and `package` the name the files of other packages import them by. Nothing here is
+barrel, and `package` the name the files of other packages import them by. Definitions whose
+files would be the same (`getPetsHandler2` and the `getPets2Handler` of `/pets2`) are written to
+files of their own names (`getPetsHandler2.ts`, `getPets2Handler.ts`). Nothing here is
 yours: the file is written over on every run.
 
 Without `template`, that is all: your app calls each definition with its handler. With

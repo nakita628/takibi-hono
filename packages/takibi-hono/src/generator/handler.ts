@@ -370,9 +370,30 @@ export function routeKey(route: Route) {
 export type DefinitionsContext = Omit<HandlerContext, 'defineHandler' | 'responseRefs' | 'openapi'>
 
 /**
+ * The file a split target writes each definition to, by the definition's name: the name
+ * without `Handler` (`getPets` for `getPetsHandler`). A numbered definition and the definition
+ * of a path that ends in the number read as one file (`getPetsHandler2` beside
+ * `getPets2Handler` of `/pets2`), so the definitions that share a file are each written to the
+ * file of their own name instead, which no two definitions share, until every file is
+ * distinct.
+ */
+function nameDefinitionFiles(names: readonly string[]) {
+  const settle = (files: ReadonlyMap<string, string>): ReadonlyMap<string, string> => {
+    const fileNames = [...files.values()]
+    const shared = new Set(fileNames.filter((fileName, i) => fileNames.indexOf(fileName) !== i))
+    // Of the definitions that share a file, at most one is in the file of its own name.
+    return shared.size === 0
+      ? files
+      : settle(new Map([...files].map(([name, file]) => [name, shared.has(file) ? name : file])))
+  }
+  return settle(new Map(names.map((name) => [name, name.replace(/Handler(\d*)$/u, '$1')])))
+}
+
+/**
  * The definition of every route, by the name `names` gives it, without imports: `fileName` is
- * the file a split target writes it to (`getPets.ts` for `getPetsHandler`). Nothing in a
- * definition is the user's, so a definitions module is written over.
+ * the file a split target writes it to (`getPets.ts` for `getPetsHandler`), distinct from the
+ * file of every other definition (`nameDefinitionFiles`). Nothing in a definition is the
+ * user's, so a definitions module is written over.
  */
 export function makeDefinitionEntries(
   routes: readonly Route[],
@@ -381,14 +402,16 @@ export function makeDefinitionEntries(
 ) {
   const full: HandlerContext = { ...context, openapi: false, responseRefs: false }
   const adapter = makeInlineAdapter(context.lib, { resolver: false })
-  return routes.map((route) => {
-    const name = names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path)
-    return {
-      name,
-      fileName: name.replace(/Handler(\d*)$/u, '$1'),
-      code: makeDefinitionCode(name, route, full, adapter),
-    }
-  })
+  const named = routes.map((route) => ({
+    route,
+    name: names.get(routeKey(route)) ?? toOperationVarName(route.method, route.path),
+  }))
+  const fileNames = nameDefinitionFiles(named.map(({ name }) => name))
+  return named.map(({ route, name }) => ({
+    name,
+    fileName: fileNames.get(name) ?? name,
+    code: makeDefinitionCode(name, route, full, adapter),
+  }))
 }
 
 /** The definitions as one module, importing the schemas it refers to. */
