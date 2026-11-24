@@ -594,6 +594,10 @@ export function nameGroups(fileNames: readonly string[], definitions: readonly s
  * that a client of one group resolves the routes of that group and not of the whole app; the
  * routes are still registered on the one app. The app is bound as `app`, unless a group takes
  * that name.
+ *
+ * The handlers are registered in the order of their file names, those of `last` after the
+ * others: Hono answers with the first registered route that matches, and a file whose routes
+ * start at a path parameter (`/{slug}`) would answer for every file registered after it.
  */
 export function makeAppCode(
   handlerFileNames: readonly string[],
@@ -603,11 +607,18 @@ export function makeAppCode(
     readonly split?: boolean | undefined
     /** The `defineHandler` definitions, whose names no numbered handler takes. */
     readonly definitions?: readonly string[] | undefined
+    /** The handler files registered after the others: those of a first-segment parameter. */
+    readonly last?: readonly string[] | undefined
   },
 ) {
-  const files = handlerFileNames.toSorted()
-  const handlerOf = nameHandlers(files, options.definitions)
-  const groupOf = nameGroups(files, options.definitions)
+  const sorted = handlerFileNames.toSorted()
+  const last = new Set(options.last)
+  const files = [
+    ...sorted.filter((file) => !last.has(file)),
+    ...sorted.filter((file) => last.has(file)),
+  ]
+  const handlerOf = nameHandlers(sorted, options.definitions)
+  const groupOf = nameGroups(sorted, options.definitions)
   const names = files.map(handlerOf)
   const app = options.split === true ? freeName('app', files.map(groupOf)) : 'app'
   const created = options.basePath
@@ -619,5 +630,5 @@ export function makeAppCode(
           .map((file) => `export const ${groupOf(file)}=${app}.route('/',${handlerOf(file)})`)
           .join('\n\n')
       : `export const api=app${names.map((name) => `.route('/',${name})`).join('')}`
-  return `import{Hono}from'hono'\nimport{${names.join(',')}}from'${options.handlersImport}'\n\nconst ${app}=${created}\n\n${routes}\n\nexport default ${app}`
+  return `import{Hono}from'hono'\nimport{${sorted.map(handlerOf).join(',')}}from'${options.handlersImport}'\n\nconst ${app}=${created}\n\n${routes}\n\nexport default ${app}`
 }

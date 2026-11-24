@@ -98,6 +98,14 @@ async function fill(file: string, route: string, body: string, prologue = '') {
   await fsp.writeFile(file, `${filled.slice(0, end)}\n${prologue}${filled.slice(end)}`)
 }
 
+function indexSpec(routes: readonly string[]) {
+  return `openapi: 3.1.0
+info: { title: Index, version: 1.0.0 }
+paths:
+${routes.map((route) => `  ${route}:\n    get: { responses: { '200': { description: ok } } }`).join('\n')}
+`
+}
+
 describe('hono', () => {
   it('hono-openapi mode: components, handlers, webhooks and the app', async () => {
     await runGenerator(
@@ -322,14 +330,14 @@ paths:
       responses:
         '200': { description: ok }
 `
-    const config = { input: 'events.yaml', schema: 'zod' } as const
-    const kebab = { ...config, fileNameCase: 'kebab-case' } as const
+    const kebab = { input: 'events.yaml', schema: 'zod' } as const
+    const lowercase = { ...kebab, fileNameCase: 'lowercase' } as const
 
     beforeEach(async () => {
       await fsp.writeFile('events.yaml', KEBAB_SPEC)
     })
 
-    it('names a fresh handler file in kebab case and keeps camelCase exports', async () => {
+    it('names a fresh handler file in kebab case by default and keeps camelCase exports', async () => {
       await runGenerator(hono(kebab))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
@@ -348,6 +356,28 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
       )
     })
 
+    it("names a fresh handler file the same with 'kebab-case' spelled out", async () => {
+      await runGenerator(hono({ ...kebab, fileNameCase: 'kebab-case' }))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'real-time-events.ts',
+        'user-profiles.ts',
+      ])
+    })
+
+    it("lowercases the name of a fresh handler file with 'lowercase'", async () => {
+      await runGenerator(hono(lowercase))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'realtimeevents.ts',
+        'user_profiles.ts',
+      ])
+      expect(read('src/handlers/realtimeevents.ts')).toBe(`import { Hono } from 'hono'
+
+export const realtimeeventsHandler = new Hono().get('/realTimeEvents', (c) => {})
+`)
+    })
+
     it('keeps an implementation when it runs again', async () => {
       await runGenerator(hono(kebab))
       await implement('src/handlers/real-time-events.ts')
@@ -361,7 +391,7 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
     })
 
     it('keeps the files of a project generated in the other case', async () => {
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'realtimeevents.ts',
@@ -376,10 +406,10 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
       ])
       expect(read('src/handlers/realtimeevents.ts')).toContain("(c) => c.text('live'))")
 
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/real-time-events.ts')
       await fsp.rename('src/handlers/user_profiles.ts', 'src/handlers/user-profiles.ts')
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'real-time-events.ts',
@@ -389,10 +419,10 @@ export const realTimeEventsHandler = new Hono().get('/realTimeEvents', (c) => {}
     })
 
     it('regenerates a file renamed by hand in place', async () => {
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       await implement('src/handlers/realtimeevents.ts')
       await fsp.rename('src/handlers/realtimeevents.ts', 'src/handlers/realTimeEvents.ts')
-      await runGenerator(hono(config))
+      await runGenerator(hono(lowercase))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'realTimeEvents.ts',
@@ -429,7 +459,8 @@ paths:
       responses:
         '200': { description: ok }
 `
-    const moved = { input: 'moved.yaml', schema: 'zod' } as const
+    const movedKebab = { input: 'moved.yaml', schema: 'zod' } as const
+    const moved = { ...movedKebab, fileNameCase: 'lowercase' } as const
 
     it('carries handlers, with their imports and helpers, to the file their route moved to', async () => {
       await fsp.writeFile('moved.yaml', MOVED_SPEC)
@@ -456,7 +487,7 @@ paths:
       )
       await fill('src/handlers/{org_id}.ts', "'/:org_id/items'", "(c) => c.text('org')")
 
-      await runGenerator(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGenerator(hono(movedKebab))
       expect(list('src/handlers')).toStrictEqual([
         'index.ts',
         'org-id.ts',
@@ -489,7 +520,7 @@ paths:
         '(c) => c.text(String(LIMIT))',
         'const LIMIT = 50\n',
       )
-      await runGenerator(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGenerator(hono(movedKebab))
       expect(list('src/handlers')).toContain('user_profiles.ts')
       const kebabFile = read('src/handlers/user-profiles.ts')
       expect(kebabFile).toContain('const LIMIT = 50')
@@ -505,7 +536,7 @@ paths:
         'src/handlers/user-profiles.ts',
         `${read('src/handlers/user-profiles.ts')}\nconst broken = (\n`,
       )
-      await runGeneratorError(hono({ ...moved, fileNameCase: 'kebab-case' }))
+      await runGeneratorError(hono(movedKebab))
       expect(read('src/handlers/user_profiles.ts')).toContain("(c) => c.text('a')")
       expect(read('src/handlers/user-profiles.ts')).toContain('const broken = (')
     })
@@ -556,6 +587,169 @@ paths:
       expect(list('src/handlers')).toStrictEqual(['__root.ts', 'index.ts'])
     })
 
+    it('registers a group that starts at a path parameter after the static ones', async () => {
+      await fsp.writeFile(
+        'slug.yaml',
+        `openapi: 3.1.0
+info: { title: Slug, version: 1.0.0 }
+paths:
+  /users:
+    get: { responses: { '200': { description: ok } } }
+  /{slug}:
+    get:
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /{org_id}/items:
+    get:
+      parameters:
+        - { name: org_id, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+`,
+      )
+      const slug = { input: 'slug.yaml', schema: 'zod' } as const
+      await runGenerator(hono({ ...slug, fileNameCase: 'lowercase' }))
+      await fill('src/handlers/{org_id}.ts', "'/:org_id/items'", "(c) => c.text('org')")
+      expect(read('src/index.ts')).toContain(
+        "app.route('/', usersHandler).route('/', orgIdHandler).route('/', slugHandler)",
+      )
+      await runGenerator(hono(slug))
+      expect(list('src/handlers')).toStrictEqual(['index.ts', 'org-id.ts', 'slug.ts', 'users.ts'])
+      expect(read('src/handlers/org-id.ts')).toContain("(c) => c.text('org')")
+      expect(read('src/index.ts')).toBe(`import { Hono } from 'hono'
+import { orgIdHandler, slugHandler, usersHandler } from './handlers'
+
+const app = new Hono()
+
+export const api = app.route('/', usersHandler).route('/', orgIdHandler).route('/', slugHandler)
+
+export default app
+`)
+    })
+
+    it('keeps a parameter route out of the file of a static route of its name', async () => {
+      await fsp.writeFile(
+        'tenant.yaml',
+        `openapi: 3.1.0
+info: { title: Tenant, version: 1.0.0 }
+paths:
+  /{tenant}/items:
+    get:
+      parameters:
+        - { name: tenant, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /tenant:
+    get: { responses: { '200': { description: ok } } }
+  /{org}:
+    get:
+      parameters:
+        - { name: org, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+  /zebra:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(hono({ input: 'tenant.yaml', schema: 'zod' }))
+      expect(list('src/handlers')).toStrictEqual([
+        'index.ts',
+        'org.ts',
+        'tenant.ts',
+        'zebra.ts',
+        '{tenant}.ts',
+      ])
+      expect(read('src/handlers/tenant.ts')).toBe(`import { Hono } from 'hono'
+
+export const tenantHandler = new Hono().get('/tenant', (c) => {})
+`)
+      expect(read('src/index.ts')).toContain(`export const api = app
+  .route('/', tenantHandler)
+  .route('/', zebraHandler)
+  .route('/', orgHandler)
+  .route('/', tenantHandler2)
+`)
+    })
+
+    it('keeps a group named as the barrel out of index.ts', async () => {
+      await fsp.writeFile(
+        'index.yaml',
+        `openapi: 3.1.0
+info: { title: Index, version: 1.0.0 }
+paths:
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /{index}/docs:
+    get:
+      parameters:
+        - { name: index, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: ok } }
+`,
+      )
+      const index = { input: 'index.yaml', schema: 'zod' } as const
+      await runGenerator(hono({ ...index, fileNameCase: 'lowercase' }))
+      expect(list('src/handlers')).toStrictEqual(['index.ts', 'pets.ts', '{index}.ts'])
+      await fill('src/handlers/{index}.ts', "'/:index/docs'", "(c) => c.text('docs')")
+
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', 'index.ts', 'pets.ts'])
+      expect(read('src/handlers/__index.ts')).toContain('export const indexHandler = new Hono()')
+      expect(read('src/handlers/__index.ts')).toContain("(c) => c.text('docs')")
+      expect(read('src/handlers/index.ts')).toBe(
+        "export * from './__index'\nexport * from './pets'\n",
+      )
+      expect(read('src/index.ts')).toContain(
+        "import { indexHandler, petsHandler } from './handlers'",
+      )
+
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', 'index.ts', 'pets.ts'])
+      expect(read('src/handlers/__index.ts')).toContain("(c) => c.text('docs')")
+    })
+
+    it('leaves the file of a reserved name to its group when a group of a like name is added', async () => {
+      const index = { input: 'index.yaml', schema: 'zod', fileNameCase: 'lowercase' } as const
+      await fsp.writeFile('index.yaml', indexSpec(['/index']))
+      await runGenerator(hono(index))
+      await fill('src/handlers/__index.ts', "'/index'", "(c) => c.text('index')")
+      await fsp.writeFile('index.yaml', indexSpec(['/_index', '/index']))
+      await runGenerator(hono(index))
+      expect(list('src/handlers')).toStrictEqual(['__index.ts', '_index.ts', 'index.ts'])
+      expect(read('src/handlers/__index.ts')).toContain("'/index', (c) => c.text('index')")
+      expect(read('src/handlers/_index.ts')).toContain("'/_index'")
+    })
+
+    it('keeps a group named as the webhooks file out of webhooks.ts', async () => {
+      await fsp.writeFile(
+        'hooks.yaml',
+        `openapi: 3.1.0
+info: { title: Hooks, version: 1.0.0 }
+paths:
+  /webhooks:
+    get: { responses: { '200': { description: ok } } }
+  /index:
+    get: { responses: { '200': { description: ok } } }
+  /__index:
+    get: { responses: { '200': { description: ok } } }
+webhooks:
+  newUser:
+    post: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(
+        hono({ input: 'hooks.yaml', schema: 'zod', openapi: true, fileNameCase: 'lowercase' }),
+      )
+      expect(list('src/handlers')).toStrictEqual([
+        '___index.ts',
+        '__index.ts',
+        '__webhooks.ts',
+        'index.ts',
+        'webhooks.ts',
+      ])
+      expect(read('src/handlers/webhooks.ts')).toContain("'/newUser'")
+      expect(read('src/handlers/__webhooks.ts')).toContain("'/webhooks'")
+      expect(read('src/handlers/__index.ts')).toContain("'/__index'")
+      expect(read('src/handlers/___index.ts')).toContain("'/index'")
+    })
+
     it('exports each group of a split app under its camelCase name', async () => {
       await runGenerator(
         hono({
@@ -583,7 +777,7 @@ export default app
   })
 
   describe('handler files of one export name', () => {
-    const config = { input: 'profiles.yaml', schema: 'zod' } as const
+    const config = { input: 'profiles.yaml', schema: 'zod', fileNameCase: 'lowercase' } as const
 
     beforeEach(async () => {
       await fsp.writeFile(
@@ -672,6 +866,7 @@ paths:
         hono({
           input: 'definitions.yaml',
           schema: 'zod',
+          fileNameCase: 'lowercase',
           defineHandler: { output: 'src/definitions.ts', template: true },
         }),
       )

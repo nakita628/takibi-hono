@@ -4,6 +4,7 @@ import {
   collectRoutes,
   collectWebhookRoutes,
   makeHandlerFileName,
+  nameHandlerFiles,
   resolveRef,
 } from './operations.js'
 
@@ -64,13 +65,44 @@ describe('collectWebhookRoutes', () => {
   })
 })
 
+function document(paths: readonly string[]) {
+  return { paths: Object.fromEntries(paths.map((path) => [path, { get: ok }])) } as never
+}
+
+describe('nameHandlerFiles', () => {
+  it('keeps a first-segment parameter out of the group of a static segment of its name', () => {
+    const paths = ['/{user}', '/user', '/{org_id}/items', '/org-id', '/{slug}', '/realTimeEvents']
+    const nameOf = nameHandlerFiles(document(paths))
+    expect(paths.map(nameOf)).toStrictEqual([
+      '{user}',
+      'user',
+      '{org_id}',
+      'org-id',
+      'slug',
+      'real-time-events',
+    ])
+    expect([...collectRoutes(document(paths)).keys()]).toStrictEqual(paths.map(nameOf))
+  })
+
+  it('names every path as makeHandlerFileName does in lowercase', () => {
+    const paths = ['/{user}', '/user', '/realTimeEvents']
+    expect(paths.map(nameHandlerFiles(document(paths), 'lowercase'))).toStrictEqual([
+      '{user}',
+      'user',
+      'realtimeevents',
+    ])
+  })
+})
+
 describe('makeHandlerFileName', () => {
   it.each([
     ['/', '__root'],
     ['/Users/{id}', 'users'],
     ['/v1/items', 'v1'],
-  ])('%s → %s', (path, expected) => {
-    expect(makeHandlerFileName(path)).toBe(expected)
+    ['/realTimeEvents', 'realtimeevents'],
+    ['/user_profiles/{id}', 'user_profiles'],
+  ])('lowercase: %s → %s', (path, expected) => {
+    expect(makeHandlerFileName(path, 'lowercase')).toBe(expected)
   })
 
   it.each([
@@ -83,8 +115,9 @@ describe('makeHandlerFileName', () => {
     ['/2010-04-01/calls', '2010-04-01'],
     ['/ユーザー/{id}', 'ユーザー'],
     ['/{}/x', '{}'],
-  ])('kebab-case: %s → %s', (path, expected) => {
+  ])('kebab-case, and by default: %s → %s', (path, expected) => {
     expect(makeHandlerFileName(path, 'kebab-case')).toBe(expected)
+    expect(makeHandlerFileName(path)).toBe(expected)
   })
 })
 

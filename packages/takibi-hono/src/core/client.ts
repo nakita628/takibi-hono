@@ -10,7 +10,7 @@ import type { OpenAPI } from 'oas-truth'
 import { emit } from '../emit/index.js'
 import { makeClientCode } from '../generator/client.js'
 import { nameGroups } from '../generator/handler.js'
-import { collectRoutes, makeHandlerFileName } from '../helper/operations.js'
+import { collectRoutes, nameHandlerFiles } from '../helper/operations.js'
 import type { ClientOptions, HookLibrary, Layout, Target, TakibiHonoConfig } from './layout.js'
 import { HOOK_LIBRARIES, makeSpecifier, targetModule } from './layout.js'
 
@@ -118,8 +118,9 @@ function makeGrouping(
   definitions: readonly string[],
 ) {
   const groupOf = nameGroups(groupFiles(openapi, config, handlerFiles), definitions)
+  const nameOf = nameHandlerFiles(openapi, config.fileNameCase)
   return (route: string) => {
-    const group = makeHandlerFileName(route, config.fileNameCase)
+    const group = nameOf(route)
     return groupOf(handlerFiles.get(group) ?? group)
   }
 }

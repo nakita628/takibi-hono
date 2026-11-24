@@ -500,6 +500,40 @@ export const api=app.route('/',rootHandler).route('/',petsHandler).route('/',use
 export default app`)
   })
 
+  it('registers the files of a first-segment parameter after the others', () => {
+    expect(
+      makeAppCode(['users', 'org-id', '__root', 'slug'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+        last: ['slug', 'org-id'],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{rootHandler,orgIdHandler,slugHandler,usersHandler}from'./handlers'
+
+const app=new Hono()
+
+export const api=app.route('/',rootHandler).route('/',usersHandler).route('/',orgIdHandler).route('/',slugHandler)
+
+export default app`)
+    expect(
+      makeAppCode(['users', 'slug'], {
+        basePath: undefined,
+        handlersImport: './handlers',
+        split: true,
+        last: ['slug'],
+      }),
+    ).toBe(`import{Hono}from'hono'
+import{slugHandler,usersHandler}from'./handlers'
+
+const app=new Hono()
+
+export const users=app.route('/',usersHandler)
+
+export const slug=app.route('/',slugHandler)
+
+export default app`)
+  })
+
   it('exports each handler file as a group with split, all on the one app', () => {
     expect(
       makeAppCode(['users', '__root', 'user-profiles'], {

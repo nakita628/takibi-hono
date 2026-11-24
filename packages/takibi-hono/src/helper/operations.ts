@@ -35,6 +35,9 @@ function makeRoutes(path: string, rawPathItem: PathItem, openapi: OpenAPI): read
   })
 }
 
+/** How a handler file is named after the first segment of its paths; kebab case when unset. */
+export type FileNameCase = 'kebab-case' | 'lowercase'
+
 /**
  * A path segment in kebab case: every run of what is no letter or digit is a word break, and so
  * is a change of case, an acronym being one word. `realTimeEvents` as `real-time-events`,
@@ -53,22 +56,51 @@ function toKebabCase(segment: string) {
 
 /**
  * `/users/{id}` → group `users`; `/` → `__root`. One group per handler file. The first segment
- * is lowercased, or with `fileNameCase: 'kebab-case'` written in kebab case
- * (`/realTimeEvents` → `real-time-events`); a segment with no ASCII letter or digit, which kebab
- * case would leave empty, is lowercased all the same rather than taken for the root.
+ * is written in kebab case (`/realTimeEvents` → `real-time-events`), or with
+ * `fileNameCase: 'lowercase'` lowercased (`realtimeevents`); a segment with no ASCII letter or
+ * digit, which kebab case would leave empty, is lowercased all the same rather than taken for
+ * the root.
  */
-export function makeHandlerFileName(path: string, fileNameCase?: 'kebab-case') {
+export function makeHandlerFileName(path: string, fileNameCase?: FileNameCase) {
   const segment = path.split('/').find(Boolean)
   if (segment === undefined) return '__root'
-  const kebab = fileNameCase === 'kebab-case' ? toKebabCase(segment) : ''
+  const kebab = fileNameCase === 'lowercase' ? '' : toKebabCase(segment)
   return kebab === '' ? segment.toLowerCase() : kebab
 }
 
-export function collectRoutes(openapi: OpenAPI, fileNameCase?: 'kebab-case') {
+/** Whether the first segment of `path` holds a path parameter (`/{slug}`, `/{org_id}/items`). */
+function startsAtParameter(path: string) {
+  return path.split('/').find(Boolean)?.includes('{') === true
+}
+
+/**
+ * The group of every path of the document, as `makeHandlerFileName` names it, but for a first
+ * segment that is a parameter and would share its kebab-case name with a static one
+ * (`/{user}` beside `/user`, `/{org_id}` beside `/org-id`): it keeps its lowercased name
+ * (`{user}`), a group of its own. In one group, and so one handler file, the parameter route
+ * would answer for the static one, or the static one be registered behind the parameter
+ * routes of other files.
+ */
+export function nameHandlerFiles(openapi: OpenAPI, fileNameCase?: FileNameCase) {
+  const statics = new Set(
+    Object.keys(openapi.paths)
+      .filter((path) => !startsAtParameter(path))
+      .map((path) => makeHandlerFileName(path, fileNameCase)),
+  )
+  return (path: string) => {
+    const name = makeHandlerFileName(path, fileNameCase)
+    return startsAtParameter(path) && statics.has(name)
+      ? makeHandlerFileName(path, 'lowercase')
+      : name
+  }
+}
+
+export function collectRoutes(openapi: OpenAPI, fileNameCase?: FileNameCase) {
   const paths: { readonly [path: string]: PathItem } = openapi.paths
+  const nameOf = nameHandlerFiles(openapi, fileNameCase)
   return Object.entries(paths).reduce((groups, [path, pathItem]) => {
     const routes = makeRoutes(path.replaceAll(/\{([^}]+)\}/gu, ':$1'), pathItem, openapi)
-    const name = makeHandlerFileName(path, fileNameCase)
+    const name = nameOf(path)
     return routes.length > 0 ? groups.set(name, [...(groups.get(name) ?? []), ...routes]) : groups
   }, new Map<string, readonly Route[]>())
 }
