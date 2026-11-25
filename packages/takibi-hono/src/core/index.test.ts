@@ -911,6 +911,49 @@ export default app
 `)
     })
 
+    it('writes split definitions whose names read as one file to files of their own names', async () => {
+      await fsp.writeFile(
+        'definitions.yaml',
+        `openapi: 3.1.0
+info: { title: Definitions, version: 1.0.0 }
+paths:
+  /get-pets:
+    get: { responses: { '200': { description: ok } } }
+  /pets:
+    get: { responses: { '200': { description: ok } } }
+  /pets2:
+    get: { responses: { '200': { description: ok } } }
+`,
+      )
+      await runGenerator(
+        hono({
+          input: 'definitions.yaml',
+          schema: 'zod',
+          defineHandler: { output: 'src/definitions', split: true, template: true },
+        }),
+      )
+      expect(list('src/definitions')).toStrictEqual([
+        'getGetPets.ts',
+        'getPets2Handler.ts',
+        'getPetsHandler2.ts',
+        'index.ts',
+      ])
+      expect(read('src/definitions/getPetsHandler2.ts'))
+        .toBe(`import { defineHandler } from 'hono/factory'
+
+export const getPetsHandler2 = defineHandler({})
+`)
+      expect(read('src/definitions/getPets2Handler.ts'))
+        .toBe(`import { defineHandler } from 'hono/factory'
+
+export const getPets2Handler = defineHandler({})
+`)
+      expect(read('src/definitions/index.ts')).toBe(`export * from './getGetPets'
+export * from './getPets2Handler'
+export * from './getPetsHandler2'
+`)
+    })
+
     it('numbers the group of a split app, in the app entry, the client and rpc', async () => {
       await runGenerator(
         hono({
